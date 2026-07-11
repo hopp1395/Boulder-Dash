@@ -6,9 +6,9 @@ namespace BoulderDash.Game.Graphics;
 
 /// <summary>
 /// Zeichnet den laufenden Spielzustand: 20x12-Kachel-Sichtfenster ab der aktuellen
-/// Kameraposition, Dissolve-Überlagerung, Ein-/Ausgangstür-Blinkanimation und die
-/// Sprite-Animationszyklen (entspricht copy64()+BildschirmMaske()+level_in() aus
-/// src/BOULDER.CPP, plus der Frameauswahl aus sprites_wechsel()/boulder_lauf(), :593-646).
+/// Kameraposition, Verdeckungs-Überlagerung (ScreenCover), Ein-/Ausgangstür-Blinkanimation und die
+/// Sprite-Animationszyklen (entspricht copy64()+BildschirmMaske() aus src/BOULDER.CPP, plus der
+/// Frameauswahl aus sprites_wechsel()/boulder_lauf(), :593-646).
 /// Die Rockford-Blickrichtung wird per SpriteEffects gespiegelt statt wie im Original die
 /// Sprite-Pixel im Speicher zu vertauschen — beobachtbar identisch, technisch einfacher.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed class CaveRenderer
         _atlas = atlas;
     }
 
-    public void Draw(SpriteBatch batch, Cave cave, Camera camera, GameState state, InputState input, Clocks clocks, Dissolve? dissolve)
+    public void Draw(SpriteBatch batch, Cave cave, Camera camera, GameState state, InputState input, Clocks clocks, ScreenCover? cover)
     {
         for (var row = 0; row < ViewportRows; row++)
         {
@@ -46,14 +46,12 @@ public sealed class CaveRenderer
                     continue;
                 }
 
-                var viewportIndex = (row * ViewportColumns) + col;
                 var destination = new Rectangle(col * TileSize, StatusLineHeight + (row * TileSize), TileSize, TileSize);
 
-                // Original wendet die Maske nur an, solange level_in() überhaupt noch läuft
-                // (anfang_var<65, BOULDER.CPP:263) — danach zeigt BildschirmMaske das echte
-                // Gitter unverändert, auch wenn im Sichtfenster-Overlay noch vereinzelt Zellen
-                // als "verdeckt" markiert geblieben sein sollten (Retry-Budget der Zufallswahl).
-                if (dissolve is not null && state.EntranceProgress < 65 && dissolve.IsCovered(viewportIndex))
+                // Die Verdeckungsmaske liegt in Cave-Koordinaten (siehe ScreenCover) und entscheidet
+                // selbst, wie lange sie gilt: beim Cave-Start bis zum Vollaufdecken, am Cave-Ende
+                // bis zum vollständigen Zudecken.
+                if (cover is not null && cover.IsCovered(x, y))
                 {
                     var (coveredTexture, coveredSource) = _atlas.GetBorderFillSprite(state.WechselVier);
                     batch.Draw(coveredTexture, destination, coveredSource, Color.White);

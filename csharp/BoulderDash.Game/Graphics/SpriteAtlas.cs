@@ -17,18 +17,22 @@ public sealed class SpriteAtlas
     private readonly Texture2D[] _textures;
     private readonly IReadOnlyList<byte[]> _rawSprites;
 
-    public SpriteAtlas(GraphicsDevice device, string spritesDirectory)
+    public SpriteAtlas(GraphicsDevice device, ISpriteRepository sprites)
     {
-        _rawSprites = new SpriteTextRepository(spritesDirectory).RawSprites;
-        _textures = new Texture2D[SpriteTextRepository.SpriteCount];
-
-        for (var i = 0; i < SpriteTextRepository.SpriteCount; i++)
+        // Die Frames aller Objekte hintereinander sind die Rohsprites, die FrameToRawSprite indiziert.
+        var raw = new List<byte[]>();
+        var textures = new List<Texture2D>();
+        foreach (var sprite in sprites.Get())
         {
-            var height = i == SpriteTextRepository.LastSpriteIndex
-                ? SpriteTextRepository.LastSpriteHeight
-                : SpriteTextRepository.NormalSpriteHeight;
-            _textures[i] = new Texture2D(device, SpriteTextRepository.SpriteWidth, height);
+            foreach (var frame in sprite.Frames)
+            {
+                raw.Add(frame);
+                textures.Add(new Texture2D(device, sprite.Width, sprite.Height));
+            }
         }
+
+        _rawSprites = raw;
+        _textures = textures.ToArray();
     }
 
     /// <summary>Färbt alle Sprites mit der aktuellen 4-Farben-Cave-Palette neu ein.</summary>
@@ -55,7 +59,7 @@ public sealed class SpriteAtlas
     {
         var rawIndex = SpriteTables.FrameToRawSprite[zFrameIndex];
         var texture = _textures[rawIndex];
-        var source = new Rectangle(0, 0, SpriteTextRepository.SpriteWidth, SpriteTextRepository.NormalSpriteHeight);
+        var source = new Rectangle(0, 0, texture.Width, CaveRenderer.TileSize);
         return (texture, source);
     }
 
@@ -70,7 +74,7 @@ public sealed class SpriteAtlas
     {
         var rawIndex = SpriteTables.FrameToRawSprite[SpriteTables.GetDefaultFrame(Element.BorderFill)];
         var texture = _textures[rawIndex];
-        var source = new Rectangle(0, wechselVier, SpriteTextRepository.SpriteWidth, SpriteTextRepository.NormalSpriteHeight);
+        var source = new Rectangle(0, wechselVier, texture.Width, CaveRenderer.TileSize);
         return (texture, source);
     }
 }

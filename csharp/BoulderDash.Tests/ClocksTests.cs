@@ -50,4 +50,43 @@ public class ClocksTests
         clocks.Tick();
         Assert.Equal(0, clocks.Clk18);
     }
+
+    /// <summary>Bei schnellerem Tempo braucht eine Spielsekunde mehr Ticks (CaveSpeed) — die
+    /// Clk18-Periode ist deshalb einstellbar, Clk1/Clk4 bleiben davon unberührt.</summary>
+    [Fact]
+    public void Clk18_Periode_ist_einstellbar()
+    {
+        var clocks = new Clocks();
+        clocks.Reset(31);
+
+        var nullstellen = 0;
+        for (var i = 0; i < 93; i++) // 3 volle Perioden
+        {
+            clocks.Tick();
+            if (clocks.Clk18 == 0)
+            {
+                nullstellen++;
+            }
+        }
+
+        Assert.Equal(3, nullstellen);
+        Assert.Equal(0, clocks.Clk18);
+    }
+
+    [Fact]
+    public void Reset_ohne_Periode_stellt_die_Original_Periode_22_wieder_her()
+    {
+        var clocks = new Clocks();
+        clocks.Reset(31);
+        clocks.Reset();
+
+        for (var i = 0; i < 21; i++)
+        {
+            clocks.Tick();
+        }
+
+        Assert.Equal(21, clocks.Clk18);
+        clocks.Tick();
+        Assert.Equal(0, clocks.Clk18);
+    }
 }

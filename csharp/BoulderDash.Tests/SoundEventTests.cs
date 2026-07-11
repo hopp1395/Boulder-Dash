@@ -22,9 +22,10 @@ public class SoundEventTests
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = enchantedWallSeconds,
+        AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = 10,
         PointsPerJewelAfterQuota = 20,
-        GameSpeed = 1,
+        GameSpeed = CaveSpeed.For(1, isIntermission: false),
         Tiles = tiles,
     };
 
@@ -43,7 +44,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new BorlandRandom()).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
 
         Assert.Contains(SoundEvent.Explosion, state.SoundEvents);
     }
@@ -62,7 +63,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new BorlandRandom()).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
 
         Assert.True(state.AmoebaPresent);
     }
@@ -81,7 +82,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new BorlandRandom()).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
 
         Assert.False(state.AmoebaPresent);
     }
@@ -101,8 +102,8 @@ public class SoundEventTests
         state.ResetForCave(data);
         state.CaveTimeRemaining = 11; // -> nach zwei Sekunden-Countdowns bei 9 (Warnung), dann bei 10 (keine)
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var random = new BorlandRandom();
-        var tick = new GameTick(new CavePhysics(random), new Dissolve(random));
+        var random = new Random(1);
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
@@ -119,7 +120,7 @@ public class SoundEventTests
     }
 
     [Fact]
-    public void Uncover_wird_nur_waehrend_der_Dissolve_Phase_eingereiht()
+    public void Uncover_wird_nur_waehrend_der_Aufdeck_Phase_eingereiht()
     {
         byte[] tiles =
         [
@@ -132,25 +133,29 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var random = new BorlandRandom();
-        var tick = new GameTick(new CavePhysics(random), new Dissolve(random));
+        var random = new Random(1);
+        var cover = new ScreenCover(random);
+        cover.BeginUncover(data.Width, data.Height);
+        var tick = new GameTick(new CavePhysics(random), cover);
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
 
         tick.Tick(cave, state, input, camera, clocks, entranceIndex);
         Assert.Contains(SoundEvent.Uncover, state.SoundEvents);
+        Assert.True(state.ScreenCoverActive);
 
-        // Erst genug Ticks, um die Dissolve-Phase (EntranceProgress<65) vollständig zu verlassen...
-        for (var i = 0; i < 70; i++)
+        // Restliche Aufdeck-Runden abarbeiten (eine pro Tick)...
+        for (var i = 1; i < ScreenCover.Iterations; i++)
         {
             tick.Tick(cave, state, input, camera, clocks, entranceIndex);
         }
 
-        Assert.True(state.EntranceProgress >= 65);
+        Assert.False(cover.IsActive);
+        Assert.False(state.ScreenCoverActive);
         state.SoundEvents.Clear();
 
-        // ...dann ein weiterer Tick darf kein neues Uncover-Ereignis mehr einreihen.
+        // ...dann darf kein neues Uncover-Ereignis mehr eingereiht werden.
         tick.Tick(cave, state, input, camera, clocks, entranceIndex);
 
         Assert.DoesNotContain(SoundEvent.Uncover, state.SoundEvents);

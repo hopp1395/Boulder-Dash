@@ -1,5 +1,6 @@
 using BoulderDash.Core.Data;
 using BoulderDash.Core.Flow;
+using BoulderDash.Core.Simulation;
 
 namespace BoulderDash.Tests;
 
@@ -8,6 +9,17 @@ public class GameSessionTests
     private static readonly string CavesPath = Path.Combine(TestPaths.GameAssets, "Caves");
 
     private static GameSession NewRealSession() => new(new CaveTextRepository(CavesPath));
+
+    /// <summary>Pumpt die Session in Frame-Schritten durch die Zudeck-Animation am Cave-Ende
+    /// (ScreenCovering: 69 Runden, eine pro Tick — mehr, als AdvanceSimulation pro Update-Aufruf
+    /// zulässt).</summary>
+    private static void AdvanceThroughCovering(GameSession session)
+    {
+        for (var frame = 0; frame < 600 && session.Phase == SessionPhase.ScreenCovering; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+    }
 
     [Fact]
     public void Menu_Cave_Auswahl_ist_auf_A_bis_P_begrenzt()
@@ -70,6 +82,9 @@ public class GameSessionTests
         session.MenuStart();
 
         session.EscapePressed();
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase); // erst deckt sich der Bildschirm zu
+
+        AdvanceThroughCovering(session);
         Assert.Equal(SessionPhase.CaveTransition, session.Phase);
 
         session.Update(10.0); // Übergangspause (0,5s) sicher überschreiten
@@ -94,6 +109,9 @@ public class GameSessionTests
         Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
 
         session.Update(10.0); // Bonuszählung + Nachpause sicher abschließen
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
+
+        AdvanceThroughCovering(session);
         Assert.Equal(SessionPhase.CaveTransition, session.Phase);
 
         session.Update(10.0); // Übergangspause abschließen -> nächste Cave (B)
@@ -119,7 +137,8 @@ public class GameSessionTests
         session.Update(0.001);
         Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
 
-        session.Update(10.0); // Nachpause abschließen -> CaveTransition
+        session.Update(10.0); // Nachpause abschließen -> ScreenCovering
+        AdvanceThroughCovering(session); // Zudecken -> CaveTransition
         session.Update(10.0); // Übergangspause abschließen -> nächste Cave (B), Playing
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
@@ -146,8 +165,9 @@ public class GameSessionTests
 
         session.Update(10.0); // delay(1000) überschreiten
         session.AnyKeyPressed();
-        Assert.Equal(SessionPhase.CaveTransition, session.Phase);
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
 
+        AdvanceThroughCovering(session);
         session.Update(10.0);
         Assert.Equal(SessionPhase.Playing, session.Phase);
         Assert.Equal('A', session.CurrentCaveData!.Letter); // dieselbe Cave, kein Fortschritt
@@ -200,10 +220,113 @@ public class GameSessionTests
 
         session.Update(10.0); // zweite Pause
         session.AnyKeyPressed();
-        Assert.Equal(SessionPhase.CaveTransition, session.Phase);
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
 
+        AdvanceThroughCovering(session);
         session.Update(10.0);
         Assert.Equal(SessionPhase.Menu, session.Phase);
+    }
+
+    [Fact]
+    public void Cave_startet_vollstaendig_verdeckt_und_ist_nach_dem_Aufdecken_frei()
+    {
+        // BD1: die Cave liegt zu Beginn komplett unter der animierten Stahlwand und wird
+        // zeilenweise-zufällig freigelegt (69 Runden, eine pro Tick).
+        var session = NewRealSession();
+        session.MenuStart();
+
+        var cave = session.Cave!;
+        Assert.True(session.ScreenCover.IsActive);
+        Assert.True(session.ScreenCover.IsCovered(0, 0));
+        Assert.True(session.ScreenCover.IsCovered(cave.Width - 1, cave.Height - 1));
+
+        for (var frame = 0; frame < 600 && session.ScreenCover.IsActive; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+
+        Assert.False(session.ScreenCover.IsActive);
+        Assert.False(session.ScreenCover.IsCovered(0, 0));
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+    }
+
+    [Fact]
+    public void Cave_Ende_deckt_den_Bildschirm_wieder_zu()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+
+        session.EscapePressed();
+        AdvanceThroughCovering(session);
+
+        var cave = session.Cave!;
+        Assert.Equal(SessionPhase.CaveTransition, session.Phase);
+        Assert.True(session.ScreenCover.IsCovered(0, 0));
+        Assert.True(session.ScreenCover.IsCovered(cave.Width - 1, cave.Height - 1));
+    }
+
+    /// <summary>Startet Cave A auf dem gegebenen Schwierigkeitsgrad.</summary>
+    private static GameSession StartedAtLevel(int level)
+    {
+        var session = NewRealSession();
+        for (var i = 1; i < level; i++)
+        {
+            session.MenuUp();
+        }
+
+        Assert.Equal(level, session.DifficultyLevel);
+        session.MenuStart();
+        return session;
+    }
+
+    /// <summary>Füttert die Session mit echter Zeit in 60-Hz-Frames.</summary>
+    private static void Pump(GameSession session, double seconds)
+    {
+        for (var frame = 0; frame < (int)Math.Round(seconds * 60); frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+    }
+
+    /// <summary>BD1: das Tempo hängt am Schwierigkeitsgrad (CaveDelay 12/6/3/1/0). EntranceProgress
+    /// zählt genau einen Tick pro Tick und ist deshalb ein direktes Maß für die Tickrate.</summary>
+    [Fact]
+    public void Hoeherer_Schwierigkeitsgrad_laesst_die_Cave_schneller_laufen()
+    {
+        var grad1 = StartedAtLevel(1);
+        var grad5 = StartedAtLevel(5);
+
+        Pump(grad1, 2.0);
+        Pump(grad5, 2.0);
+
+        Assert.Equal(40, grad1.State.EntranceProgress); // 2 s / 50 ms
+        Assert.True(
+            grad5.State.EntranceProgress > grad1.State.EntranceProgress * 1.3,
+            $"Grad 5 muss deutlich schneller ticken als Grad 1 (war {grad5.State.EntranceProgress} vs. {grad1.State.EntranceProgress}).");
+    }
+
+    /// <summary>Gegenstück dazu: der Zeit-Countdown zählt in BD1 IRQ-getrieben und ist damit
+    /// tempo-UNabhängig — eine Spielsekunde dauert bei jedem Grad ~1,1 reale Sekunden (CaveSpeed).
+    /// Ohne die nachgeführte Clk18-Periode würde Grad 5 hier ~14 statt ~10 Sekunden verbrauchen.</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    public void Zeit_Countdown_laeuft_unabhaengig_vom_Schwierigkeitsgrad(int level)
+    {
+        var session = StartedAtLevel(level);
+
+        // Der Countdown startet erst nach dem Aufbau des Eingangs (EntranceProgress > 99).
+        for (var frame = 0; frame < 1000 && session.State.EntranceProgress <= 99; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+
+        var vorher = session.State.CaveTimeRemaining;
+        Pump(session, 11.0);
+        var verbraucht = vorher - session.State.CaveTimeRemaining;
+
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+        Assert.InRange(verbraucht, 9, 11); // 11 s Realzeit / 1,1 s pro Spielsekunde = 10
     }
 
     /// <summary>Test-Repository, das für Cave A eine Karte ohne Eingang liefert und für alle
@@ -238,16 +361,18 @@ public class GameSessionTests
                 Index = 0, Name = "Blank", Description = "", Letter = 'A', IsIntermission = false,
                 Width = 40, Height = 22, JewelQuota = 0, TimeSeconds = 99,
                 BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
-                EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
-                GameSpeed = 1, Tiles = blankTiles,
+                EnchantedWallSeconds = 0, AmoebaSlowGrowthSeconds = 0,
+                PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
+                GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = blankTiles,
             };
             _valid = new CaveData
             {
                 Index = 1, Name = "Valid", Description = "", Letter = 'B', IsIntermission = false,
                 Width = 20, Height = 12, JewelQuota = 0, TimeSeconds = 99,
                 BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
-                EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
-                GameSpeed = 1, Tiles = validTiles,
+                EnchantedWallSeconds = 0, AmoebaSlowGrowthSeconds = 0,
+                PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
+                GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = validTiles,
             };
         }
 

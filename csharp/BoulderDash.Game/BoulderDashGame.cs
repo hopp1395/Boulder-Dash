@@ -62,7 +62,8 @@ public class BoulderDashGame : XnaGame
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         var assets = Path.Combine(AppContext.BaseDirectory, "Assets");
-        _spriteAtlas = new SpriteAtlas(GraphicsDevice, Path.Combine(assets, "Sprites"));
+        var sprites = new SpriteTextRepository(Path.Combine(assets, "Sprites"));
+        _spriteAtlas = new SpriteAtlas(GraphicsDevice, sprites);
         _caveRenderer = new CaveRenderer(_spriteAtlas);
         _font = new BiosFont(GraphicsDevice);
         _menuRenderer = new MenuRenderer(_spriteAtlas, _font);
@@ -165,7 +166,7 @@ public class BoulderDashGame : XnaGame
         }
         else if (_session.Cave is not null)
         {
-            _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.Dissolve);
+            _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.ScreenCover);
 
             var statusText = BuildStatusLine();
             _font.DrawText(_spriteBatch, statusText, Vector2.Zero, Color.White);

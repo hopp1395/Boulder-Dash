@@ -8,9 +8,13 @@ namespace BoulderDash.Core.Simulation;
 /// </summary>
 public sealed class CavePhysics
 {
-    private readonly BorlandRandom _random;
+    /// <summary>Ab dieser Zellzahl wird die ganze Amoeba zu Boulders. Feste BD1-Konstante (in BD1
+    /// nicht pro Cave einstellbar); das DOS-Original wandelte schon ab 96 Zellen um (BOULDER.CPP:951).</summary>
+    private const int AmoebaMaxSize = 200;
 
-    public CavePhysics(BorlandRandom random)
+    private readonly Random _random;
+
+    public CavePhysics(Random random)
     {
         _random = random;
     }
@@ -22,9 +26,21 @@ public sealed class CavePhysics
     {
         var width = cave.Width;
         var height = cave.Height;
-        byte lavaVar = 0;
-        var lavaNr = (byte)((_random.Next() % 96) + 1);
-        byte lf = 3;
+
+        // Die Amoeba entscheidet ihr Schicksal aus den Zahlen des VORIGEN Scans — laut Spezifikation
+        // wirken "zu groß" und "eingeschlossen" jeweils erst im Folge-Scan, und "zu groß" hat Vorrang.
+        byte amoebaFate = 0;
+        if (state.AmoebaCountLastScan >= AmoebaMaxSize)
+        {
+            amoebaFate = (byte)Element.Boulder;
+        }
+        else if (state.AmoebaSuffocatedLastScan)
+        {
+            amoebaFate = (byte)Element.Jewel;
+        }
+
+        var amoebaFound = 0;
+        var amoebaCanGrow = false;
 
         var wasAlive = state.Stat == 0;
 
@@ -40,7 +56,7 @@ public sealed class CavePhysics
                 var idx = (row * width) + col;
 
                 ResolveExplosion(cave, state, idx);
-                ProcessAmoeba(cave, idx, width, ref lavaVar, lavaNr);
+                ProcessAmoeba(cave, state, idx, width, amoebaFate, ref amoebaFound, ref amoebaCanGrow);
                 ProcessButterfly(cave, state, idx, width);
                 ProcessGhost(cave, state, idx, width);
                 ProcessBoulderOrJewel(cave, state, idx, width);
@@ -59,36 +75,11 @@ public sealed class CavePhysics
             cave.SetRaw(i, (byte)(cave.GetRaw(i) & 0x7F));
         }
 
-        // Lava-Einschluss prüfen: wächst irgendwo noch? (:937-947)
-        for (var i = 0; i < width * height; i++)
-        {
-            if (cave.GetRaw(i) == 7)
-            {
-                if (IsEmptyOrEarthRaw(cave.GetRaw(i - width)) ||
-                    IsEmptyOrEarthRaw(cave.GetRaw(i + width)) ||
-                    IsEmptyOrEarthRaw(cave.GetRaw(i - 1)) ||
-                    IsEmptyOrEarthRaw(cave.GetRaw(i + 1)))
-                {
-                    lf = 2;
-                }
-            }
-        }
-
-        // Eingeschlossen (lf==3, alles zu Jewel) oder überwuchert (>95 Zellen, alles zu Boulder) (:949-956)
-        var converted = lavaVar > 95 || lf == 3;
-        if (converted)
-        {
-            for (var i = 0; i < width * height; i++)
-            {
-                if (cave.GetRaw(i) == 7)
-                {
-                    cave.SetRaw(i, lf);
-                }
-            }
-        }
+        state.AmoebaCountLastScan = amoebaFound;
+        state.AmoebaSuffocatedLastScan = amoebaFound > 0 && !amoebaCanGrow;
 
         // Für die Amoeba-Drone (kein Original-Äquivalent, siehe AudioPlayer/SoundRecipes).
-        state.AmoebaPresent = lavaVar > 0 && !converted;
+        state.AmoebaPresent = amoebaFound > 0;
     }
 
     /// <summary>Explosion -&gt; Jewel / Explosion -&gt; Leer, wenn die Animation ausgelaufen ist (:740-743).</summary>
@@ -106,8 +97,15 @@ public sealed class CavePhysics
         }
     }
 
-    /// <summary>Amoeba/Lava: pro Sweep breitet sich nur die zufällig gewählte lavaNr-te Zelle aus (:745-755).</summary>
-    private static void ProcessAmoeba(Cave cave, int idx, int width, ref byte lavaVar, byte lavaNr)
+    /// <summary>Amoeba nach BD1 statt nach dem DOS-Original (BDCFF-Objektspezifikation 000A,
+    /// elmerproductions.com/sp/peterb/BDCFF/objects/000A.html): Jede Zelle würfelt pro Scan einzeln, ob sie
+    /// wächst — mit 4/128 (~3 %), nach Ablauf der Amoeba-Zeit mit 4/16 (25 %) —, und wächst dann in genau
+    /// eine zufällig gezogene der vier Richtungen, sofern dort Leerraum oder Erde liegt. Wird sie zu groß
+    /// oder erstickt sie, wandelt der Folge-Scan sie über <paramref name="fate"/> um.
+    /// Das DOS-Original ließ dagegen pro Scan nur eine einzige, per rand()%96 gewählte Zelle wachsen, und
+    /// die immer in fester Richtungspriorität (BOULDER.CPP:745-755).</summary>
+    private void ProcessAmoeba(
+        Cave cave, GameState state, int idx, int width, byte fate, ref int found, ref bool canGrow)
     {
         var raw = cave.GetRaw(idx);
         if ((raw & 0x9F) != 0x07)
@@ -115,27 +113,37 @@ public sealed class CavePhysics
             return;
         }
 
-        lavaVar++;
-        if (lavaVar != lavaNr)
+        if (fate != 0)
+        {
+            // Verarbeitet-Bit setzen, damit ein so entstandener Boulder nicht schon im selben Scan
+            // weiterfällt (dasselbe Muster wie ResolveExplosion).
+            cave.SetRaw(idx, (byte)(0x80 | fate));
+            return;
+        }
+
+        found++;
+
+        ReadOnlySpan<int> directions = [-width, width, -1, 1];
+        foreach (var direction in directions)
+        {
+            if (IsEmptyOrEarthRaw(cave.GetRaw(idx + direction)))
+            {
+                canGrow = true;
+                break;
+            }
+        }
+
+        if (_random.Next(state.AmoebaSlowGrowthRemaining > 0 ? 128 : 16) >= 4)
         {
             return;
         }
 
-        if (IsEmptyOrEarthRaw(cave.GetRaw(idx - width)))
+        var target = idx + directions[_random.Next(directions.Length)];
+        if (IsEmptyOrEarthRaw(cave.GetRaw(target)))
         {
-            cave.SetRaw(idx - width, 0x87);
-        }
-        else if (IsEmptyOrEarthRaw(cave.GetRaw(idx + width)))
-        {
-            cave.SetRaw(idx + width, 0x87);
-        }
-        else if (IsEmptyOrEarthRaw(cave.GetRaw(idx - 1)))
-        {
-            cave.SetRaw(idx - 1, 0x87);
-        }
-        else if (IsEmptyOrEarthRaw(cave.GetRaw(idx + 1)))
-        {
-            cave.SetRaw(idx + 1, 0x87);
+            // 0x87: frische Amoeba mit Verarbeitet-Bit — sie wächst erst im nächsten Scan weiter und
+            // zählt auch erst dann mit ("newly grown amoeba cannot expand until the following frame").
+            cave.SetRaw(target, 0x87);
         }
     }
 

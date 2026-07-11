@@ -23,9 +23,10 @@ public class CavePhysicsTests
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = enchantedWallSeconds,
+        AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = pointsBefore,
         PointsPerJewelAfterQuota = pointsAfter,
-        GameSpeed = 1,
+        GameSpeed = CaveSpeed.For(1, isIntermission: false),
         Tiles = tiles,
     };
 
@@ -37,7 +38,7 @@ public class CavePhysicsTests
         return (cave, state);
     }
 
-    private static CavePhysics NewPhysics() => new(new BorlandRandom());
+    private static CavePhysics NewPhysics() => new(new Random(1));
 
     [Fact]
     public void Boulder_faellt_in_leere_Zelle_darunter()

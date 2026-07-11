@@ -22,9 +22,10 @@ public class GameTickTests
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = 0,
+        AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = 10,
         PointsPerJewelAfterQuota = 20,
-        GameSpeed = 1,
+        GameSpeed = CaveSpeed.For(1, isIntermission: false),
         Tiles = tiles,
     };
 
@@ -45,10 +46,10 @@ public class GameTickTests
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
-        var random = new BorlandRandom();
+        var random = new Random(1);
         var physics = new CavePhysics(random);
-        var dissolve = new Dissolve(random);
-        var tick = new GameTick(physics, dissolve);
+        var cover = new ScreenCover(random);
+        var tick = new GameTick(physics, cover);
 
         // Eintretend mit EntranceProgress==92 löst die Explosion aus -> 93 Ticks nötig
         // (Tick 1 bringt EntranceProgress von 0 auf 1, ..., Tick 93 sieht beim Eintritt 92).

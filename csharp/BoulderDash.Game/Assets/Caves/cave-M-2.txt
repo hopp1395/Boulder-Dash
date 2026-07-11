@@ -13,7 +13,9 @@ Height      = 22
 [Rules]
 JewelsNeeded    = 55
 CaveTime        = 155
+GameSpeed       = 128
 MagicWallTime   = 140
+AmoebaTime      = 140
 JewelValue      = 5
 JewelValueExtra = 8
 Colors          = 6, 8, 13

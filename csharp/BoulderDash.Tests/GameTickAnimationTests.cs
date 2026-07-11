@@ -22,9 +22,10 @@ public class GameTickAnimationTests
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = 0,
+        AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = 10,
         PointsPerJewelAfterQuota = 20,
-        GameSpeed = 1,
+        GameSpeed = CaveSpeed.For(1, isIntermission: false),
         Tiles =
         [
             Wall, Wall, Wall, Wall, Wall,
@@ -47,8 +48,8 @@ public class GameTickAnimationTests
         input.PressRight(); // richtung!=0, damit wechsel_boulder überhaupt läuft
         var camera = new Camera();
         var clocks = new Clocks();
-        var random = new BorlandRandom();
-        var tick = new GameTick(new CavePhysics(random), new Dissolve(random));
+        var random = new Random(1);
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
         var entranceIndex = 0;
 
         byte[] beobachtet = new byte[8];
@@ -71,8 +72,8 @@ public class GameTickAnimationTests
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
-        var random = new BorlandRandom();
-        var tick = new GameTick(new CavePhysics(random), new Dissolve(random));
+        var random = new Random(1);
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
 
         byte[] beobachtet = new byte[9];
         for (var i = 0; i < 9; i++)

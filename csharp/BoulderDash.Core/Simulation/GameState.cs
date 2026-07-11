@@ -29,6 +29,18 @@ public sealed class GameState
     /// Amoeba-Dauerklang-Drone (nur zusammen mit EntranceProgress&gt;99, siehe AudioPlayer).</summary>
     public bool AmoebaPresent { get; set; }
 
+    /// <summary>Restliche Spielsekunden, in denen die Amoeba noch langsam wächst; bei 0 schaltet sie
+    /// auf schnelles Wachstum um (BD1 "amoeba slow growth time", siehe CavePhysics.ProcessAmoeba).</summary>
+    public byte AmoebaSlowGrowthRemaining { get; set; }
+
+    /// <summary>Amoeba-Zellen, die der vorige Cave-Scan gezählt hat. Die Umwandlung greift laut Spec
+    /// erst im Folge-Scan, entscheidet also immer auf Basis der Zahlen des vorigen.</summary>
+    public int AmoebaCountLastScan { get; set; }
+
+    /// <summary>Ob im vorigen Scan zwar Amoeba existierte, aber keine einzige Zelle einen freien
+    /// Nachbarn hatte ("suffocated") — dann wird sie im nächsten Scan zu Jewels.</summary>
+    public bool AmoebaSuffocatedLastScan { get; set; }
+
     public bool IsCaveEnded { get; set; }
     public bool AdvanceToNextCave { get; set; }
 
@@ -39,6 +51,10 @@ public sealed class GameState
     public byte Stat { get; set; }
 
     public bool ExitFlashOn { get; set; }
+
+    /// <summary>Ob gerade auf- oder zugedeckt wird (ScreenCover) — der Uncover-Sound übertönt
+    /// dann alle anderen Sounds, siehe AudioPlayer.</summary>
+    public bool ScreenCoverActive { get; set; }
 
     /// <summary>Überschreibt Palettenfarbe 0 während des Ausgangs-Blitzes (ende(), BOULDER.CPP:683-684). Null = normale Cave-Farbe.</summary>
     public Rgb? PaletteColor0Override { get; set; }
@@ -67,11 +83,16 @@ public sealed class GameState
         PointsPerJewelAfterQuota = cave.PointsPerJewelAfterQuota;
         EnchantedWallTimeRemaining = cave.EnchantedWallSeconds;
         EnchantedWallRunning = false;
+        AmoebaPresent = false;
+        AmoebaSlowGrowthRemaining = cave.AmoebaSlowGrowthSeconds;
+        AmoebaCountLastScan = 0;
+        AmoebaSuffocatedLastScan = false;
         IsCaveEnded = false;
         AdvanceToNextCave = false;
         EntranceProgress = 0;
         Stat = 0;
         ExitFlashOn = false;
+        ScreenCoverActive = false;
         PaletteColor0Override = null;
         WechselExplo = 0;
         WechselVier = 0;

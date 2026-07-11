@@ -13,12 +13,12 @@ namespace BoulderDash.Core.Simulation;
 public sealed class GameTick
 {
     private readonly CavePhysics _physics;
-    private readonly Dissolve _dissolve;
+    private readonly ScreenCover _cover;
 
-    public GameTick(CavePhysics physics, Dissolve dissolve)
+    public GameTick(CavePhysics physics, ScreenCover cover)
     {
         _physics = physics;
-        _dissolve = dissolve;
+        _cover = cover;
     }
 
     public void Tick(Cave cave, GameState state, InputState input, Camera camera, Clocks clocks, int entranceIndex)
@@ -71,6 +71,13 @@ public sealed class GameTick
             {
                 state.EnchantedWallTimeRemaining--;
             }
+
+            // Die Amoeba-Zeit läuft wie die Zaubermauer-Zeit in Spielsekunden, also tempo-unabhängig
+            // (siehe CaveSpeed) — nach ihrem Ablauf wächst die Amoeba schnell (CavePhysics.ProcessAmoeba).
+            if (state.EntranceProgress > 99 && state.AmoebaSlowGrowthRemaining > 0)
+            {
+                state.AmoebaSlowGrowthRemaining--;
+            }
         }
 
         if (state.EnchantedWallTimeRemaining == 0)
@@ -85,7 +92,10 @@ public sealed class GameTick
 
         if (!state.IsCaveEnded)
         {
-            if (clocks.Clk1 == 0 && state.EntranceProgress > 65)
+            // Anders als im Original (dort "anfang_var>65", BOULDER.CPP:255) läuft die Cave schon
+            // während des Aufdeckens ganz normal weiter — BD1-Verhalten, siehe ScreenCover.
+            // Ungefährlich vor Rockfords Geburt: Regel() erkennt einen Tod erst ab EntranceProgress>100.
+            if (clocks.Clk1 == 0)
             {
                 _physics.Regel(cave, state, input, camera, clocks);
             }
@@ -101,10 +111,14 @@ public sealed class GameTick
             }
         }
 
-        if (state.EntranceProgress < 65 && !state.IsCaveEnded)
+        // Auf-/Zudeck-Animation (ScreenCover): eine Runde pro Tick, dazu der Uncover-Sound, der
+        // solange alle anderen Sounds übertönt (siehe AudioPlayer).
+        if (_cover.IsActive)
         {
-            _dissolve.Tick(state.EntranceProgress);
+            _cover.Tick();
             state.SoundEvents.Enqueue(SoundEvent.Uncover);
         }
+
+        state.ScreenCoverActive = _cover.IsActive;
     }
 }
