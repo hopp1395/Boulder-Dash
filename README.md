@@ -27,3 +27,7 @@ Es gibt kein modernes Buildsystem — der Code verwendet DOS-spezifische Header 
 - **Doku**: `BOULDER.TXT` beschreibt das Sprite-Layout und das binäre Levelformat (16-Byte-Header plus Levelmaske, ein Byte pro Kachel)
 
 Weitere Details zur Struktur und zu den Datenformaten stehen in der [CLAUDE.md](CLAUDE.md).
+
+## C#-Port
+
+Unter `csharp/` liegt eine moderne Neuimplementierung in C# mit MonoGame, die das beobachtbare Spielverhalten des Originals exakt nachbildet, aber architektonisch idiomatisch neu aufgebaut ist. Die synthetisierten Soundeffekte und die Titelmelodie orientieren sich an Peter Broadribbs Analyse der Original-C64-Soundeffekte auf der [Boulder-Dash-Seite von elmerproductions.com](https://www.elmerproductions.com/sp/peterb/).
