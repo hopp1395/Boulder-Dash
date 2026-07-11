@@ -1,3 +1,6 @@
+using BoulderDash.Core.Data;
+using BoulderDash.Core.Simulation;
+using BoulderDash.Game.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -18,7 +21,11 @@ public class BoulderDashGame : XnaGame
     private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
     private RenderTarget2D _renderTarget = null!;
-    private Texture2D _pixel = null!;
+
+    private SpriteAtlas _spriteAtlas = null!;
+    private CaveRenderer _caveRenderer = null!;
+    private BiosFont _font = null!;
+    private CaveData _cave = null!;
 
     public BoulderDashGame()
     {
@@ -39,8 +46,15 @@ public class BoulderDashGame : XnaGame
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
-        _pixel = new Texture2D(GraphicsDevice, 1, 1);
-        _pixel.SetData(new[] { Color.White });
+
+        var assets = Path.Combine(AppContext.BaseDirectory, "Assets");
+        _spriteAtlas = new SpriteAtlas(GraphicsDevice, Path.Combine(assets, "SPRITES.BIN"));
+        _caveRenderer = new CaveRenderer(_spriteAtlas);
+        _font = new BiosFont(GraphicsDevice);
+
+        var caves = CaveFile.LoadAll(Path.Combine(assets, "LEVEL.BIN"));
+        _cave = caves[0]; // Cave A
+        _spriteAtlas.ApplyPalette(Palette.BuildCavePalette(_cave.BaseColors));
     }
 
     protected override void Update(GameTime gameTime)
@@ -58,7 +72,7 @@ public class BoulderDashGame : XnaGame
         // Erst in logischer Auflösung zeichnen ...
         GraphicsDevice.SetRenderTarget(_renderTarget);
         GraphicsDevice.Clear(Color.Black);
-        DrawTestPattern();
+        DrawCaveStandbild();
         GraphicsDevice.SetRenderTarget(null);
 
         // ... dann mit Punktfilterung ganzzahlig auf das Fenster skalieren.
@@ -74,19 +88,19 @@ public class BoulderDashGame : XnaGame
     }
 
     /// <summary>
-    /// Platzhalter-Testbild für M0 (Gerüst): belegt, dass RenderTarget und Integer-Skalierung
-    /// funktionieren. Wird in M1 durch CaveRenderer ersetzt.
+    /// M1-Standbild: Cave A im Ladezustand (keine Animation/Simulation, siehe CaveRenderer)
+    /// plus Statuszeile im "vor Levelaufbau"-Format von Send_Message (src/GAME.CPP:34-48).
     /// </summary>
-    private void DrawTestPattern()
+    private void DrawCaveStandbild()
     {
-        var farben = new[] { Color.White, Color.Red, Color.Yellow, Color.Blue };
-        var breite = LogicalWidth / farben.Length;
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        _caveRenderer.Draw(_spriteBatch, _cave);
 
-        _spriteBatch.Begin();
-        for (var i = 0; i < farben.Length; i++)
-        {
-            _spriteBatch.Draw(_pixel, new Rectangle(i * breite, 0, breite, LogicalHeight), farben[i]);
-        }
+        const byte chances = 3; // Original: leben=3 (Start_menu, BOULDER.CPP:302)
+        const byte difficultyLevel = 1; // Original: levelnr=1 (Standardwert)
+        var statusText = $"  P L A Y E R   1 ,   {chances}  M E N   {_cave.Letter} / {difficultyLevel}";
+        _font.DrawText(_spriteBatch, statusText, Vector2.Zero, Color.White);
+
         _spriteBatch.End();
     }
 
