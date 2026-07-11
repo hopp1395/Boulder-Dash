@@ -48,14 +48,27 @@ public sealed class SpriteAtlas
 
     public Texture2D GetRawTexture(int rawSpriteIndex) => _textures[rawSpriteIndex];
 
-    /// <summary>Liefert die Textur für ein Element in seinem Standard-(Anfangs-)Frame plus die
-    /// 16x16-Quellrechteck-Zeile 0 (relevant für den 24 Zeilen hohen Rand-Sprite Nr. 48).</summary>
-    public (Texture2D Texture, Rectangle Source) GetDefaultSprite(Element element)
+    /// <summary>Liefert Textur + 16x16-Quellrechteck (Zeile 0) für einen z_zeiger-Frame-Index.</summary>
+    public (Texture2D Texture, Rectangle Source) GetFrameSprite(int zFrameIndex)
     {
-        var frame = SpriteTables.GetDefaultFrame(element);
-        var rawIndex = SpriteTables.FrameToRawSprite[frame];
+        var rawIndex = SpriteTables.FrameToRawSprite[zFrameIndex];
         var texture = _textures[rawIndex];
         var source = new Rectangle(0, 0, SpriteFile.SpriteWidth, SpriteFile.NormalSpriteHeight);
+        return (texture, source);
+    }
+
+    /// <summary>Standard-(Anfangs-)Frame eines Elements, siehe SpriteTables.GetDefaultFrame.</summary>
+    public (Texture2D Texture, Rectangle Source) GetDefaultSprite(Element element) =>
+        GetFrameSprite(SpriteTables.GetDefaultFrame(element));
+
+    /// <summary>Rand-Gleitfenster (MASK_SLAUF): 16-Zeilen-Fenster im 24 Zeilen hohen Sprite 48,
+    /// verschoben um wechselVier Zeilen (0-7) — buffer[MASK_SLAUF]=z_zeiger[76]+wechsel_vier*16
+    /// in BOULDER.CPP:604 ist Byte-Zeiger-Arithmetik auf den Rohsprite, kein z_zeiger-Frameindex.</summary>
+    public (Texture2D Texture, Rectangle Source) GetBorderFillSprite(byte wechselVier)
+    {
+        var rawIndex = SpriteTables.FrameToRawSprite[SpriteTables.GetDefaultFrame(Element.BorderFill)];
+        var texture = _textures[rawIndex];
+        var source = new Rectangle(0, wechselVier, SpriteFile.SpriteWidth, SpriteFile.NormalSpriteHeight);
         return (texture, source);
     }
 }
