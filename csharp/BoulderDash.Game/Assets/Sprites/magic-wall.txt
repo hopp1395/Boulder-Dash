@@ -1,0 +1,84 @@
+# Boulder Dash — Sprite: Magic wall (4 Frames, 16x16)
+# Ein Zeichen pro Pixel, Werte sind Indizes in die 4-Farben-Cave-Palette:
+# . = Farbe 0 (Hintergrund), : = Farbe 1, x = Farbe 2, # = Farbe 3
+# Innerhalb der [Frame]-Abschnitte sind keine Kommentarzeilen möglich,
+# da Pixelzeilen mit '#' beginnen dürfen.
+# Im Code: Element.EnchantedWall.
+
+[Sprite]
+Name   = Magic wall
+Width  = 16
+Height = 16
+Frames = 4
+
+[Frame 1]
+..::::::..::::::
+..::::::..::::::
+..::xxxx..::xxxx
+..::......::....
+::::::::::::::::
+::::::xx::::::xx
+xxxx::xxxxxx::xx
+....::......::..
+..::::::..::::::
+..::::::..::::::
+..::xxxx..::xxxx
+..::......::....
+::::::::::::::::
+::::::xx::::::xx
+xxxx::xxxxxx::xx
+....::......::..
+
+[Frame 2]
+..::::::..::::::
+..xx::::..xx::::
+..xx::xx..xx::xx
+....::......::..
+::::..::::::..::
+::::..xx::::..xx
+xx::..xxxx::..xx
+..::......::....
+..::::::..::::::
+..xx::::..xx::::
+..xx::xx..xx::xx
+....::......::..
+::::..::::::..::
+::::..xx::::..xx
+xx::..xxxx::..xx
+..::......::....
+
+[Frame 3]
+..::::::..::::::
+..xx::::..xx::::
+..xxxx::..xxxx::
+......::......::
+::::..::::::..::
+::::..xx::::..xx
+::xx..xx::xx..xx
+::......::......
+..::::::..::::::
+..xx::::..xx::::
+..xxxx::..xxxx::
+......::......::
+::::..::::::..::
+::::..xx::::..xx
+::xx..xx::xx..xx
+::......::......
+
+[Frame 4]
+::::::::::::::::
+::xx::::::xx::::
+::xxxxxx::xxxxxx
+::......::......
+::::..::::::..::
+::::..::::::..::
+xxxx..::xxxx..::
+......::......::
+::::::::::::::::
+::xx::::::xx::::
+::xxxxxx::xxxxxx
+::......::......
+::::..::::::..::
+::::..::::::..::
+xxxx..::xxxx..::
+......::......::

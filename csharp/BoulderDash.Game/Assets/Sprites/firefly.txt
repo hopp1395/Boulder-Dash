@@ -1,0 +1,83 @@
+# Boulder Dash — Sprite: Firefly (4 Frames, 16x16)
+# Ein Zeichen pro Pixel, Werte sind Indizes in die 4-Farben-Cave-Palette:
+# . = Farbe 0 (Hintergrund), : = Farbe 1, x = Farbe 2, # = Farbe 3
+# Innerhalb der [Frame]-Abschnitte sind keine Kommentarzeilen möglich,
+# da Pixelzeilen mit '#' beginnen dürfen.
+
+[Sprite]
+Name   = Firefly
+Width  = 16
+Height = 16
+Frames = 4
+
+[Frame 1]
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx............xx
+xx............xx
+xx..xxxxxxxx..xx
+xx..xxxxxxxx..xx
+xx..xx::::xx..xx
+xx..xx::::xx..xx
+xx..xx::::xx..xx
+xx..xx::::xx..xx
+xx..xxxxxxxx..xx
+xx..xxxxxxxx..xx
+xx............xx
+xx............xx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+
+[Frame 2]
+................
+................
+..xxxxxxxxxxxx..
+..xxxxxxxxxxxx..
+..xx::::::::xx..
+..xx::::::::xx..
+..xx::xxxx::xx..
+..xx::xxxx::xx..
+..xx::xxxx::xx..
+..xx::xxxx::xx..
+..xx::::::::xx..
+..xx::::::::xx..
+..xxxxxxxxxxxx..
+..xxxxxxxxxxxx..
+................
+................
+
+[Frame 3]
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx::::::::::::xx
+xx::::::::::::xx
+xx::xxxxxxxx::xx
+xx::xxxxxxxx::xx
+xx::xx....xx::xx
+xx::xx....xx::xx
+xx::xx....xx::xx
+xx::xx....xx::xx
+xx::xxxxxxxx::xx
+xx::xxxxxxxx::xx
+xx::::::::::::xx
+xx::::::::::::xx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+
+[Frame 4]
+::::::::::::::::
+::::::::::::::::
+::xxxxxxxxxxxx::
+::xxxxxxxxxxxx::
+::xx........xx::
+::xx........xx::
+::xx..xxxx..xx::
+::xx..xxxx..xx::
+::xx..xxxx..xx::
+::xx..xxxx..xx::
+::xx........xx::
+::xx........xx::
+::xxxxxxxxxxxx::
+::xxxxxxxxxxxx::
+::::::::::::::::
+::::::::::::::::

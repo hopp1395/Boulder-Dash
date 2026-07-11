@@ -5,7 +5,7 @@ using BoulderDash.Core.Simulation;
 namespace BoulderDash.Tests;
 
 /// <summary>
-/// Spielt die Original-Demo (DEMO.BIN, Cave A) headless bis zum Ende durch und friert einen
+/// Spielt die Demo (Assets/demo.txt, Cave A) headless bis zum Ende durch und friert einen
 /// Hash über alle durchlaufenen Grid-Zustände sowie die Endwerte ein — ein Regressionsschutz für
 /// Physik (CavePhysics), Timing (GameTick/Clocks) und RNG (BorlandRandom) gemeinsam. Schlägt
 /// dieser Test nach einer absichtlichen Änderung fehl, die eingefrorenen Werte neu ermitteln
@@ -13,16 +13,16 @@ namespace BoulderDash.Tests;
 /// </summary>
 public class GoldenStateTests
 {
-    // DEMO.BIN wurde für die 1999er-Cave-A (LEVEL.BIN-Layout) aufgezeichnet, nicht für die
-    // seit der Umstellung auf das BD1-Rohformat geladene Original-BD1-Cave-A - die Eingaben
-    // desyncen daher zwangsläufig (bewusste Folge des Cave-Tauschs). Neu einfrieren, sobald eine
-    // zur neuen Cave-A passende Demo-Aufzeichnung vorliegt.
-    [Fact(Skip = "DEMO.BIN passt nicht mehr zur BD1-Cave-A-Geometrie - neu aufzeichnen und Werte neu einfrieren.")]
+    // Die Demo ist jetzt die Original-BD1-Aufzeichnung (passend zur BD1-Cave-A), aber die unten
+    // eingefrorenen Werte stammen noch vom alten DEMO.BIN-Lauf auf der 1999er-Cave-A. Neu
+    // einfrieren (Hash/Steps/Score aus einem verifizierten Lauf übernehmen), sobald der Nutzer
+    // die Demo manuell abgenommen hat.
+    [Fact(Skip = "Golden-Werte stammen noch vom alten DEMO.BIN-Lauf - nach Abnahme der BD1-Demo neu einfrieren.")]
     public void Demo_spielt_Cave_A_deterministisch_durch_und_kehrt_ins_Menue_zurueck()
     {
         var caves = new CaveTextRepository(Path.Combine(TestPaths.GameAssets, "Caves"));
-        var demoScancodes = DemoFile.Load(Path.Combine(TestPaths.GameAssets, "DEMO.BIN"));
-        var session = new GameSession(caves, demoScancodes);
+        var demoSteps = DemoTextFile.Load(Path.Combine(TestPaths.GameAssets, "demo.txt"));
+        var session = new GameSession(caves, demoSteps);
 
         session.MenuDemo();
         Assert.Equal(SessionPhase.DemoWait, session.Phase);

@@ -1,0 +1,30 @@
+# Boulder Dash — Sprite: Steel wall (1 Frame, 16x16)
+# Ein Zeichen pro Pixel, Werte sind Indizes in die 4-Farben-Cave-Palette:
+# . = Farbe 0 (Hintergrund), : = Farbe 1, x = Farbe 2, # = Farbe 3
+# Innerhalb der [Frame]-Abschnitte sind keine Kommentarzeilen möglich,
+# da Pixelzeilen mit '#' beginnen dürfen.
+# Im Code: Element.TitaniumWall; auch Tarnung des Ausgangs vor der Freischaltung.
+
+[Sprite]
+Name   = Steel wall
+Width  = 16
+Height = 16
+Frames = 1
+
+[Frame 1]
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx....xxxx....xx
+xxxx..xxxxxx..xx
+xx::..xxxx::..xx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx....xxxx....xx
+xxxx..xxxxxx..xx
+xx::..xxxx::..xx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx

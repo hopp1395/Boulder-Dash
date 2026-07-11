@@ -6,26 +6,28 @@ using Microsoft.Xna.Framework.Graphics;
 namespace BoulderDash.Game.Graphics;
 
 /// <summary>
-/// Hält die 49 Rohsprites aus SPRITES.BIN als Texture2D. Die Pixelbytes sind Palettenindizes
-/// (0-3); da jede Cave nur 4 aktive Farben nutzt (setnewpalette, src/BOULDER.CPP:496-512),
-/// werden die Texturen bei jedem Palettenwechsel per SetData neu eingefärbt statt pro Cave
-/// neue Texturen anzulegen — das entspricht dem Original, wo derselbe Sprite-Speicher einfach
-/// unter wechselnden VGA-DAC-Registern angezeigt wird.
+/// Hält die 49 Rohsprites aus den Sprite-Textdateien als Texture2D. Die Pixelbytes sind
+/// Palettenindizes (0-3); da jede Cave nur 4 aktive Farben nutzt (setnewpalette,
+/// src/BOULDER.CPP:496-512), werden die Texturen bei jedem Palettenwechsel per SetData neu
+/// eingefärbt statt pro Cave neue Texturen anzulegen — das entspricht dem Original, wo derselbe
+/// Sprite-Speicher einfach unter wechselnden VGA-DAC-Registern angezeigt wird.
 /// </summary>
 public sealed class SpriteAtlas
 {
     private readonly Texture2D[] _textures;
     private readonly IReadOnlyList<byte[]> _rawSprites;
 
-    public SpriteAtlas(GraphicsDevice device, string spritesBinPath)
+    public SpriteAtlas(GraphicsDevice device, string spritesDirectory)
     {
-        _rawSprites = SpriteFile.LoadAll(spritesBinPath);
-        _textures = new Texture2D[SpriteFile.SpriteCount];
+        _rawSprites = new SpriteTextRepository(spritesDirectory).RawSprites;
+        _textures = new Texture2D[SpriteTextRepository.SpriteCount];
 
-        for (var i = 0; i < SpriteFile.SpriteCount; i++)
+        for (var i = 0; i < SpriteTextRepository.SpriteCount; i++)
         {
-            var height = i == SpriteFile.LastSpriteIndex ? SpriteFile.LastSpriteHeight : SpriteFile.NormalSpriteHeight;
-            _textures[i] = new Texture2D(device, SpriteFile.SpriteWidth, height);
+            var height = i == SpriteTextRepository.LastSpriteIndex
+                ? SpriteTextRepository.LastSpriteHeight
+                : SpriteTextRepository.NormalSpriteHeight;
+            _textures[i] = new Texture2D(device, SpriteTextRepository.SpriteWidth, height);
         }
     }
 
@@ -53,7 +55,7 @@ public sealed class SpriteAtlas
     {
         var rawIndex = SpriteTables.FrameToRawSprite[zFrameIndex];
         var texture = _textures[rawIndex];
-        var source = new Rectangle(0, 0, SpriteFile.SpriteWidth, SpriteFile.NormalSpriteHeight);
+        var source = new Rectangle(0, 0, SpriteTextRepository.SpriteWidth, SpriteTextRepository.NormalSpriteHeight);
         return (texture, source);
     }
 
@@ -68,7 +70,7 @@ public sealed class SpriteAtlas
     {
         var rawIndex = SpriteTables.FrameToRawSprite[SpriteTables.GetDefaultFrame(Element.BorderFill)];
         var texture = _textures[rawIndex];
-        var source = new Rectangle(0, wechselVier, SpriteFile.SpriteWidth, SpriteFile.NormalSpriteHeight);
+        var source = new Rectangle(0, wechselVier, SpriteTextRepository.SpriteWidth, SpriteTextRepository.NormalSpriteHeight);
         return (texture, source);
     }
 }

@@ -1,0 +1,38 @@
+# Boulder Dash — Sprite: Border fill (1 Frame, 16x24)
+# Ein Zeichen pro Pixel, Werte sind Indizes in die 4-Farben-Cave-Palette:
+# . = Farbe 0 (Hintergrund), : = Farbe 1, x = Farbe 2, # = Farbe 3
+# Innerhalb der [Frame]-Abschnitte sind keine Kommentarzeilen möglich,
+# da Pixelzeilen mit '#' beginnen dürfen.
+# Im Code: Element.BorderFill; 16 Zeilen hohes Gleitfenster im 24 Zeilen hohen Sprite.
+
+[Sprite]
+Name   = Border fill
+Width  = 16
+Height = 24
+Frames = 1
+
+[Frame 1]
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx....xxxx....xx
+xxxx..xxxxxx..xx
+xx::..xxxx::..xx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx....xxxx....xx
+xxxx..xxxxxx..xx
+xx::..xxxx::..xx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxx
+xx....xxxx....xx
+xxxx..xxxxxx..xx
+xx::..xxxx::..xx
+xxxxxxxxxxxxxxxx

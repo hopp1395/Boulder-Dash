@@ -1,3 +1,4 @@
+using BoulderDash.Core.Data;
 using BoulderDash.Core.Flow;
 using BoulderDash.Core.Simulation;
 
@@ -8,11 +9,11 @@ public class DemoPlayerTests
     private const int CaveWidth = 40;
 
     [Fact]
-    public void ApplyScancode_Rechts_setzt_Richtung_Flags_und_Blickrichtung()
+    public void ApplyStep_Rechts_setzt_Richtung_Flags_und_Blickrichtung()
     {
         var input = new InputState();
 
-        DemoPlayer.ApplyScancode(0x4D, input, CaveWidth);
+        DemoPlayer.ApplyStep(DemoStep.Right, input, CaveWidth);
 
         Assert.Equal(1, input.Direction);
         Assert.Equal(0x40, input.Flags);
@@ -20,11 +21,11 @@ public class DemoPlayerTests
     }
 
     [Fact]
-    public void ApplyScancode_Links_setzt_Richtung_Flags_und_Blickrichtung()
+    public void ApplyStep_Links_setzt_Richtung_Flags_und_Blickrichtung()
     {
         var input = new InputState();
 
-        DemoPlayer.ApplyScancode(0x4B, input, CaveWidth);
+        DemoPlayer.ApplyStep(DemoStep.Left, input, CaveWidth);
 
         Assert.Equal(-1, input.Direction);
         Assert.Equal(0x10, input.Flags);
@@ -32,58 +33,34 @@ public class DemoPlayerTests
     }
 
     [Fact]
-    public void ApplyScancode_Runter_und_Hoch_nutzen_die_Cavebreite()
+    public void ApplyStep_Runter_und_Hoch_nutzen_die_Cavebreite()
     {
         var input = new InputState();
 
-        DemoPlayer.ApplyScancode(0x50, input, CaveWidth);
+        DemoPlayer.ApplyStep(DemoStep.Down, input, CaveWidth);
         Assert.Equal(CaveWidth, input.Direction);
 
-        DemoPlayer.ApplyScancode(0x48, input, CaveWidth);
+        DemoPlayer.ApplyStep(DemoStep.Up, input, CaveWidth);
         Assert.Equal(-CaveWidth, input.Direction);
     }
 
     [Fact]
-    public void ApplyScancode_BreakCode_loescht_nur_sein_eigenes_Flag_und_stoppt_ueber_SettleIdleState()
+    public void ApplyStep_Wait_loest_alle_Richtungen_und_stoppt_ueber_SettleIdleState()
     {
         var input = new InputState();
-        DemoPlayer.ApplyScancode(0x4D, input, CaveWidth); // rechts halten
+        DemoPlayer.ApplyStep(DemoStep.Right, input, CaveWidth); // rechts halten
         Assert.Equal(0x40, input.Flags);
 
-        DemoPlayer.ApplyScancode(0xCD, input, CaveWidth); // rechts loslassen
+        DemoPlayer.ApplyStep(DemoStep.Wait, input, CaveWidth);
 
         Assert.Equal(0, input.Flags);
         Assert.Equal(0, input.Direction); // SettleIdleState: Flags<0x10 -> Direction=0
     }
 
     [Fact]
-    public void ApplyScancode_NoOp_laesst_bestehenden_Zustand_unangetastet()
+    public void ApplyCurrent_wendet_den_Zug_am_Index_0_sofort_an()
     {
-        var input = new InputState();
-        DemoPlayer.ApplyScancode(0x4D, input, CaveWidth);
-
-        DemoPlayer.ApplyScancode(0x30, input, CaveWidth);
-
-        Assert.Equal(1, input.Direction);
-        Assert.Equal(0x40, input.Flags);
-    }
-
-    [Fact]
-    public void ApplyScancode_Steuerungstaste_setzt_und_loescht_GrabModifier()
-    {
-        var input = new InputState();
-
-        DemoPlayer.ApplyScancode(0x1D, input, CaveWidth);
-        Assert.Equal((byte)6, input.GrabModifier);
-
-        DemoPlayer.ApplyScancode(0x9D, input, CaveWidth);
-        Assert.Equal((byte)0, input.GrabModifier);
-    }
-
-    [Fact]
-    public void ApplyCurrent_wendet_den_Scancode_am_Index_0_sofort_an()
-    {
-        var player = new DemoPlayer([0x4D, DemoPlayer.Terminator]);
+        var player = new DemoPlayer([DemoStep.Right]);
         var input = new InputState();
 
         player.ApplyCurrent(input, CaveWidth);
@@ -95,8 +72,8 @@ public class DemoPlayerTests
     public void AdvanceIfDue_rueckt_genau_einmal_pro_Clk1_Periode_vor()
     {
         // Clk1 hat Periode 3 (Clocks.cs): Post-Tick-Werte laufen 1,2,0,1,2,0,... — AdvanceIfDue
-        // darf daher erst beim DRITTEN Tick auf den nächsten Scancode vorrücken.
-        var player = new DemoPlayer([0x4D, 0x48, DemoPlayer.Terminator]);
+        // darf daher erst beim DRITTEN Tick auf den nächsten Zug vorrücken.
+        var player = new DemoPlayer([DemoStep.Right, DemoStep.Up]);
         var input = new InputState();
         var clocks = new Clocks();
 
@@ -117,9 +94,9 @@ public class DemoPlayerTests
     }
 
     [Fact]
-    public void AdvanceIfDue_bleibt_am_Terminator_stehen_ohne_Fehler()
+    public void AdvanceIfDue_bleibt_am_Ende_der_Aufzeichnung_stehen_ohne_Fehler()
     {
-        var player = new DemoPlayer([DemoPlayer.Terminator]);
+        var player = new DemoPlayer([]);
         var input = new InputState();
         var clocks = new Clocks();
 

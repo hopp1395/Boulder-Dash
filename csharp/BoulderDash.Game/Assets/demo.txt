@@ -1,0 +1,69 @@
+# Boulder Dash - Demo-Aufzeichnung: die Original-BD1-Demo (Cave A, Level 1),
+# uebernommen aus den BD1-Rohdaten (elmerproductions.com/sp/peterb/rawCaveData.html).
+# Eine Zeile = ein Zug "Richtung Anzahl": die Richtung wird fuer Anzahl Zuege gehalten
+# (ein Zug = eine clk_1-Periode, der Takt von Mov_Rockford).
+# Richtungen: Wait, Up, Down, Left, Right - siehe BoulderDash.Core/Data/DemoTextFile.cs.
+
+Wait  15
+Wait  15
+Up     1
+Right  7
+Down   2
+Right  9
+Wait   4
+Down   2
+Right  4
+Up     3
+Left   1
+Wait   4
+Up     1
+Right 11
+Down   1
+Right  2
+Wait   4
+Down   6
+Right  1
+Down   4
+Left   3
+Wait   4
+Down   1
+Left   1
+Right  4
+Left   3
+Wait   4
+Up     4
+Left   5
+Up     3
+Left   5
+Down   4
+Left   3
+Wait   5
+Up     3
+Left  10
+Up     1
+Left   3
+Down   1
+Left   6
+Down   4
+Right  1
+Wait   4
+Down   3
+Right  4
+Down   4
+Left   4
+Up     2
+Right  2
+Up     3
+Right 10
+Right 10
+Down   1
+Right  4
+Down   1
+Right  4
+Down   2
+Wait   5
+Right  5
+Up     4
+Right  5
+Wait   6
+Down   1

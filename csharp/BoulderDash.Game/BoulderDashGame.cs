@@ -62,7 +62,7 @@ public class BoulderDashGame : XnaGame
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         var assets = Path.Combine(AppContext.BaseDirectory, "Assets");
-        _spriteAtlas = new SpriteAtlas(GraphicsDevice, Path.Combine(assets, "SPRITES.BIN"));
+        _spriteAtlas = new SpriteAtlas(GraphicsDevice, Path.Combine(assets, "Sprites"));
         _caveRenderer = new CaveRenderer(_spriteAtlas);
         _font = new BiosFont(GraphicsDevice);
         _menuRenderer = new MenuRenderer(_spriteAtlas, _font);
@@ -70,8 +70,8 @@ public class BoulderDashGame : XnaGame
         _inputAdapter = new InputAdapter();
 
         var caves = new CaveTextRepository(Path.Combine(assets, "Caves"));
-        var demoScancodes = DemoFile.Load(Path.Combine(assets, "DEMO.BIN"));
-        _session = new GameSession(caves, demoScancodes);
+        var demoSteps = DemoTextFile.Load(Path.Combine(assets, "demo.txt"));
+        _session = new GameSession(caves, demoSteps);
 
         SyncPalette();
     }

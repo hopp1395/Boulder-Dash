@@ -12,7 +12,7 @@ public enum SessionPhase
     GameOverMessage,
     CaveTransition,
 
-    /// <summary>Wartephase nach F2, vor dem ersten Demo-Scancode — entspricht delay(7000) in
+    /// <summary>Wartephase nach F2, vor dem ersten Demo-Zug — entspricht delay(7000) in
     /// demo() (BOULDER.CPP:359), während dem der Eingang sich bereits aufbaut.</summary>
     DemoWait,
     DemoPlaying,
@@ -30,8 +30,8 @@ public enum TransitionReason
     GameOver,
     EscQuit,
 
-    /// <summary>Demo endet (Terminator, Cave-Ende oder Tod) — kehrt immer ins Menü zurück, wie
-    /// der F2-Zweig in Start_menu (BOULDER.CPP:321-328).</summary>
+    /// <summary>Demo endet (Ende der Aufzeichnung, Cave-Ende oder Tod) — kehrt immer ins Menü
+    /// zurück, wie der F2-Zweig in Start_menu (BOULDER.CPP:321-328).</summary>
     DemoEnd,
 }
 
@@ -99,7 +99,7 @@ public sealed class GameSession
     private int _entranceIndex;
     private TransitionReason _transitionReason;
 
-    private readonly byte[]? _demoScancodes;
+    private readonly IReadOnlyList<DemoStep>? _demoSteps;
     private DemoPlayer? _demoPlayer;
     private bool _isDemo;
     private sbyte _menuCaveIndexBeforeDemo;
@@ -121,10 +121,10 @@ public sealed class GameSession
     /// die gesamte Session, da level_in() und regel() im Original denselben rand()-Strom teilen.</summary>
     public Dissolve Dissolve => _dissolve;
 
-    public GameSession(ICaveRepository caves, byte[]? demoScancodes = null)
+    public GameSession(ICaveRepository caves, IReadOnlyList<DemoStep>? demoSteps = null)
     {
         _caves = caves;
-        _demoScancodes = demoScancodes;
+        _demoSteps = demoSteps;
         _random = new BorlandRandom();
         _physics = new CavePhysics(_random);
         _dissolve = new Dissolve(_random);
@@ -248,7 +248,7 @@ public sealed class GameSession
     /// werden (LoadCaveWithSkip setzt CaveIndex sonst dauerhaft auf 0).</summary>
     public void MenuDemo()
     {
-        if (Phase != SessionPhase.Menu || _demoScancodes is null)
+        if (Phase != SessionPhase.Menu || _demoSteps is null)
         {
             return;
         }
@@ -264,7 +264,7 @@ public sealed class GameSession
             return;
         }
 
-        _demoPlayer = new DemoPlayer(_demoScancodes);
+        _demoPlayer = new DemoPlayer(_demoSteps);
         Phase = SessionPhase.DemoWait;
         _phaseTimer = DemoWaitSeconds;
     }
