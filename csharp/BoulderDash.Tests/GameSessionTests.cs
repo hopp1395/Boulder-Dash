@@ -1,5 +1,6 @@
 using BoulderDash.Core.Data;
 using BoulderDash.Core.Flow;
+using BoulderDash.Core.Simulation;
 
 namespace BoulderDash.Tests;
 
@@ -264,6 +265,70 @@ public class GameSessionTests
         Assert.True(session.ScreenCover.IsCovered(cave.Width - 1, cave.Height - 1));
     }
 
+    /// <summary>Startet Cave A auf dem gegebenen Schwierigkeitsgrad.</summary>
+    private static GameSession StartedAtLevel(int level)
+    {
+        var session = NewRealSession();
+        for (var i = 1; i < level; i++)
+        {
+            session.MenuUp();
+        }
+
+        Assert.Equal(level, session.DifficultyLevel);
+        session.MenuStart();
+        return session;
+    }
+
+    /// <summary>Füttert die Session mit echter Zeit in 60-Hz-Frames.</summary>
+    private static void Pump(GameSession session, double seconds)
+    {
+        for (var frame = 0; frame < (int)Math.Round(seconds * 60); frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+    }
+
+    /// <summary>BD1: das Tempo hängt am Schwierigkeitsgrad (CaveDelay 12/6/3/1/0). EntranceProgress
+    /// zählt genau einen Tick pro Tick und ist deshalb ein direktes Maß für die Tickrate.</summary>
+    [Fact]
+    public void Hoeherer_Schwierigkeitsgrad_laesst_die_Cave_schneller_laufen()
+    {
+        var grad1 = StartedAtLevel(1);
+        var grad5 = StartedAtLevel(5);
+
+        Pump(grad1, 2.0);
+        Pump(grad5, 2.0);
+
+        Assert.Equal(40, grad1.State.EntranceProgress); // 2 s / 50 ms
+        Assert.True(
+            grad5.State.EntranceProgress > grad1.State.EntranceProgress * 1.3,
+            $"Grad 5 muss deutlich schneller ticken als Grad 1 (war {grad5.State.EntranceProgress} vs. {grad1.State.EntranceProgress}).");
+    }
+
+    /// <summary>Gegenstück dazu: der Zeit-Countdown zählt in BD1 IRQ-getrieben und ist damit
+    /// tempo-UNabhängig — eine Spielsekunde dauert bei jedem Grad ~1,1 reale Sekunden (CaveSpeed).
+    /// Ohne die nachgeführte Clk18-Periode würde Grad 5 hier ~14 statt ~10 Sekunden verbrauchen.</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    public void Zeit_Countdown_laeuft_unabhaengig_vom_Schwierigkeitsgrad(int level)
+    {
+        var session = StartedAtLevel(level);
+
+        // Der Countdown startet erst nach dem Aufbau des Eingangs (EntranceProgress > 99).
+        for (var frame = 0; frame < 1000 && session.State.EntranceProgress <= 99; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+
+        var vorher = session.State.CaveTimeRemaining;
+        Pump(session, 11.0);
+        var verbraucht = vorher - session.State.CaveTimeRemaining;
+
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+        Assert.InRange(verbraucht, 9, 11); // 11 s Realzeit / 1,1 s pro Spielsekunde = 10
+    }
+
     /// <summary>Test-Repository, das für Cave A eine Karte ohne Eingang liefert und für alle
     /// anderen Caves eine gültige Karte - deckt das Sicherheitsnetz in LoadCaveWithSkip ab.</summary>
     private sealed class BlankFirstCaveRepository : ICaveRepository
@@ -297,7 +362,7 @@ public class GameSessionTests
                 Width = 40, Height = 22, JewelQuota = 0, TimeSeconds = 99,
                 BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
                 EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
-                GameSpeed = 1, Tiles = blankTiles,
+                GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = blankTiles,
             };
             _valid = new CaveData
             {
@@ -305,7 +370,7 @@ public class GameSessionTests
                 Width = 20, Height = 12, JewelQuota = 0, TimeSeconds = 99,
                 BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
                 EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
-                GameSpeed = 1, Tiles = validTiles,
+                GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = validTiles,
             };
         }
 

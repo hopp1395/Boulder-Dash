@@ -24,7 +24,7 @@ public class GameTickTests
         EnchantedWallSeconds = 0,
         PointsPerJewelBeforeQuota = 10,
         PointsPerJewelAfterQuota = 20,
-        GameSpeed = 1,
+        GameSpeed = CaveSpeed.For(1, isIntermission: false),
         Tiles = tiles,
     };
 

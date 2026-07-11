@@ -91,6 +91,15 @@ public static class CaveTextFile
         }
 
         var letter = char.ToUpperInvariant(RequireField(caveFields, "Cave", sourceName)[0]);
+
+        // Der Schwierigkeitsgrad steht im Cave-Kopf und bestimmt (zusammen mit Kind) allein das
+        // Spieltempo — in BD1 gibt es kein Tempo pro Cave (siehe CaveSpeed).
+        var level = RequireByte(caveFields, "Level", sourceName);
+        if (level is < 1 or > 5)
+        {
+            throw new FormatException($"{sourceName}: Level muss 1..5 sein, gefunden: {level}.");
+        }
+
         var width = RequireByte(caveFields, "Width", sourceName);
         var height = RequireByte(caveFields, "Height", sourceName);
         var tiles = ParseMap(sourceName, mapLines, width, height);
@@ -124,7 +133,9 @@ public static class CaveTextFile
             EnchantedWallSeconds = RequireByte(rulesFields, "MagicWallTime", sourceName),
             PointsPerJewelBeforeQuota = RequireByte(rulesFields, "JewelValue", sourceName),
             PointsPerJewelAfterQuota = RequireByte(rulesFields, "JewelValueExtra", sourceName),
-            GameSpeed = 1,
+            // Millisekunden pro Cave-Scan; in BD1 aus Level und Kind abgeleitet, steht aber wie alle
+            // Spieldaten in der Datei selbst (siehe CaveSpeed).
+            GameSpeed = CaveSpeed.FromScanMilliseconds(RequireInt(rulesFields, "GameSpeed", sourceName, 20, 1000)),
             Tiles = tiles,
         };
     }
@@ -165,6 +176,17 @@ public static class CaveTextFile
 
     private static byte RequireByte(Dictionary<string, string> fields, string key, string sourceName) =>
         ParseByte(RequireField(fields, key, sourceName), sourceName, key);
+
+    private static int RequireInt(Dictionary<string, string> fields, string key, string sourceName, int min, int max)
+    {
+        var token = RequireField(fields, key, sourceName);
+        if (!int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value < min || value > max)
+        {
+            throw new FormatException($"{sourceName}: '{key}' erwartet eine Zahl {min}-{max}, gefunden: '{token}'.");
+        }
+
+        return value;
+    }
 
     private static byte ParseByte(string token, string sourceName, string key) =>
         byte.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)

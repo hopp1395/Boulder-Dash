@@ -13,6 +13,7 @@ Height      = 22
 [Rules]
 JewelsNeeded    = 10
 CaveTime        = 150
+GameSpeed       = 150
 MagicWallTime   = 20
 JewelValue      = 20
 JewelValueExtra = 50

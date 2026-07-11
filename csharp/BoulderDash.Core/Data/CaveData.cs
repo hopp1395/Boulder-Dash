@@ -24,7 +24,11 @@ public sealed class CaveData
     public required byte EnchantedWallSeconds { get; init; }
     public required byte PointsPerJewelBeforeQuota { get; init; }
     public required byte PointsPerJewelAfterQuota { get; init; }
-    public required byte GameSpeed { get; init; }
+
+    /// <summary>Spieltempo: hängt in BD1 am Schwierigkeitsgrad und an der Cave-Art, nicht an der
+    /// Cave selbst — da eine CaveData genau eine Cave auf genau einem Level ist (Level steht im
+    /// Cave-Kopf), steht es trotzdem hier. Siehe CaveSpeed.</summary>
+    public required CaveSpeed GameSpeed { get; init; }
 
     /// <summary>Kachelkarte, zeilenweise, Länge = Width*Height, ein Byte = eine Element-ID.</summary>
     public required byte[] Tiles { get; init; }

@@ -574,11 +574,13 @@ public sealed class GameSession
             State.ResetForCave(data);
             Input.ResetForNewCave();
             Camera.ResetTo(data.CameraStartX, data.CameraStartY);
-            Clocks.Reset();
             _cover.BeginUncover(cave.Width, cave.Height);
 
-            var divisor = 59659 / data.GameSpeed;
-            _secondsPerTick = divisor / 1193182.0;
+            // Tempo der geladenen Cave (BD1: ergibt sich aus Schwierigkeitsgrad und Cave-Art, siehe
+            // CaveSpeed). Die Clk18-Periode wird mitgesetzt, damit die Spielsekunde tempo-unabhängig
+            // gleich lang bleibt.
+            _secondsPerTick = data.GameSpeed.SecondsPerTick;
+            Clocks.Reset(data.GameSpeed.GameSecondTicks);
             _tickAccumulator = 0;
             _bonusSubTimer = 0;
 

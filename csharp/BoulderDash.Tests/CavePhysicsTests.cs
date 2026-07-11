@@ -25,7 +25,7 @@ public class CavePhysicsTests
         EnchantedWallSeconds = enchantedWallSeconds,
         PointsPerJewelBeforeQuota = pointsBefore,
         PointsPerJewelAfterQuota = pointsAfter,
-        GameSpeed = 1,
+        GameSpeed = CaveSpeed.For(1, isIntermission: false),
         Tiles = tiles,
     };
 
