@@ -7,7 +7,6 @@ namespace BoulderDash.Tests;
 public class AssetIntegrityTests
 {
     [Theory]
-    [InlineData("LEVEL.BIN")]
     [InlineData("SPRITES.BIN")]
     [InlineData("DEMO.BIN")]
     public void Kopie_ist_byteidentisch_zum_Original(string dateiname)

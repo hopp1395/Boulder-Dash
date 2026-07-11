@@ -10,6 +10,10 @@ public class GameTickTests
     private static CaveData BuildCaveData(int width, int height, byte[] tiles) => new()
     {
         Index = 0,
+        Name = "Test",
+        Description = "",
+        Letter = 'A',
+        IsIntermission = false,
         Width = (byte)width,
         Height = (byte)height,
         JewelQuota = 0,
@@ -34,7 +38,7 @@ public class GameTickTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);

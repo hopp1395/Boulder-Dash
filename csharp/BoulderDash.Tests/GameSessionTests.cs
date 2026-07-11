@@ -5,12 +5,12 @@ namespace BoulderDash.Tests;
 
 public class GameSessionTests
 {
-    private static readonly string LevelBinPath = Path.Combine(TestPaths.GameAssets, "LEVEL.BIN");
+    private static readonly string CavesPath = Path.Combine(TestPaths.GameAssets, "Caves");
 
-    private static GameSession NewRealSession() => new(CaveFile.LoadAll(LevelBinPath));
+    private static GameSession NewRealSession() => new(new CaveTextRepository(CavesPath));
 
     [Fact]
-    public void Menu_Cave_Auswahl_ist_auf_0_bis_15_begrenzt()
+    public void Menu_Cave_Auswahl_ist_auf_A_bis_P_begrenzt()
     {
         var session = NewRealSession();
 
@@ -19,18 +19,18 @@ public class GameSessionTests
             session.MenuNextCave();
         }
 
-        Assert.Equal(15, session.CaveIndex);
+        Assert.Equal('P', session.SelectedCaveLetter);
 
         for (var i = 0; i < 30; i++)
         {
             session.MenuPreviousCave();
         }
 
-        Assert.Equal(0, session.CaveIndex);
+        Assert.Equal('A', session.SelectedCaveLetter);
     }
 
     [Fact]
-    public void Schwierigkeitsgrad_ist_auf_1_bis_4_begrenzt()
+    public void Schwierigkeitsgrad_ist_auf_1_bis_5_begrenzt()
     {
         var session = NewRealSession();
 
@@ -39,7 +39,7 @@ public class GameSessionTests
             session.MenuUp();
         }
 
-        Assert.Equal(4, session.DifficultyLevel);
+        Assert.Equal(5, session.DifficultyLevel);
 
         for (var i = 0; i < 10; i++)
         {
@@ -206,46 +206,61 @@ public class GameSessionTests
         Assert.Equal(SessionPhase.Menu, session.Phase);
     }
 
+    /// <summary>Test-Repository, das für Cave A eine Karte ohne Eingang liefert und für alle
+    /// anderen Caves eine gültige Karte - deckt das Sicherheitsnetz in LoadCaveWithSkip ab.</summary>
+    private sealed class BlankFirstCaveRepository : ICaveRepository
+    {
+        private readonly CaveData _blank;
+        private readonly CaveData _valid;
+
+        public BlankFirstCaveRepository()
+        {
+            byte[] blankTiles = new byte[40 * 22]; // alles 0, kein Eingang
+            byte[] validTiles = new byte[20 * 12];
+            // Minimaler gültiger 20x12-Rand mit Eingang und Ausgang.
+            for (var x = 0; x < 20; x++)
+            {
+                validTiles[x] = 5;
+                validTiles[(11 * 20) + x] = 5;
+            }
+
+            for (var y = 0; y < 12; y++)
+            {
+                validTiles[y * 20] = 5;
+                validTiles[(y * 20) + 19] = 5;
+            }
+
+            validTiles[(1 * 20) + 1] = 10; // Eingang
+            validTiles[(1 * 20) + 2] = 11; // Ausgang
+
+            _blank = new CaveData
+            {
+                Index = 0, Name = "Blank", Description = "", Letter = 'A', IsIntermission = false,
+                Width = 40, Height = 22, JewelQuota = 0, TimeSeconds = 99,
+                BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
+                EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
+                GameSpeed = 1, Tiles = blankTiles,
+            };
+            _valid = new CaveData
+            {
+                Index = 1, Name = "Valid", Description = "", Letter = 'B', IsIntermission = false,
+                Width = 20, Height = 12, JewelQuota = 0, TimeSeconds = 99,
+                BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
+                EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
+                GameSpeed = 1, Tiles = validTiles,
+            };
+        }
+
+        public CaveData Get(string name) => name.StartsWith("cave-A-", StringComparison.OrdinalIgnoreCase) ? _blank : _valid;
+    }
+
     [Fact]
     public void Leere_Platzhalter_Cave_wird_beim_Laden_uebersprungen()
     {
-        byte[] blankTiles = new byte[40 * 22]; // alles 0, kein Eingang
-        byte[] validTiles = new byte[20 * 12];
-        // Minimaler gültiger 20x12-Rand mit Eingang und Ausgang.
-        for (var x = 0; x < 20; x++)
-        {
-            validTiles[x] = 5;
-            validTiles[(11 * 20) + x] = 5;
-        }
-
-        for (var y = 0; y < 12; y++)
-        {
-            validTiles[y * 20] = 5;
-            validTiles[(y * 20) + 19] = 5;
-        }
-
-        validTiles[(1 * 20) + 1] = 10; // Eingang
-        validTiles[(1 * 20) + 2] = 11; // Ausgang
-
-        var blank = new CaveData
-        {
-            Index = 0, Width = 40, Height = 22, JewelQuota = 0, TimeSeconds = 99,
-            BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
-            EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
-            GameSpeed = 1, Tiles = blankTiles,
-        };
-        var valid = new CaveData
-        {
-            Index = 1, Width = 20, Height = 12, JewelQuota = 0, TimeSeconds = 99,
-            BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
-            EnchantedWallSeconds = 0, PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
-            GameSpeed = 1, Tiles = validTiles,
-        };
-
-        var session = new GameSession([blank, valid]);
-        session.MenuStart(); // CaveIndex steht auf 0 (blank)
+        var session = new GameSession(new BlankFirstCaveRepository());
+        session.MenuStart(); // CaveIndex steht auf 0 (Cave A, blank)
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
-        Assert.Equal(1, session.CaveIndex); // auf die gültige Cave übergesprungen
+        Assert.Equal(1, session.CaveIndex); // auf die gültige Cave übergesprungen (Cave B)
     }
 }

@@ -3,13 +3,17 @@ using BoulderDash.Core.Simulation;
 namespace BoulderDash.Core.Data;
 
 /// <summary>
-/// Eine geladene Cave: 16-Byte-Header plus Kachelkarte, direkt aus LEVEL.BIN übernommen
-/// (siehe level_laden in src/BOULDER.CPP:975-1040). Die Kacheln sind hier noch roh
-/// (reine Element-IDs ohne Verarbeitungs-/Bewegungs-Flags), wie unmittelbar nach dem Laden.
+/// Eine geladene Cave: Kopfdaten plus Kachelkarte, gelesen aus einer Cave-Textdatei
+/// (siehe CaveTextFile). Die Kacheln sind hier noch roh (reine Element-IDs ohne Verarbeitungs-/
+/// Bewegungs-Flags), wie unmittelbar nach dem Laden.
 /// </summary>
 public sealed class CaveData
 {
     public required int Index { get; init; }
+    public required string Name { get; init; }
+    public required string Description { get; init; }
+    public required char Letter { get; init; }
+    public required bool IsIntermission { get; init; }
     public required byte Width { get; init; }
     public required byte Height { get; init; }
     public required byte JewelQuota { get; init; }
@@ -24,20 +28,6 @@ public sealed class CaveData
 
     /// <summary>Kachelkarte, zeilenweise, Länge = Width*Height, ein Byte = eine Element-ID.</summary>
     public required byte[] Tiles { get; init; }
-
-    /// <summary>
-    /// Buchstabe der Cave nach Original-Formel (GAME.CPP:39): cavenr+'A'-((cavenr-1)/4).
-    /// Ganzzahldivision inkl. Original-Rundungsverhalten für negative Zwischenwerte bei Index 0.
-    /// </summary>
-    public char Letter
-    {
-        get
-        {
-            var cavenr = (sbyte)Index;
-            var korrektur = (sbyte)((cavenr - 1) / 4);
-            return (char)(cavenr + 'A' - korrektur);
-        }
-    }
 
     public Element GetElement(int x, int y) => (Element)(Tiles[y * Width + x] & 0x0F);
 

@@ -10,6 +10,10 @@ public class GameTickAnimationTests
     private static CaveData BuildCaveData() => new()
     {
         Index = 0,
+        Name = "Test",
+        Description = "",
+        Letter = 'A',
+        IsIntermission = false,
         Width = 5,
         Height = 3,
         JewelQuota = 0,
@@ -36,7 +40,7 @@ public class GameTickAnimationTests
         // (unbedingtes Inkrement, dann Prüfung des neuen Werts) statt des
         // Postfix-in-Bedingung-Musters der clk_*-Zähler — das ergibt Periode 6, nicht 7.
         var data = BuildCaveData();
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
         var input = new InputState();
@@ -61,7 +65,7 @@ public class GameTickAnimationTests
     public void WechselVier_durchlaeuft_genau_die_Werte_0_bis_7()
     {
         var data = BuildCaveData();
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
         var input = new InputState();

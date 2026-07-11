@@ -1,0 +1,46 @@
+# Boulder Dash — Cave H, Level 4
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = H
+Name        = Enchanted wall
+Description = Activate enchanted wall; create jewels
+Kind        = Normal
+Level       = 4
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 20
+CaveTime        = 90
+MagicWallTime   = 20
+JewelValue      = 10
+JewelValueExtra = 20
+Colors          = 2, 14, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+W . r.... .. ..rr..rP... ...r......r.rrW
+W....r..r. ... ..r.  ..r.rr... ...dr.rrW
+W.... ..r...r.... ...F......wwwwwwwwwwwW
+W. rd. r....r..r.r.... ..........  r..rW
+Wwwwwwwwwwwww...r.  .....rr r..r. . r..W
+W....r..r.r.... .  ......rr r..r...  ..W
+W..r.  ..r.  .....r.r. ...  r..r.... ..W
+W.....  .r.  .....r.r...r. . r.. r....rW
+Wr.rr.... ..... ...r r..r.... ...r.....W
+W...... .  .rr. ...  r.. .r....r..d.r..W
+W. r...... ..r...r....r. ...wwwwwwwwwwwW
+W. r...... .. r..r.... ...r......r.rr..W
+Wwwwwwwwwwwww..........  ... ....r.rr..W
+W.. ..rF..r.d.. ...r......r.rF......r..W
+W ...r..r. ..rMMMMMMMM....r.rr...... ..W
+W r.F.r .r.... ....d...rr r..r. . r.. rW
+W..r..r.r.... .  ......r  r..r...  ... W
+Wr.  ..r.  .... rrr.....  r.. .F... r..W
+WF.. ..r.  .....r.rr..r. . r.. r..r. ..W
+W r.... ..... ...r r..r.... ...r.....r W
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

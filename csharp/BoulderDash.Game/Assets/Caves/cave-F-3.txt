@@ -1,0 +1,46 @@
+# Boulder Dash — Cave F, Level 3
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = F
+Name        = Firefly dens
+Description = Each firefly is guarding a jewel
+Kind        = Normal
+Level       = 3
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 7
+CaveTime        = 100
+MagicWallTime   = 20
+JewelValue      = 40
+JewelValueExtra = 60
+Colors          = 14, 10, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+Wwwwwwwwww......r........rrrr.wwwwwwwwwW
+Ww        ........r.r.....r.r.        wW
+Ww dF     ........rrr.......r.     Fd wW
+Wwwwwwwwww..........rr..r.....wwwwwwwwwW
+Ww        ...r.....r.r..r.....        wW
+Ww dF     ...r........r.....r.     Fd wW
+Wwwwwwwwww...rr..r........r...wwwwwwwwwW
+Ww        .....r....r.rr......        wW
+Ww dF     ....................     Fd wW
+Wwwwwwwwww...r.r..............wwwwwwwwwW
+Ww        ....r........rrrr...        wW
+Ww dF     .............rr.r...     Fd wW
+Wwwwwwwwww......r.r.......r...wwwwwwwwwW
+W......r.r......r.r............r....r..W
+Wr................rr..r..............r.W
+W..........r.....r.r..r........r......rW
+Wr.........r......r..r....r...r.......rW
+Wr.P........r..r........r......r.rr...XW
+W...r........r.....r..r........r.rr....W
+W...r...r........r......r.r....r..r....W
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

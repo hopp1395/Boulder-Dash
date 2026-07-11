@@ -1,0 +1,46 @@
+# Boulder Dash — Cave D, Level 3
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = D
+Name        = Butterflies
+Description = Drop boulders on butterflies to create jewels
+Kind        = Normal
+Level       = 3
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 36
+CaveTime        = 80
+MagicWallTime   = 20
+JewelValue      = 5
+JewelValueExtra = 20
+Colors          = 4, 8, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+WPr.....r..............................W
+W.........r..r.........................W
+W.r....................................W
+W....................r.................W
+W..r.....................r.........r...W
+W.........r..............r.............W
+W.......r......r.r...................r.W
+W..............r............r..r.......W
+W........ B....r. B...... B...... B....W
+W........  ......  ......  ......  ....W
+W...................r.........r.....r..W
+W....r..r..r...........r...............W
+W...................r.................rW
+W............r.......r.................W
+W...r..............r...................W
+W................................r.....W
+W...............r.................r....W
+W.....r......r..r..................r...W
+W............r..r.............r........W
+W................................r....XW
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

@@ -10,6 +10,10 @@ public class SoundEventTests
     private static CaveData BuildCaveData(int width, int height, byte[] tiles, byte enchantedWallSeconds = 0) => new()
     {
         Index = 0,
+        Name = "Test",
+        Description = "",
+        Letter = 'A',
+        IsIntermission = false,
         Width = (byte)width,
         Height = (byte)height,
         JewelQuota = 0,
@@ -35,7 +39,7 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 4, tiles);
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
 
@@ -54,7 +58,7 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
 
@@ -73,7 +77,7 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
 
@@ -92,7 +96,7 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
         state.CaveTimeRemaining = 11; // -> nach zwei Sekunden-Countdowns bei 9 (Warnung), dann bei 10 (keine)
@@ -124,7 +128,7 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
