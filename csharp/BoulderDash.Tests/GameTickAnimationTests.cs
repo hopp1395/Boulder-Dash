@@ -47,7 +47,7 @@ public class GameTickAnimationTests
         input.PressRight(); // richtung!=0, damit wechsel_boulder überhaupt läuft
         var camera = new Camera();
         var clocks = new Clocks();
-        var random = new BorlandRandom();
+        var random = new Random(1);
         var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
         var entranceIndex = 0;
 
@@ -71,7 +71,7 @@ public class GameTickAnimationTests
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
-        var random = new BorlandRandom();
+        var random = new Random(1);
         var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
 
         byte[] beobachtet = new byte[9];

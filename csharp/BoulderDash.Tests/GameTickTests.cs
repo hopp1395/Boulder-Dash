@@ -45,7 +45,7 @@ public class GameTickTests
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
-        var random = new BorlandRandom();
+        var random = new Random(1);
         var physics = new CavePhysics(random);
         var cover = new ScreenCover(random);
         var tick = new GameTick(physics, cover);

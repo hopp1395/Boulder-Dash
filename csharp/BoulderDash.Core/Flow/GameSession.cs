@@ -86,7 +86,7 @@ public sealed class GameSession
         "                                        ";
 
     private readonly ICaveRepository _caves;
-    private readonly BorlandRandom _random;
+    private readonly Random _random;
     private readonly CavePhysics _physics;
     private readonly ScreenCover _cover;
     private readonly GameTick _gameTick;
@@ -130,7 +130,9 @@ public sealed class GameSession
     {
         _caves = caves;
         _demoSteps = demoSteps;
-        _random = new BorlandRandom();
+        // Fester Seed: Das Original ruft nie srand(), läuft also bei jedem Start durch dieselbe
+        // rand()-Sequenz. Amoeba-Ausbreitung und ScreenCover sind damit reproduzierbar.
+        _random = new Random(1);
         _physics = new CavePhysics(_random);
         _cover = new ScreenCover(_random);
         _gameTick = new GameTick(_physics, _cover);

@@ -27,24 +27,22 @@ public enum ScreenCoverPhase
 /// 20x12-Fenster. Nach den 69 Runden sind je Zeile im Schnitt ~82% der Zellen frei, den Rest
 /// räumt das abschließende Vollaufdecken.
 ///
-/// Der Zufall kommt aus derselben BorlandRandom-Instanz wie die Physik (ein einziger
-/// deterministischer Strom, wie im Original, wo level_in() und regel() sich rand() teilen) —
-/// der Strom verschiebt sich gegenüber DOS aber ohnehin, da pro Tick 22 statt 4 Zufallszahlen
-/// gezogen werden.
+/// Der Zufall kommt aus derselben Random-Instanz wie die Physik (ein einziger deterministischer
+/// Strom, wie im Original, wo level_in() und regel() sich rand() teilen).
 /// </summary>
 public sealed class ScreenCover
 {
     /// <summary>"loop 69 times" — eine Runde pro GameTick (bei ~20 Ticks/s also ~3,5 s).</summary>
     public const int Iterations = 69;
 
-    private readonly BorlandRandom _random;
+    private readonly Random _random;
 
     private bool[] _covered = [];
     private int _width;
     private int _height;
     private int _iteration;
 
-    public ScreenCover(BorlandRandom random)
+    public ScreenCover(Random random)
     {
         _random = random;
     }
@@ -92,7 +90,7 @@ public sealed class ScreenCover
 
         for (var y = 0; y < _height; y++)
         {
-            var x = _random.Next() % _width;
+            var x = _random.Next(_width);
             _covered[(y * _width) + x] = target;
         }
 

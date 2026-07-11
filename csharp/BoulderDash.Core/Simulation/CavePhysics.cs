@@ -8,9 +8,9 @@ namespace BoulderDash.Core.Simulation;
 /// </summary>
 public sealed class CavePhysics
 {
-    private readonly BorlandRandom _random;
+    private readonly Random _random;
 
-    public CavePhysics(BorlandRandom random)
+    public CavePhysics(Random random)
     {
         _random = random;
     }
@@ -23,7 +23,7 @@ public sealed class CavePhysics
         var width = cave.Width;
         var height = cave.Height;
         byte lavaVar = 0;
-        var lavaNr = (byte)((_random.Next() % 96) + 1);
+        var lavaNr = (byte)(_random.Next(96) + 1);
         byte lf = 3;
 
         var wasAlive = state.Stat == 0;

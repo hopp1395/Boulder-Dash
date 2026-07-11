@@ -7,7 +7,7 @@ namespace BoulderDash.Tests;
 /// <summary>
 /// Spielt die Demo (Assets/demo.txt, Cave A) headless bis zum Ende durch und friert einen
 /// Hash über alle durchlaufenen Grid-Zustände sowie die Endwerte ein — ein Regressionsschutz für
-/// Physik (CavePhysics), Timing (GameTick/Clocks) und RNG (BorlandRandom) gemeinsam. Schlägt
+/// Physik (CavePhysics), Timing (GameTick/Clocks) und RNG (seed-festes System.Random) gemeinsam. Schlägt
 /// dieser Test nach einer absichtlichen Änderung fehl, die eingefrorenen Werte neu ermitteln
 /// (Testausgabe zeigt den tatsächlich berechneten Hash) und hier eintragen.
 /// </summary>

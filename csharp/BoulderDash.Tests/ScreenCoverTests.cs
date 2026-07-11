@@ -7,7 +7,7 @@ public class ScreenCoverTests
     private const int Width = 40;
     private const int Height = 22;
 
-    private static ScreenCover NewCover() => new(new BorlandRandom());
+    private static ScreenCover NewCover() => new(new Random(1));
 
     private static IEnumerable<(int X, int Y)> AllCells()
     {

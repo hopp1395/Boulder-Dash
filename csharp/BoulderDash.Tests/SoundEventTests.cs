@@ -43,7 +43,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new BorlandRandom()).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
 
         Assert.Contains(SoundEvent.Explosion, state.SoundEvents);
     }
@@ -62,7 +62,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new BorlandRandom()).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
 
         Assert.True(state.AmoebaPresent);
     }
@@ -81,7 +81,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new BorlandRandom()).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
 
         Assert.False(state.AmoebaPresent);
     }
@@ -101,7 +101,7 @@ public class SoundEventTests
         state.ResetForCave(data);
         state.CaveTimeRemaining = 11; // -> nach zwei Sekunden-Countdowns bei 9 (Warnung), dann bei 10 (keine)
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var random = new BorlandRandom();
+        var random = new Random(1);
         var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
         var input = new InputState();
         var camera = new Camera();
@@ -132,7 +132,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var random = new BorlandRandom();
+        var random = new Random(1);
         var cover = new ScreenCover(random);
         cover.BeginUncover(data.Width, data.Height);
         var tick = new GameTick(new CavePhysics(random), cover);
