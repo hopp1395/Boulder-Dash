@@ -26,10 +26,9 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Keine Content-Pipeline (kein MGCB): Assets werden zur Laufzeit direkt aus den
-         Original-Binärdateien (LEVEL.BIN, SPRITES.BIN, DEMO.BIN) und den OGG-Sounddateien
-         geladen, siehe Assets/. -->
+         Original-Binärdateien (LEVEL.BIN, SPRITES.BIN, DEMO.BIN) geladen, siehe Assets/.
+         Sound wird vollständig synthetisiert (BoulderDash.Core/Audio), keine Audiodateien nötig. -->
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
-    <PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BoulderDash.Core\BoulderDash.Core.csproj" />

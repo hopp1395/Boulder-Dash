@@ -2,10 +2,10 @@ namespace BoulderDash.Core.Audio;
 
 /// <summary>
 /// Klangparameter der Original-Boulder-Dash-Soundeffekte, nach Peter Broadribbs Analyse der
-/// SID-Registerwerte (https://www.elmerproductions.com/sp/peterb/sounds.html). Nur kurze,
-/// funktionale Effekte (Frequenz + Hüllkurve) — die dort ebenfalls dokumentierte 128-Noten-
-/// Titelmelodie wird bewusst NICHT übernommen (das wäre die geschützte Original-Komposition,
-/// kein technischer Parameter); die Menümusik bleibt bei der vorhandenen bdmusic.ogg.
+/// SID-Registerwerte (https://www.elmerproductions.com/sp/peterb/sounds.html). Kurze,
+/// funktionale Effekte (Frequenz + Hüllkurve); die dort ebenfalls dokumentierte 128-Noten-
+/// Titelmelodie liegt separat in <see cref="ThemeTune"/> (eigene Notendaten, nutzt aber
+/// <see cref="RegisterToHz"/> von hier).
 ///
 /// HoldSeconds/ReleaseSeconds sind bei "sustain at volume X" ohne dokumentierte Gate-Länge
 /// kalibriert (siehe Envelope-Klassenkommentar), ebenso SustainLevel wo die Doku keinen Wert

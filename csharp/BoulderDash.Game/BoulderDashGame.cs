@@ -66,7 +66,7 @@ public class BoulderDashGame : XnaGame
         _caveRenderer = new CaveRenderer(_spriteAtlas);
         _font = new BiosFont(GraphicsDevice);
         _menuRenderer = new MenuRenderer(_spriteAtlas, _font);
-        _audioPlayer = new AudioPlayer(Path.Combine(assets, "Sound"));
+        _audioPlayer = new AudioPlayer();
         _inputAdapter = new InputAdapter();
 
         var caves = CaveFile.LoadAll(Path.Combine(assets, "LEVEL.BIN"));

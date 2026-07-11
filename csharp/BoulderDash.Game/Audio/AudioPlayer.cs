@@ -1,15 +1,13 @@
 using BoulderDash.Core.Audio;
 using BoulderDash.Core.Simulation;
 using Microsoft.Xna.Framework.Audio;
-using NVorbis;
 
 namespace BoulderDash.Game.Audio;
 
 /// <summary>
-/// Synthetisiert die Original-C64-Soundeffekte (Peter Broadribb, elmerproductions.com/sp/
-/// peterb/sounds.html — siehe Core/Audio/SoundRecipes.cs) über SidSynth und spielt sie ab.
-/// Nur die Menümusik (bdmusic.ogg) bleibt eine echte Audiodatei: die dort dokumentierte
-/// 128-Noten-Titelmelodie wird bewusst nicht nachgebildet (geschützte Originalkomposition).
+/// Synthetisiert die Original-C64-Soundeffekte UND die Titelmelodie (Peter Broadribb,
+/// elmerproductions.com/sp/peterb/sounds.html — siehe Core/Audio/SoundRecipes.cs bzw.
+/// Core/Audio/ThemeTune.cs) über SidSynth und spielt sie ab.
 ///
 /// Vereinfachtes Drei-Stimmen-Modell (Original: SID hat 3 Hardware-Stimmen mit fester
 /// Priorität "Stimme 3 = Crack &gt; Amoeba &gt; Zaubermauer, Stimme 2 = Bewegung, Stimme 1 =
@@ -22,7 +20,7 @@ namespace BoulderDash.Game.Audio;
 public sealed class AudioPlayer
 {
     private readonly Random _random = new();
-    private readonly SoundEffectInstance? _music;
+    private readonly SoundEffectInstance _music;
 
     private readonly SoundEffect _collectJewel;
     private readonly SoundEffect _boulderLand;
@@ -37,14 +35,10 @@ public sealed class AudioPlayer
 
     private int _bonusSweepZ = SoundRecipes.BonusSweepInitialZ;
 
-    public AudioPlayer(string soundFolder)
+    public AudioPlayer()
     {
-        var musicPath = Path.Combine(soundFolder, "bdmusic.ogg");
-        if (File.Exists(musicPath))
-        {
-            _music = LoadOgg(musicPath).CreateInstance();
-            _music.IsLooped = true;
-        }
+        _music = BuildEffect(ThemeTune.Render()).CreateInstance();
+        _music.IsLooped = true;
 
         _collectJewel = RenderTriangleEffect(SoundRecipes.CollectJewelHz, SoundRecipes.CollectJewel);
         _boulderLand = RenderNoiseEffect(SoundRecipes.BoulderLandHz, SoundRecipes.BoulderLand);
@@ -153,13 +147,13 @@ public sealed class AudioPlayer
 
     public void PlayMusic()
     {
-        if (_music is not null && _music.State != SoundState.Playing)
+        if (_music.State != SoundState.Playing)
         {
             _music.Play();
         }
     }
 
-    public void StopMusic() => _music?.Stop();
+    public void StopMusic() => _music.Stop();
 
     private static SoundEffect RenderTriangleEffect(double frequencyHz, Envelope envelope) =>
         BuildEffect(SidSynth.RenderTriangle(frequencyHz, envelope));
@@ -199,25 +193,5 @@ public sealed class AudioPlayer
         var pcm = new byte[samples.Length * 2];
         Buffer.BlockCopy(samples, 0, pcm, 0, pcm.Length);
         return new SoundEffect(pcm, SidSynth.SampleRate, AudioChannels.Mono);
-    }
-
-    private static SoundEffect LoadOgg(string path)
-    {
-        using var reader = new VorbisReader(path);
-        var totalFloats = (int)(reader.TotalSamples * reader.Channels);
-        var floatBuffer = new float[totalFloats];
-        reader.ReadSamples(floatBuffer, 0, totalFloats);
-
-        var samples = new short[totalFloats];
-        for (var i = 0; i < totalFloats; i++)
-        {
-            var sample = Math.Clamp(floatBuffer[i], -1f, 1f);
-            samples[i] = (short)(sample * short.MaxValue);
-        }
-
-        var channels = reader.Channels == 2 ? AudioChannels.Stereo : AudioChannels.Mono;
-        var pcm = new byte[samples.Length * 2];
-        Buffer.BlockCopy(samples, 0, pcm, 0, pcm.Length);
-        return new SoundEffect(pcm, reader.SampleRate, channels);
     }
 }
