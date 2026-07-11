@@ -10,10 +10,10 @@ public static class CaveTextWriter
     public static string Write(CaveDefinition def, string[] mapLines)
     {
         var sb = new StringBuilder();
-        var letter = CaveLetter.ToChar(def.Cave);
+        var letter = def.Letter;
         var kind = def.IsIntermission ? "Intermission" : "Normal";
 
-        sb.AppendLine($"# Boulder Dash — Cave {letter}, Level {(int)def.Level}");
+        sb.AppendLine($"# Boulder Dash — Cave {letter}, Level {def.Level}");
         sb.AppendLine("# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).");
         sb.AppendLine();
 
@@ -22,7 +22,7 @@ public static class CaveTextWriter
         sb.AppendLine($"Name        = {def.Name}");
         sb.AppendLine($"Description = {def.Description}");
         sb.AppendLine($"Kind        = {kind}");
-        sb.AppendLine($"Level       = {(int)def.Level}");
+        sb.AppendLine($"Level       = {def.Level}");
         sb.AppendLine($"Width       = {def.Width}");
         sb.AppendLine($"Height      = {def.Height}");
         sb.AppendLine();

@@ -54,8 +54,12 @@ public readonly record struct DrawCommand(
 /// </summary>
 public sealed class CaveDefinition
 {
-    public required Cave Cave { get; init; }
-    public required CaveLevel Level { get; init; }
+    /// <summary>Buchstabe der Cave (A-P regulär, Q-T Intermissions).</summary>
+    public required char Letter { get; init; }
+
+    /// <summary>Schwierigkeitsgrad 1-5.</summary>
+    public required int Level { get; init; }
+
     public required string Name { get; init; }
     public required string Description { get; init; }
     public required bool IsIntermission { get; init; }

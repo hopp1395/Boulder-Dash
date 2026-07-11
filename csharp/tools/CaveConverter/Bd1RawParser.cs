@@ -9,7 +9,7 @@ namespace CaveConverter;
 /// </summary>
 public static class Bd1RawParser
 {
-    public static CaveDefinition[] ParseLevels(byte[] data, Cave cave, string name, string description, bool isIntermission)
+    public static CaveDefinition[] ParseLevels(byte[] data, char letter, string name, string description, bool isIntermission)
     {
         var magicWallTime = data[1];
         var jewelValue = data[2];
@@ -37,8 +37,8 @@ public static class Bd1RawParser
         {
             levels[level] = new CaveDefinition
             {
-                Cave = cave,
-                Level = (CaveLevel)(level + 1),
+                Letter = letter,
+                Level = level + 1,
                 Name = name,
                 Description = description,
                 IsIntermission = isIntermission,

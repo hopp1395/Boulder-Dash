@@ -1,7 +1,9 @@
 namespace BoulderDash.Core.Data;
 
-/// <summary>Quelle fertig aufgebauter Cave-Kachelkarten, unabhängig vom Speicherformat.</summary>
+/// <summary>Quelle fertig aufgebauter Cave-Kachelkarten, unabhängig vom Speicherformat.
+/// Der Name ist der Bezeichner einer Cave in einem bestimmten Schwierigkeitsgrad, z.B. "cave-A-1"
+/// (Groß-/Kleinschreibung egal).</summary>
 public interface ICaveRepository
 {
-    CaveData Get(Cave cave, CaveLevel level);
+    CaveData Get(string name);
 }

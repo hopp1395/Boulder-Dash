@@ -251,7 +251,7 @@ public class GameSessionTests
             };
         }
 
-        public CaveData Get(Cave cave, CaveLevel level) => cave == Cave.CaveA ? _blank : _valid;
+        public CaveData Get(string name) => name.StartsWith("cave-A-", StringComparison.OrdinalIgnoreCase) ? _blank : _valid;
     }
 
     [Fact]

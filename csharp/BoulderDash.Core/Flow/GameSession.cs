@@ -1,6 +1,5 @@
 using BoulderDash.Core.Data;
 using BoulderDash.Core.Simulation;
-using CaveId = BoulderDash.Core.Data.Cave;
 
 namespace BoulderDash.Core.Flow;
 
@@ -54,14 +53,14 @@ public enum TransitionReason
 /// </summary>
 public sealed class GameSession
 {
-    /// <summary>Spielreihenfolge der 20 BD1-Caves: nach je 4 regulären Caves eine Intermission
-    /// (Original-BD1-Struktur). CaveIndex indiziert in diese Tabelle.</summary>
-    private static readonly CaveId[] PlayOrder =
+    /// <summary>Spielreihenfolge der 20 BD1-Caves als Cave-Buchstaben: nach je 4 regulären Caves eine
+    /// Intermission (Q-T, Original-BD1-Struktur). CaveIndex indiziert in diese Tabelle.</summary>
+    private static readonly char[] PlayOrder =
     [
-        CaveId.CaveA, CaveId.CaveB, CaveId.CaveC, CaveId.CaveD, CaveId.CaveQ,
-        CaveId.CaveE, CaveId.CaveF, CaveId.CaveG, CaveId.CaveH, CaveId.CaveR,
-        CaveId.CaveI, CaveId.CaveJ, CaveId.CaveK, CaveId.CaveL, CaveId.CaveS,
-        CaveId.CaveM, CaveId.CaveN, CaveId.CaveO, CaveId.CaveP, CaveId.CaveT,
+        'A', 'B', 'C', 'D', 'Q',
+        'E', 'F', 'G', 'H', 'R',
+        'I', 'J', 'K', 'L', 'S',
+        'M', 'N', 'O', 'P', 'T',
     ];
 
     private const int MaxCaveIndex = 18; // Menü-Auswahl A..P (letzte reguläre Cave in PlayOrder, Index 18=P)
@@ -140,7 +139,14 @@ public sealed class GameSession
     public string MarqueeVisibleText => MarqueeText.Substring(_marqueeOffset, 40);
 
     /// <summary>Cave-Buchstabe der aktuell im Menü gewählten (nicht zwingend geladenen) Cave.</summary>
-    public char SelectedCaveLetter => CaveLetter.ToChar(PlayOrder[CaveIndex]);
+    public char SelectedCaveLetter => PlayOrder[CaveIndex];
+
+    /// <summary>Name, unter dem eine Cave im Repository liegt (= Dateiname ohne Endung).</summary>
+    private static string NameFor(int playIndex, int level) => $"cave-{PlayOrder[playIndex]}-{level}";
+
+    /// <summary>Ob die Cave an dieser Stelle der Spielreihenfolge eine Intermission ist — steht in
+    /// der Cave-Datei selbst (Kind=Intermission) und ist für alle 5 Level gleich.</summary>
+    private bool IsIntermission(int playIndex) => _caves.Get(NameFor(playIndex, 1)).IsIntermission;
 
     public void Update(double deltaSeconds)
     {
@@ -209,7 +215,7 @@ public sealed class GameSession
     {
         if (Phase != SessionPhase.Menu) return;
         var next = CaveIndex + 1;
-        while (next <= MaxCaveIndex && CaveLetter.IsIntermission(PlayOrder[next])) next++;
+        while (next <= MaxCaveIndex && IsIntermission(next)) next++;
         CaveIndex = next > MaxCaveIndex ? (sbyte)MaxCaveIndex : (sbyte)next;
     }
 
@@ -217,7 +223,7 @@ public sealed class GameSession
     {
         if (Phase != SessionPhase.Menu) return;
         var previous = CaveIndex - 1;
-        while (previous >= 0 && CaveLetter.IsIntermission(PlayOrder[previous])) previous--;
+        while (previous >= 0 && IsIntermission(previous)) previous--;
         CaveIndex = previous < 0 ? (sbyte)0 : (sbyte)previous;
     }
 
@@ -249,7 +255,7 @@ public sealed class GameSession
 
         _isDemo = true;
         _menuCaveIndexBeforeDemo = CaveIndex;
-        LoadCaveWithSkip(0, CaveLevel.Level1);
+        LoadCaveWithSkip(0, 1);
 
         if (Phase != SessionPhase.Playing)
         {
@@ -521,13 +527,13 @@ public sealed class GameSession
     /// <summary>Lädt eine Cave über PlayOrder/DifficultyLevel (oder dem optionalen Level-Override,
     /// für die Demo, die immer Level 1 spielt); überspringt (mit Sicherheitsgrenze) Caves ohne
     /// Eingang, falls ein Repository doch einmal eine unspielbare Cave liefert.</summary>
-    private void LoadCaveWithSkip(int caveIndex, CaveLevel? levelOverride = null)
+    private void LoadCaveWithSkip(int caveIndex, int? levelOverride = null)
     {
-        var level = levelOverride ?? (CaveLevel)DifficultyLevel;
+        var level = levelOverride ?? DifficultyLevel;
         for (var attempt = 0; attempt < PlayOrder.Length; attempt++)
         {
             var index = (caveIndex + attempt) % PlayOrder.Length;
-            var data = _caves.Get(PlayOrder[index], level);
+            var data = _caves.Get(NameFor(index, level));
             var cave = new Simulation.Cave(data);
             var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
             if (entranceIndex < 0)

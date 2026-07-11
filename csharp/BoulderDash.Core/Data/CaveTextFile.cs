@@ -90,7 +90,7 @@ public static class CaveTextFile
             throw new FormatException($"{sourceName}: Colors muss genau 3 kommagetrennte Werte haben.");
         }
 
-        var cave = CaveLetter.FromChar(RequireField(caveFields, "Cave", sourceName)[0]);
+        var letter = char.ToUpperInvariant(RequireField(caveFields, "Cave", sourceName)[0]);
         var width = RequireByte(caveFields, "Width", sourceName);
         var height = RequireByte(caveFields, "Height", sourceName);
         var tiles = ParseMap(sourceName, mapLines, width, height);
@@ -107,10 +107,10 @@ public static class CaveTextFile
 
         return new CaveData
         {
-            Index = (int)cave,
+            Index = letter - 'A',
             Name = RequireField(caveFields, "Name", sourceName),
             Description = RequireField(caveFields, "Description", sourceName),
-            Letter = CaveLetter.ToChar(cave),
+            Letter = letter,
             IsIntermission = isIntermission,
             Width = width,
             Height = height,

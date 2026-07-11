@@ -47,11 +47,10 @@ foreach (var entry in json.RootElement.EnumerateArray())
     var hex = entry.GetProperty("hex").GetString()!;
     var data = Convert.FromHexString(hex);
 
-    var cave = CaveLetter.FromChar(letter);
     var (name, description) = caveNames[letter];
     var isIntermission = typ == "Intermission";
 
-    var levels = Bd1RawParser.ParseLevels(data, cave, name, description, isIntermission);
+    var levels = Bd1RawParser.ParseLevels(data, letter, name, description, isIntermission);
     var referenceMaps = ReferenceMaps.Load(Path.Combine(referenceDir, $"cave_{letter}.txt"));
 
     for (var levelIndex = 0; levelIndex < levels.Length; levelIndex++)
@@ -70,7 +69,7 @@ foreach (var entry in json.RootElement.EnumerateArray())
             mismatched.Add($"{letter}-{levelIndex + 1}");
         }
 
-        var path = Path.Combine(outputDir, CaveTextRepository.FileName(cave, def.Level));
+        var path = Path.Combine(outputDir, $"cave-{letter}-{def.Level}.txt");
         File.WriteAllText(path, CaveTextWriter.Write(def, renderedMap));
         written++;
 

@@ -1,24 +1,24 @@
 namespace BoulderDash.Core.Data;
 
 /// <summary>ICaveRepository-Implementierung für das Cave-Textformat: liest beim Erzeugen alle
-/// cave-{Buchstabe}-{Level}.txt-Dateien aus einem Verzeichnis und baut daraus die Kachelkarten.</summary>
+/// cave-*.txt-Dateien eines Verzeichnisses ein; der Dateiname ohne Endung (z.B. "cave-A-1") ist
+/// der Name, unter dem die Cave abrufbar ist. Neue Caves erfordern daher nur eine neue Datei.</summary>
 public sealed class CaveTextRepository : ICaveRepository
 {
-    private readonly Dictionary<(Cave Cave, CaveLevel Level), CaveData> _caves = [];
+    private readonly Dictionary<string, CaveData> _caves = new(StringComparer.OrdinalIgnoreCase);
 
     public CaveTextRepository(string cavesDirectory)
     {
-        foreach (Cave cave in Enum.GetValues<Cave>())
+        foreach (var path in Directory.EnumerateFiles(cavesDirectory, "cave-*.txt"))
         {
-            foreach (CaveLevel level in Enum.GetValues<CaveLevel>())
-            {
-                var path = Path.Combine(cavesDirectory, FileName(cave, level));
-                _caves[(cave, level)] = CaveTextFile.Parse(File.ReadAllText(path), path);
-            }
+            _caves[Path.GetFileNameWithoutExtension(path)] = CaveTextFile.Parse(File.ReadAllText(path), path);
         }
     }
 
-    public CaveData Get(Cave cave, CaveLevel level) => _caves[(cave, level)];
+    /// <summary>Namen aller geladenen Caves (Dateinamen ohne Endung).</summary>
+    public IReadOnlyCollection<string> Names => _caves.Keys;
 
-    public static string FileName(Cave cave, CaveLevel level) => $"cave-{CaveLetter.ToChar(cave)}-{(int)level}.txt";
+    public CaveData Get(string name) => _caves.TryGetValue(name, out var cave)
+        ? cave
+        : throw new KeyNotFoundException($"Cave '{name}' nicht gefunden (erwartet wird eine Datei {name}.txt im Cave-Verzeichnis).");
 }

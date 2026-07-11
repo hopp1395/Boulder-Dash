@@ -110,10 +110,10 @@ public static class CaveMapBuilder
 
         return new CaveData
         {
-            Index = (int)def.Cave,
+            Index = def.Letter - 'A',
             Name = def.Name,
             Description = def.Description,
-            Letter = CaveLetter.ToChar(def.Cave),
+            Letter = def.Letter,
             IsIntermission = def.IsIntermission,
             Width = width,
             Height = height,
