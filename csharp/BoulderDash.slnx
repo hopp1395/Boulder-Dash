@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="BoulderDash.Core/BoulderDash.Core.csproj" />
+  <Project Path="BoulderDash.Game/BoulderDash.Game.csproj" />
+  <Project Path="BoulderDash.Tests/BoulderDash.Tests.csproj" />
+</Solution>
