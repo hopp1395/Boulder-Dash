@@ -75,7 +75,8 @@ public sealed class CavePhysics
         }
 
         // Eingeschlossen (lf==3, alles zu Jewel) oder überwuchert (>95 Zellen, alles zu Boulder) (:949-956)
-        if (lavaVar > 95 || lf == 3)
+        var converted = lavaVar > 95 || lf == 3;
+        if (converted)
         {
             for (var i = 0; i < width * height; i++)
             {
@@ -85,6 +86,9 @@ public sealed class CavePhysics
                 }
             }
         }
+
+        // Für die Amoeba-Drone (kein Original-Äquivalent, siehe AudioPlayer/SoundRecipes).
+        state.AmoebaPresent = lavaVar > 0 && !converted;
     }
 
     /// <summary>Explosion -&gt; Jewel / Explosion -&gt; Leer, wenn die Animation ausgelaufen ist (:740-743).</summary>
@@ -569,6 +573,7 @@ public sealed class CavePhysics
         }
 
         state.WechselExplo = 1;
+        state.SoundEvents.Enqueue(SoundEvent.Explosion);
     }
 
     /// <summary>anfang(): Eingangsaufbau — Explosion bei 92, Rockford-Spawn bei 99 (:667-677).

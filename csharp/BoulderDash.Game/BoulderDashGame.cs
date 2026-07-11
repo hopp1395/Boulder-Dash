@@ -39,6 +39,7 @@ public class BoulderDashGame : XnaGame
     private PaletteContext _paletteContext = PaletteContext.None;
     private CaveData? _lastPaletteCaveData;
     private Rgb? _lastExitOverride;
+    private SessionPhase _lastPhase = SessionPhase.Menu;
 
     public BoulderDashGame()
     {
@@ -81,10 +82,17 @@ public class BoulderDashGame : XnaGame
 
         HandlePhaseInput();
 
+        if (_session.Phase == SessionPhase.LevelEndBonus && _lastPhase != SessionPhase.LevelEndBonus)
+        {
+            _audioPlayer.ResetBonusSweep();
+        }
+
+        _lastPhase = _session.Phase;
+
         _session.Update(gameTime.ElapsedGameTime.TotalSeconds);
 
         SyncPalette();
-        _audioPlayer.DrainAndPlay(_session.State.SoundEvents);
+        _audioPlayer.Update(_session.State);
 
         if (_session.Phase == SessionPhase.Menu)
         {

@@ -61,6 +61,10 @@ public sealed class GameTick
             if (state.EntranceProgress > 99 && state.CaveTimeRemaining > 0)
             {
                 state.CaveTimeRemaining--;
+                if (state.CaveTimeRemaining <= 9)
+                {
+                    state.SoundEvents.Enqueue(SoundEvent.TimeWarning);
+                }
             }
 
             if (state.EnchantedWallRunning && state.EnchantedWallTimeRemaining > 0)
@@ -100,6 +104,7 @@ public sealed class GameTick
         if (state.EntranceProgress < 65 && !state.IsCaveEnded)
         {
             _dissolve.Tick(state.EntranceProgress);
+            state.SoundEvents.Enqueue(SoundEvent.Uncover);
         }
     }
 }

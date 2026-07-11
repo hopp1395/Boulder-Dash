@@ -25,6 +25,10 @@ public sealed class GameState
     public byte EnchantedWallTimeRemaining { get; set; }
     public bool EnchantedWallRunning { get; set; }
 
+    /// <summary>Ob die Cave noch mindestens eine Amoeba-Zelle enthält — steuert die
+    /// Amoeba-Dauerklang-Drone (nur zusammen mit EntranceProgress&gt;99, siehe AudioPlayer).</summary>
+    public bool AmoebaPresent { get; set; }
+
     public bool IsCaveEnded { get; set; }
     public bool AdvanceToNextCave { get; set; }
 
