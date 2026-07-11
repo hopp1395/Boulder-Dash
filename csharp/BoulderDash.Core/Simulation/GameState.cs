@@ -29,6 +29,18 @@ public sealed class GameState
     /// Amoeba-Dauerklang-Drone (nur zusammen mit EntranceProgress&gt;99, siehe AudioPlayer).</summary>
     public bool AmoebaPresent { get; set; }
 
+    /// <summary>Restliche Spielsekunden, in denen die Amoeba noch langsam wächst; bei 0 schaltet sie
+    /// auf schnelles Wachstum um (BD1 "amoeba slow growth time", siehe CavePhysics.ProcessAmoeba).</summary>
+    public byte AmoebaSlowGrowthRemaining { get; set; }
+
+    /// <summary>Amoeba-Zellen, die der vorige Cave-Scan gezählt hat. Die Umwandlung greift laut Spec
+    /// erst im Folge-Scan, entscheidet also immer auf Basis der Zahlen des vorigen.</summary>
+    public int AmoebaCountLastScan { get; set; }
+
+    /// <summary>Ob im vorigen Scan zwar Amoeba existierte, aber keine einzige Zelle einen freien
+    /// Nachbarn hatte ("suffocated") — dann wird sie im nächsten Scan zu Jewels.</summary>
+    public bool AmoebaSuffocatedLastScan { get; set; }
+
     public bool IsCaveEnded { get; set; }
     public bool AdvanceToNextCave { get; set; }
 
@@ -71,6 +83,10 @@ public sealed class GameState
         PointsPerJewelAfterQuota = cave.PointsPerJewelAfterQuota;
         EnchantedWallTimeRemaining = cave.EnchantedWallSeconds;
         EnchantedWallRunning = false;
+        AmoebaPresent = false;
+        AmoebaSlowGrowthRemaining = cave.AmoebaSlowGrowthSeconds;
+        AmoebaCountLastScan = 0;
+        AmoebaSuffocatedLastScan = false;
         IsCaveEnded = false;
         AdvanceToNextCave = false;
         EntranceProgress = 0;

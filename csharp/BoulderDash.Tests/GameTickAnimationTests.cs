@@ -22,6 +22,7 @@ public class GameTickAnimationTests
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = 0,
+        AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = 10,
         PointsPerJewelAfterQuota = 20,
         GameSpeed = CaveSpeed.For(1, isIntermission: false),

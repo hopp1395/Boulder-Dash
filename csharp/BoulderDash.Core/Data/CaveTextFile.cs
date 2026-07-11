@@ -131,6 +131,7 @@ public static class CaveTextFile
             CameraStartX = (byte)cameraStartX,
             CameraStartY = (byte)cameraStartY,
             EnchantedWallSeconds = RequireByte(rulesFields, "MagicWallTime", sourceName),
+            AmoebaSlowGrowthSeconds = RequireByte(rulesFields, "AmoebaTime", sourceName),
             PointsPerJewelBeforeQuota = RequireByte(rulesFields, "JewelValue", sourceName),
             PointsPerJewelAfterQuota = RequireByte(rulesFields, "JewelValueExtra", sourceName),
             // Millisekunden pro Cave-Scan; in BD1 aus Level und Kind abgeleitet, steht aber wie alle

@@ -15,6 +15,7 @@ JewelsNeeded    = 21
 CaveTime        = 70
 GameSpeed       = 106
 MagicWallTime   = 0
+AmoebaTime      = 0
 JewelValue      = 15
 JewelValueExtra = 0
 Colors          = 9, 8, 9

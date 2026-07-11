@@ -23,6 +23,7 @@ public class CavePhysicsTests
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = enchantedWallSeconds,
+        AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = pointsBefore,
         PointsPerJewelAfterQuota = pointsAfter,
         GameSpeed = CaveSpeed.For(1, isIntermission: false),

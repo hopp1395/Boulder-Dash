@@ -71,6 +71,13 @@ public sealed class GameTick
             {
                 state.EnchantedWallTimeRemaining--;
             }
+
+            // Die Amoeba-Zeit läuft wie die Zaubermauer-Zeit in Spielsekunden, also tempo-unabhängig
+            // (siehe CaveSpeed) — nach ihrem Ablauf wächst die Amoeba schnell (CavePhysics.ProcessAmoeba).
+            if (state.EntranceProgress > 99 && state.AmoebaSlowGrowthRemaining > 0)
+            {
+                state.AmoebaSlowGrowthRemaining--;
+            }
         }
 
         if (state.EnchantedWallTimeRemaining == 0)
