@@ -166,7 +166,7 @@ public class BoulderDashGame : XnaGame
         }
         else if (_session.Cave is not null)
         {
-            _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.Dissolve);
+            _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.ScreenCover);
 
             var statusText = BuildStatusLine();
             _font.DrawText(_spriteBatch, statusText, Vector2.Zero, Color.White);

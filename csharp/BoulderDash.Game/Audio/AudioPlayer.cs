@@ -60,16 +60,26 @@ public sealed class AudioPlayer
     }
 
     /// <summary>Einmal pro Frame: leert die Ereigniswarteschlange, spielt Einzelsounds ab und
-    /// setzt die beiden Dauerklänge (Amoeba/Zaubermauer) je nach aktuellem Spielzustand.</summary>
+    /// setzt die beiden Dauerklänge (Amoeba/Zaubermauer) je nach aktuellem Spielzustand.
+    /// Während des Auf-/Zudeckens übertönt der Uncover-Sound alle anderen (BD1) — die übrigen
+    /// Ereignisse werden verworfen, die Dauerklänge schweigen.</summary>
     public void Update(GameState state)
     {
+        var covering = state.ScreenCoverActive;
+
         while (state.SoundEvents.Count > 0)
         {
-            Play(state.SoundEvents.Dequeue(), state);
+            var soundEvent = state.SoundEvents.Dequeue();
+            if (covering && soundEvent != SoundEvent.Uncover)
+            {
+                continue;
+            }
+
+            Play(soundEvent, state);
         }
 
-        SetLoopState(_amoebaLoop, state.AmoebaPresent && state.EntranceProgress > 99);
-        SetLoopState(_enchantedWallLoop, state.EnchantedWallRunning);
+        SetLoopState(_amoebaLoop, !covering && state.AmoebaPresent && state.EntranceProgress > 99);
+        SetLoopState(_enchantedWallLoop, !covering && state.EnchantedWallRunning);
     }
 
     private static void SetLoopState(SoundEffectInstance loop, bool shouldPlay)

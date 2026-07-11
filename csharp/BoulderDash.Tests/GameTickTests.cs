@@ -47,8 +47,8 @@ public class GameTickTests
         var clocks = new Clocks();
         var random = new BorlandRandom();
         var physics = new CavePhysics(random);
-        var dissolve = new Dissolve(random);
-        var tick = new GameTick(physics, dissolve);
+        var cover = new ScreenCover(random);
+        var tick = new GameTick(physics, cover);
 
         // Eintretend mit EntranceProgress==92 löst die Explosion aus -> 93 Ticks nötig
         // (Tick 1 bringt EntranceProgress von 0 auf 1, ..., Tick 93 sieht beim Eintritt 92).

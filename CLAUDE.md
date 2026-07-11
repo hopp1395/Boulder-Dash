@@ -37,6 +37,8 @@ Drei Projekte:
 
 **Treue-Prinzip:** Der Port ist eine verhaltensgetreue Transliteration des DOS-Originals. Kommentare zitieren die Originalstellen (z. B. „BOULDER.CPP:397-398"); Original-Quirks sind bewusst übernommen und als solche dokumentiert (z. B. überschreibt jeder Tastendruck in `InputState` Flags/Richtung komplett). Bei Verhaltensfragen immer die zitierte Originalzeile in `src/` nachschlagen, nicht aus dem Gedächtnis rekonstruieren.
 
+**Ausnahmen zugunsten des C64-Originals (BD1):** Wo das DOS-Original vom C64-Vorbild abweicht, gewinnt inzwischen BD1 — die Spieldaten (Caves, Demo) und der Sound stammen ohnehin von dort. Betroffen ist außerdem das Auf-/Zudecken des Bildschirms (`ScreenCover`): 69 Runden mit je einer Zufallsposition pro Cave-Zeile, danach vollständiges Aufdecken; die Cave läuft dabei schon normal weiter, und am Cave-Ende deckt sich der Bildschirm wieder zu. Das DOS-Original machte beides anders (`level_in()` räumte 4 Zufallszellen der Sichtfenster-Maske pro Tick und startete `regel()` erst danach; `level_out()` scrollte den Bildschirm hoch statt zuzudecken).
+
 Schichten in Core:
 
 - **Simulation/** — der Kern: `GameTick` ist das Äquivalent der Original-Timer-ISR und treibt pro Tick `Clocks` (clk_1/4/18-Zähler), `CavePhysics` (regel(): fallende Steine/Diamanten, Gegner, Amoeba, Explosionen), Animationszähler und `Camera`. `BorlandRandom` repliziert den Borland-`rand()` (wichtig für Determinismus/Golden-State), `InputState` die Mov_Rockford-Scancode-Semantik, `Palette` die 6-Bit-VGA-DAC-Farben.

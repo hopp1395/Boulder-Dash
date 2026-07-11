@@ -48,7 +48,7 @@ public class GameTickAnimationTests
         var camera = new Camera();
         var clocks = new Clocks();
         var random = new BorlandRandom();
-        var tick = new GameTick(new CavePhysics(random), new Dissolve(random));
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
         var entranceIndex = 0;
 
         byte[] beobachtet = new byte[8];
@@ -72,7 +72,7 @@ public class GameTickAnimationTests
         var camera = new Camera();
         var clocks = new Clocks();
         var random = new BorlandRandom();
-        var tick = new GameTick(new CavePhysics(random), new Dissolve(random));
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
 
         byte[] beobachtet = new byte[9];
         for (var i = 0; i < 9; i++)

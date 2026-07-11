@@ -40,6 +40,10 @@ public sealed class GameState
 
     public bool ExitFlashOn { get; set; }
 
+    /// <summary>Ob gerade auf- oder zugedeckt wird (ScreenCover) — der Uncover-Sound übertönt
+    /// dann alle anderen Sounds, siehe AudioPlayer.</summary>
+    public bool ScreenCoverActive { get; set; }
+
     /// <summary>Überschreibt Palettenfarbe 0 während des Ausgangs-Blitzes (ende(), BOULDER.CPP:683-684). Null = normale Cave-Farbe.</summary>
     public Rgb? PaletteColor0Override { get; set; }
 
@@ -72,6 +76,7 @@ public sealed class GameState
         EntranceProgress = 0;
         Stat = 0;
         ExitFlashOn = false;
+        ScreenCoverActive = false;
         PaletteColor0Override = null;
         WechselExplo = 0;
         WechselVier = 0;

@@ -9,6 +9,17 @@ public class GameSessionTests
 
     private static GameSession NewRealSession() => new(new CaveTextRepository(CavesPath));
 
+    /// <summary>Pumpt die Session in Frame-Schritten durch die Zudeck-Animation am Cave-Ende
+    /// (ScreenCovering: 69 Runden, eine pro Tick — mehr, als AdvanceSimulation pro Update-Aufruf
+    /// zulässt).</summary>
+    private static void AdvanceThroughCovering(GameSession session)
+    {
+        for (var frame = 0; frame < 600 && session.Phase == SessionPhase.ScreenCovering; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+    }
+
     [Fact]
     public void Menu_Cave_Auswahl_ist_auf_A_bis_P_begrenzt()
     {
@@ -70,6 +81,9 @@ public class GameSessionTests
         session.MenuStart();
 
         session.EscapePressed();
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase); // erst deckt sich der Bildschirm zu
+
+        AdvanceThroughCovering(session);
         Assert.Equal(SessionPhase.CaveTransition, session.Phase);
 
         session.Update(10.0); // Übergangspause (0,5s) sicher überschreiten
@@ -94,6 +108,9 @@ public class GameSessionTests
         Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
 
         session.Update(10.0); // Bonuszählung + Nachpause sicher abschließen
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
+
+        AdvanceThroughCovering(session);
         Assert.Equal(SessionPhase.CaveTransition, session.Phase);
 
         session.Update(10.0); // Übergangspause abschließen -> nächste Cave (B)
@@ -119,7 +136,8 @@ public class GameSessionTests
         session.Update(0.001);
         Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
 
-        session.Update(10.0); // Nachpause abschließen -> CaveTransition
+        session.Update(10.0); // Nachpause abschließen -> ScreenCovering
+        AdvanceThroughCovering(session); // Zudecken -> CaveTransition
         session.Update(10.0); // Übergangspause abschließen -> nächste Cave (B), Playing
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
@@ -146,8 +164,9 @@ public class GameSessionTests
 
         session.Update(10.0); // delay(1000) überschreiten
         session.AnyKeyPressed();
-        Assert.Equal(SessionPhase.CaveTransition, session.Phase);
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
 
+        AdvanceThroughCovering(session);
         session.Update(10.0);
         Assert.Equal(SessionPhase.Playing, session.Phase);
         Assert.Equal('A', session.CurrentCaveData!.Letter); // dieselbe Cave, kein Fortschritt
@@ -200,10 +219,49 @@ public class GameSessionTests
 
         session.Update(10.0); // zweite Pause
         session.AnyKeyPressed();
-        Assert.Equal(SessionPhase.CaveTransition, session.Phase);
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
 
+        AdvanceThroughCovering(session);
         session.Update(10.0);
         Assert.Equal(SessionPhase.Menu, session.Phase);
+    }
+
+    [Fact]
+    public void Cave_startet_vollstaendig_verdeckt_und_ist_nach_dem_Aufdecken_frei()
+    {
+        // BD1: die Cave liegt zu Beginn komplett unter der animierten Stahlwand und wird
+        // zeilenweise-zufällig freigelegt (69 Runden, eine pro Tick).
+        var session = NewRealSession();
+        session.MenuStart();
+
+        var cave = session.Cave!;
+        Assert.True(session.ScreenCover.IsActive);
+        Assert.True(session.ScreenCover.IsCovered(0, 0));
+        Assert.True(session.ScreenCover.IsCovered(cave.Width - 1, cave.Height - 1));
+
+        for (var frame = 0; frame < 600 && session.ScreenCover.IsActive; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+
+        Assert.False(session.ScreenCover.IsActive);
+        Assert.False(session.ScreenCover.IsCovered(0, 0));
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+    }
+
+    [Fact]
+    public void Cave_Ende_deckt_den_Bildschirm_wieder_zu()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+
+        session.EscapePressed();
+        AdvanceThroughCovering(session);
+
+        var cave = session.Cave!;
+        Assert.Equal(SessionPhase.CaveTransition, session.Phase);
+        Assert.True(session.ScreenCover.IsCovered(0, 0));
+        Assert.True(session.ScreenCover.IsCovered(cave.Width - 1, cave.Height - 1));
     }
 
     /// <summary>Test-Repository, das für Cave A eine Karte ohne Eingang liefert und für alle

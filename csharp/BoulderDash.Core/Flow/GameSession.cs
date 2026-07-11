@@ -10,6 +10,10 @@ public enum SessionPhase
     LevelEndBonus,
     DeathPause,
     GameOverMessage,
+
+    /// <summary>Der Bildschirm deckt sich am Cave-Ende wieder mit der animierten Stahlwand zu
+    /// (ScreenCover, BD1) — läuft vor jeder CaveTransition, egal aus welchem Grund.</summary>
+    ScreenCovering,
     CaveTransition,
 
     /// <summary>Wartephase nach F2, vor dem ersten Demo-Zug — entspricht delay(7000) in
@@ -84,7 +88,7 @@ public sealed class GameSession
     private readonly ICaveRepository _caves;
     private readonly BorlandRandom _random;
     private readonly CavePhysics _physics;
-    private readonly Dissolve _dissolve;
+    private readonly ScreenCover _cover;
     private readonly GameTick _gameTick;
 
     private double _phaseTimer;
@@ -117,9 +121,10 @@ public sealed class GameSession
     public Simulation.Cave? Cave { get; private set; }
     public CaveData? CurrentCaveData { get; private set; }
 
-    /// <summary>Auflöse-Overlay für die Rendering-Schicht (newmask-Äquivalent) — eine Instanz für
-    /// die gesamte Session, da level_in() und regel() im Original denselben rand()-Strom teilen.</summary>
-    public Dissolve Dissolve => _dissolve;
+    /// <summary>Verdeckungs-Overlay für die Rendering-Schicht — eine Instanz für die gesamte
+    /// Session, die sich den Zufallsstrom mit der Physik teilt (wie im Original level_in() und
+    /// regel()).</summary>
+    public ScreenCover ScreenCover => _cover;
 
     public GameSession(ICaveRepository caves, IReadOnlyList<DemoStep>? demoSteps = null)
     {
@@ -127,8 +132,8 @@ public sealed class GameSession
         _demoSteps = demoSteps;
         _random = new BorlandRandom();
         _physics = new CavePhysics(_random);
-        _dissolve = new Dissolve(_random);
-        _gameTick = new GameTick(_physics, _dissolve);
+        _cover = new ScreenCover(_random);
+        _gameTick = new GameTick(_physics, _cover);
 
         State = new GameState();
         Input = new InputState();
@@ -166,6 +171,9 @@ public sealed class GameSession
                 break;
             case SessionPhase.GameOverMessage:
                 UpdateGameOverMessage(deltaSeconds);
+                break;
+            case SessionPhase.ScreenCovering:
+                UpdateScreenCovering(deltaSeconds);
                 break;
             case SessionPhase.CaveTransition:
                 UpdateCaveTransition(deltaSeconds);
@@ -479,6 +487,22 @@ public sealed class GameSession
         // AnyKeyPressed() übernimmt ab _phaseTimer<=0.
     }
 
+    /// <summary>Zudeck-Animation am Cave-Ende (BD1): die Simulation läuft dabei weiter (wie im
+    /// Original die ISR bis zum Ende von game_start()), nur die Stahlwand schiebt sich Runde für
+    /// Runde wieder über die Cave. Danach erst die Übergangspause (delay(500)).</summary>
+    private void UpdateScreenCovering(double deltaSeconds)
+    {
+        AdvanceSimulation(deltaSeconds);
+
+        if (_cover.IsActive)
+        {
+            return;
+        }
+
+        Phase = SessionPhase.CaveTransition;
+        _phaseTimer = CaveTransitionPauseSeconds;
+    }
+
     private void UpdateCaveTransition(double deltaSeconds)
     {
         _phaseTimer -= deltaSeconds;
@@ -517,11 +541,13 @@ public sealed class GameSession
         }
     }
 
+    /// <summary>Einziger Choke-Point aller Cave-Enden (Erfolg, Zeitablauf, Tod, Escape, Demo-Ende):
+    /// erst deckt sich der Bildschirm zu (BD1), dann läuft die Übergangspause.</summary>
     private void BeginTransition(TransitionReason reason)
     {
         _transitionReason = reason;
-        Phase = SessionPhase.CaveTransition;
-        _phaseTimer = CaveTransitionPauseSeconds;
+        _cover.BeginCover();
+        Phase = SessionPhase.ScreenCovering;
     }
 
     /// <summary>Lädt eine Cave über PlayOrder/DifficultyLevel (oder dem optionalen Level-Override,
@@ -549,6 +575,7 @@ public sealed class GameSession
             Input.ResetForNewCave();
             Camera.ResetTo(data.CameraStartX, data.CameraStartY);
             Clocks.Reset();
+            _cover.BeginUncover(cave.Width, cave.Height);
 
             var divisor = 59659 / data.GameSpeed;
             _secondsPerTick = divisor / 1193182.0;
