@@ -229,9 +229,16 @@ public sealed class GameSession
         }
     }
 
-    private void UpdatePlaying(double deltaSeconds)
+    /// <summary>Treibt Zähler, Kamera-Scroll und (solange IsCaveEnded=false) Physik einen oder
+    /// mehrere Ticks weiter. Im Original bleibt die Timer-ISR bis Init_ISR(DEINSTALL) aktiv —
+    /// das passiert in game_start() ERST NACH den Todes-/Bonus-Pausen (BOULDER.CPP:405-422),
+    /// weshalb Animation (und bei einem Tod ohne level_ende auch die Physik) während
+    /// LevelEndBonus/DeathPause/GameOverMessage weiterläuft, nicht erst wieder in Playing.
+    /// Nur während CaveTransition ist die ISR im Original bereits deinstalliert (Start_menu:
+    /// delay(500);level_out(); läuft nach game_start()s Rückkehr) — dort bewusst kein Tick.</summary>
+    private void AdvanceSimulation(double deltaSeconds)
     {
-        if (Cave is null || CurrentCaveData is null)
+        if (Cave is null)
         {
             return;
         }
@@ -239,28 +246,39 @@ public sealed class GameSession
         _tickAccumulator += deltaSeconds;
         const int maxTicksPerFrame = 8;
         var ticks = 0;
-        while (_tickAccumulator >= _secondsPerTick && ticks < maxTicksPerFrame && !State.IsCaveEnded)
+        while (_tickAccumulator >= _secondsPerTick && ticks < maxTicksPerFrame)
         {
             _gameTick.Tick(Cave, State, Input, Camera, Clocks, _entranceIndex);
             _tickAccumulator -= _secondsPerTick;
             ticks++;
         }
+    }
 
-        if (State.IsCaveEnded)
+    private void UpdatePlaying(double deltaSeconds)
+    {
+        if (Cave is null || CurrentCaveData is null)
         {
-            if (State.Stat == 0)
-            {
-                Phase = SessionPhase.LevelEndBonus;
-                _bonusSubTimer = 0;
-                _postBonusPauseActive = false;
-            }
-            else
-            {
-                State.Chances--;
-                Phase = SessionPhase.DeathPause;
-                _phaseTimer = DeathPauseSeconds;
-                ShowGameOverMessage = false;
-            }
+            return;
+        }
+
+        AdvanceSimulation(deltaSeconds);
+
+        // Original prüft in game_start() ZWEI unabhängige Abbruchbedingungen
+        // (BOULDER.CPP:397-398: "if(level_ende==0xFF) break; if(stat!=0) break;") — ein Tod
+        // durch einen fallenden Stein setzt level_ende NICHT, nur stat.
+        if (State.Stat != 0)
+        {
+            // Level_End() zählt Bonus nur bei stat==0 — bei Tod also nie, unabhängig von IsCaveEnded.
+            State.Chances--;
+            Phase = SessionPhase.DeathPause;
+            _phaseTimer = DeathPauseSeconds;
+            ShowGameOverMessage = false;
+        }
+        else if (State.IsCaveEnded)
+        {
+            Phase = SessionPhase.LevelEndBonus;
+            _bonusSubTimer = 0;
+            _postBonusPauseActive = false;
         }
     }
 
@@ -269,6 +287,8 @@ public sealed class GameSession
 
     private void UpdateLevelEndBonus(double deltaSeconds)
     {
+        AdvanceSimulation(deltaSeconds);
+
         if (State.CaveTimeRemaining > 0)
         {
             _bonusSubTimer += deltaSeconds;
@@ -303,6 +323,8 @@ public sealed class GameSession
 
     private void UpdateDeathPause(double deltaSeconds)
     {
+        AdvanceSimulation(deltaSeconds);
+
         _phaseTimer -= deltaSeconds;
         if (_phaseTimer > 0)
         {
@@ -321,6 +343,8 @@ public sealed class GameSession
 
     private void UpdateGameOverMessage(double deltaSeconds)
     {
+        AdvanceSimulation(deltaSeconds);
+
         _phaseTimer -= deltaSeconds;
         // AnyKeyPressed() übernimmt ab _phaseTimer<=0.
     }
@@ -382,6 +406,7 @@ public sealed class GameSession
             Cave = cave;
             _entranceIndex = entranceIndex;
             State.ResetForCave(data);
+            Input.ResetForNewCave();
             Camera.ResetTo(data.CameraStartX, data.CameraStartY);
             Clocks.Reset();
 

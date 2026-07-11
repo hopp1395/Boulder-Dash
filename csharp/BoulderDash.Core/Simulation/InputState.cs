@@ -70,4 +70,15 @@ public sealed class InputState
             Direction = 0;
         }
     }
+
+    /// <summary>Wie die level_laden-Rücksetzung von richtung/flags/kop (BOULDER.CPP:981-982,991):
+    /// bei jedem Cave-Wechsel aufrufen, sonst bewegt sich Rockford in der neuen Cave sofort in die
+    /// zuletzt gehaltene Richtung weiter (z.B. die Richtung, in der der vorige Ausgang betreten
+    /// wurde). FacingLeft(status) wird im Original NICHT zurückgesetzt, bleibt also unverändert.</summary>
+    public void ResetForNewCave()
+    {
+        Direction = 0;
+        Flags = 0;
+        GrabModifier = 0;
+    }
 }

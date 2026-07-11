@@ -102,13 +102,42 @@ public class GameSessionTests
     }
 
     [Fact]
+    public void Bewegungsrichtung_wird_beim_Cave_Wechsel_zurueckgesetzt()
+    {
+        // Regressionstest: Ohne Reset bewegte sich Rockford in der neuen Cave automatisch in die
+        // Richtung weiter, in der zuvor der Ausgang der alten Cave betreten wurde (Nutzer-Feedback:
+        // "bewegt sich rockford in die gleiche richtung ... automatisch ohne eine taste zu drücken").
+        var session = NewRealSession();
+        session.MenuStart();
+        session.Input.PressRight(); // simuliert: Taste beim Betreten des Ausgangs noch gehalten
+
+        session.State.IsCaveEnded = true;
+        session.State.Stat = 0;
+        session.State.AdvanceToNextCave = true;
+        session.State.CaveTimeRemaining = 0;
+
+        session.Update(0.001);
+        Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
+
+        session.Update(10.0); // Nachpause abschließen -> CaveTransition
+        session.Update(10.0); // Übergangspause abschließen -> nächste Cave (B), Playing
+
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+        Assert.Equal(0, session.Input.Direction);
+        Assert.Equal(0, session.Input.Flags);
+    }
+
+    [Fact]
     public void Tod_kostet_ein_Leben_und_laedt_dieselbe_Cave_erneut()
     {
         var session = NewRealSession();
         session.MenuStart();
         var chancesVorher = session.State.Chances;
 
-        session.State.IsCaveEnded = true;
+        // Ein Tod durch einen fallenden Stein setzt NUR stat, nicht level_ende (BOULDER.CPP:
+        // game_start() prüft beide als unabhängige Abbruchbedingungen, :397-398) — IsCaveEnded
+        // bewusst NICHT gesetzt, um genau diesen Fall (vormals ein Bug: Playing blieb ewig hängen)
+        // abzudecken.
         session.State.Stat = 1; // Rockford nicht mehr gefunden -> tot
 
         session.Update(0.001);
@@ -125,14 +154,41 @@ public class GameSessionTests
     }
 
     [Fact]
+    public void Animation_laeuft_waehrend_der_Todes_Pause_weiter_statt_einzufrieren()
+    {
+        // Im Original bleibt die Timer-ISR bis NACH den delay()/getch()-Aufrufen aktiv
+        // (Init_ISR(DEINSTALL) steht ganz am Ende von game_start(), BOULDER.CPP:421) — Animation
+        // (und bei einem Tod ohne level_ende auch die Physik) läuft während der Todes-Pause im
+        // Original also weiter. Vormals ein Bug: das Spiel wirkte während der Pause eingefroren.
+        var session = NewRealSession();
+        session.MenuStart();
+        session.State.Stat = 1;
+        session.Update(0.001);
+        Assert.Equal(SessionPhase.DeathPause, session.Phase);
+
+        var wechselVierVorher = session.State.WechselVier;
+        var clk18Vorher = session.Clocks.Clk18;
+
+        // Mehrere kleine Schritte innerhalb der 1s-Todespause (nicht genug, um sie zu beenden).
+        for (var i = 0; i < 5; i++)
+        {
+            session.Update(0.1);
+        }
+
+        Assert.Equal(SessionPhase.DeathPause, session.Phase); // Pause läuft noch
+        Assert.True(
+            session.State.WechselVier != wechselVierVorher || session.Clocks.Clk18 != clk18Vorher,
+            "Animationszähler haben sich während der Todes-Pause nicht bewegt — Spiel wirkt eingefroren.");
+    }
+
+    [Fact]
     public void Game_Over_bei_0_Chancen_fuehrt_zurueck_ins_Menue()
     {
         var session = NewRealSession();
         session.MenuStart();
         session.State.Chances = 1; // letztes Leben
 
-        session.State.IsCaveEnded = true;
-        session.State.Stat = 1;
+        session.State.Stat = 1; // Tod ohne IsCaveEnded, siehe voriger Test
 
         session.Update(0.001);
         Assert.Equal(0, session.State.Chances);
