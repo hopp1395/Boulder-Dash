@@ -1,0 +1,1060 @@
+/**************************************************************************/
+/* Programmm    : Boulder Dash                                            */
+/* Autor        : Jan Hoppe                                               */
+/* Version      : 1.02                                                    */
+/* Beschreibung :                                                         */
+/* Speichermodel: LARGE                                                   */
+/**************************************************************************/
+
+/**************************************************************************/
+/* INCLUDE Dateien                                                        */
+/**************************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <process.h>
+#include <string.h>
+#include <alloc.h>
+#include <dos.h>
+
+/**************************************************************************/
+/* Konstante Variablen                                                    */
+/**************************************************************************/
+
+#define F1             0x3B    // F1 - Funktionstaste
+#define F2             0x3C    // F2 - Funktionstaste
+#define F3             0x3D    // F3 - Funktionstaste
+#define F4             0x3E    // F4 - Funktionstaste
+#define OBEN           0x48    // Cursor oben Taste
+#define UNTEN          0x50    // Cursor unten Taste
+#define RECHTS         0x4B    // Cursor rechts Taste
+#define LINKS          0x4D    // Cursor links Taste
+#define SPACE          0x20    // Leertaste
+
+#define INSTALL        0xFF    //
+#define DEINSTALL      0x00
+
+#define INT_TIMER      0X1C    // Timer Interrupt
+#define __CPPARGS ...
+
+#define MASK_LEER      0
+#define MASK_ERDE      1
+#define MASK_STEIN     2
+#define MASK_DIAMANT   3
+#define MASK_MAUER     4
+#define MASK_STAHL     5
+#define MASK_ROCK      6
+#define MASK_LAVA      7
+#define MASK_GEIST     8
+#define MASK_MOTYL     9
+#define MASK_HAUSE     10
+#define MASK_HAUSA     11
+#define MASK_EXPLO     12
+#define MASK_MAUERU    13
+#define MASK_EXPLO2    14
+#define MASK_SLAUF     15
+
+/**************************************************************************/
+/* Selbstdefinierte Datentypen                                            */
+/**************************************************************************/
+
+union REGS inregs, outregs;        // Standartregister
+struct SREGS segregs;              // Segmentregister
+
+typedef unsigned char   BYTE;      // 8-Bit vorzeichenlos
+typedef unsigned int    WORD;      // 16-Bit vorzeichenlos
+typedef signed char     SBYTE;     // 8-Bit vorzeichen behaftet
+typedef signed int      SWORD;     // 16-Bit vorzeichen behaftet
+
+/**************************************************************************/
+/* Globale Variablen                                                      */
+/**************************************************************************/
+
+BYTE bsp[240];                     // Bildschirmspeicher
+BYTE newmask[240];                 // Bildschirmmaske
+BYTE level_kopie[1024];            // Levelabbildung
+
+SWORD bild_xpos=0, bild_ypos=0;    // Levelpositionen
+BYTE  level_xgr=0, level_ygr=0;    // Levelgr”áe
+
+BYTE *buffer[16];                  // Grund SPRITES
+BYTE *s_zeiger[49];                // SPRITE Zeiger (Orginal)
+BYTE *z_zeiger[90];                // SPRITE Zeiger (Geordnet)
+BYTE *f_zeiger;                    // DEMO  Zeiger
+BYTE *e_zeiger=NULL;               // SOUND Zeiger
+BYTE *maske   = bsp;               // Zeiger auf Bildschirmspeicher
+BYTE *level = NULL;                // Zeiger auf Level
+WORD FMAdr  = NULL;                // Soundblaster Adresse
+BYTE grundfarbe[4];                // Grundfarben
+BYTE blitz  = NULL;                // Hintergrund = Weiss
+BYTE kop    = NULL;                // CTRL - Tastenkontrolle
+WORD flags  = NULL;                // Diverse Flags
+
+BYTE diamanten  = NULL;            // Diamantenanzahl
+BYTE level_ende = NULL;            // Levelende Flag
+BYTE level_next = NULL;            // Nechster Level
+WORD score      = NULL;            // Punktez„hler
+BYTE leben      = 3;               // Lebenz„hler
+BYTE level_dnt  = NULL;            // Aufzusamelnde diamanten
+BYTE level_clk  = NULL;            // Level Zeit
+BYTE mtime      = NULL;            // Umwandlungs Zeit
+BYTE pkt_d1     = NULL;            // Punkte pro Diamant (1)
+BYTE pkt_d2     = NULL;            // Punkte pro Diamant (2)
+BYTE game_speed = NULL;            // Level Geschwiendiegkeit
+
+BYTE clk_1 = NULL;                 // Timer Variable je 1 Click
+BYTE clk_2 = NULL;                 // Timer Variable je 2 Clicks
+BYTE clk_4 = NULL;                 // Timer Variable je 4 Clicks
+BYTE clk_18= NULL;                 // Timer Variable je 18 Click
+
+BYTE mrun  = NULL;                 // Umwandlungsflag
+WORD start = NULL;                 // Leveleingang
+WORD stop  = NULL;                 // Levelausgang
+BYTE stat  = NULL;                 // Statusflag
+
+char relx  = NULL;                 // Bildschirmposition X
+char rely  = NULL;                 // Bildschirmposition Y
+
+/************ Funktions spezifische Wariablen *****************************/
+
+BYTE *menutext="                                        ";
+WORD menuzeit=NULL;
+
+signed char richtung = NULL;
+
+BYTE *d_name="level.bin";          // Leveldatei
+BYTE *s_name="sprites.bin";        // Spritesdatei
+BYTE *f_name="demo.bin";           // Demodatei
+BYTE *e_name="sound.bin";          // Sounddatei
+
+BYTE status          = NULL;       //Statusbyte
+BYTE wechsel_vier    = NULL;       //Steuerungsvariable fr Sprites
+BYTE wechsel_boulder = NULL;       //Steuerungsvariable fr Rockford
+BYTE wechsel_explo   = NULL;       //Steuerungsvariable fr Explosion
+
+BYTE wechsel_haus    = NULL;       //Steuerungsvariable fr Ein-Ausgang
+BYTE anfang_var      = NULL;       //Steuerungsvariable fr Level Anfang
+BYTE rock_flag       = NULL;       //Rockford Flag
+BYTE sound_var       = NULL;       //Soundvariable
+SBYTE cavenr         = NULL;       //Levelnummer
+SBYTE levelnr        = 1;          //Schwierigkeitsgrad
+BYTE pause           = NULL;       //Unterbrechungssteuerung
+
+/**************************************************************************/
+/* Zeiger                                                                 */
+/**************************************************************************/
+
+void interrupt (*alte_timer_isr)(__CPPARGS);     //Alte Timer ISR
+
+/**************************************************************************/
+/* Funktionen (Vordefinition)                                             */
+/**************************************************************************/
+
+void interrupt timer_interrupt_service_routine (__CPPARGS); //Timer ISR 1
+void interrupt menu_interrupt_service_routine (__CPPARGS);  //Timer ISR 2
+
+#include "init.cpp"            // Initialisierungs Routinen
+#include "intro.cpp"           // Loader
+#include "game.cpp"            // Spielspezifische Routinen
+
+void level_laden (BYTE level_nr);
+void copy64 (void);
+void BildschirmMaske (SWORD bild_xpos, SWORD bild_ypos);
+//void boulder_wait   (void);
+void boulder_lauf (void);
+void sprite_explo (void);
+void regel (void);
+void anfang (void);
+void ende (void);
+void explosion_diamant(void);
+BYTE tastatur_code(void);
+void Start_menu(void);
+void game_start(void);
+void demo (BYTE nr);
+void setvgapalette (WORD nr, BYTE g, BYTE r, BYTE b);
+void setnewpalette(void);
+void sprites_wechsel(void);
+void level_in (void);
+void level_out(void);
+void menuausgabe(void);
+
+/**************************************************************************/
+/* Hauptprogramm                                                          */
+/**************************************************************************/
+
+void main (void)
+ {
+  Load_Defaults();              // Laden der Konfiguration
+  Init_Graph(INSTALL);          // Umschalten ins Grafikmodus
+  Init_Pointer(INSTALL);        // Sprites aufbau
+  Start_menu();                 // Hauptmen
+  Init_Pointer(DEINSTALL);      // Sprites entfernen
+  Init_Graph(DEINSTALL);        // Textmodus wiederherstellen
+  exit(EXIT_SUCCESS);           // Programm Exit
+ }
+
+/**************************************************************************/
+/* ISR's                                                                  */
+/**************************************************************************/
+
+/* Men ISR ***************************************************************/
+
+void interrupt menu_interrupt_service_routine (__CPPARGS)
+ {
+  WORD i=NULL;
+
+  BYTE *z1="                                        Boulde Dash v1.1                        "
+           "Copyright by Jan Hoppe 1999             "
+           "Drcken Sie bitte die F1 Taste um das Sp"
+           "iel zu starten                          "
+           "                                        ";
+  if (clk_18++>1)
+   {
+    clk_18=0;
+    if (menuzeit>(i-40)) menuzeit=0;
+    _fmemcpy(menutext,z1+menuzeit,40);
+    menuzeit++;
+   }
+ }
+
+/* Game ISR ***************************************************************/
+
+void interrupt timer_interrupt_service_routine (__CPPARGS)
+ {
+    if (clk_1++>1)   clk_1=0;
+    if (clk_2++>2)   clk_2=0;
+    if (clk_4++>4)   clk_4=0;
+    if (clk_18++>20) clk_18=0;
+
+    if (relx>0) relx--, bild_xpos++;
+    if (relx<0) relx++, bild_xpos--;
+    if (rely>0) rely--, bild_ypos++;
+    if (rely<0) rely++, bild_ypos--;
+
+    if (bild_xpos>level_xgr-20) bild_xpos=level_xgr-20;
+    if (bild_xpos<0) bild_xpos=0;
+    if (bild_ypos>level_ygr-12) bild_ypos=level_ygr-12;
+    if (bild_ypos<0) bild_ypos=0;
+
+    boulder_lauf();
+    sprites_wechsel();
+
+    if (pause==0)
+     {
+      if ((clk_18==0)&&(level_ende!=0xFF))   //Level Zeit
+       {
+        if (anfang_var>99) level_clk--;      //Level Zeit-- wenn augebaut
+        if (mrun==1) mtime--;                //Mauer Zeit-- wenn aktiv
+       }
+
+      if (mtime==0) mrun=0;                 //Mauer inaktiv wenn Mauerzeit=0
+      if (level_clk==0) level_ende=0xFF;    //Level Ende wenn Zeit=0
+
+      if (level_ende!=0xFF)                 //Kein Level Ende
+       {
+        if ((clk_1==0)&&(anfang_var>65)) regel();  //Regel
+        if (anfang_var<101) anfang();              //Level aufbau
+        if (diamanten>=level_dnt) ende();          //Level ende
+       }
+     }
+
+    BildschirmMaske(bild_xpos,bild_ypos);   //Bildschirmmaske
+    maske=bsp;
+    if ((anfang_var<65)&&(level_ende!=0xFF)) level_in();
+    copy64();                              //Bildschirm aufbauen
+ }
+
+/**************************************************************************/
+/* Funktionen                                                             */
+/**************************************************************************/
+
+/* Hauptmen *************************************************************/
+
+void Start_menu(void)
+ {
+  BYTE c=1;
+
+  alte_timer_isr = getvect(INT_TIMER);             //Alten Interrupt sichern
+  setvect(INT_TIMER, menu_interrupt_service_routine);  //neuen Installieren
+
+  menuausgabe();
+
+  while (c!=F4)
+   {
+
+    gotoxy(1,17); printf("%s",menutext);
+    gotoxy(1,23); printf("     LEVEL : %02i       CAVE : %c         ",levelnr,cavenr+'A'-((cavenr-1)/4));
+    if (kbhit()!=0) c=getch();
+    if (c==0)
+     {
+      c=getch();
+      switch(c)
+       {
+        default    : break;
+        case OBEN  : if (levelnr++>3)  levelnr = 4;  break;
+        case UNTEN : if (levelnr--<2)  levelnr = 1;  break;
+        case LINKS : cavenr=cavenr+1;
+                     if (cavenr>15) cavenr=15;
+                     break;
+        case RECHTS: cavenr=cavenr-1;
+                     if (cavenr<0)  cavenr=0;
+                     break;
+        case F1    : setvect(INT_TIMER, alte_timer_isr);
+                     leben=3;
+                     level_next=0;
+                     level_ende=0xFF;
+                     while (level_ende==0xFF)
+                      {
+                       level_laden(cavenr=cavenr+level_next);
+                       level_next=0;
+                       game_start();
+                       delay(500);
+                       level_out();
+                       if (cavenr+level_next==21) cavenr=0;
+                       if (leben<1) break;
+                       if (stat!=0) level_ende=0xFF;
+                      }
+                     menuausgabe();
+                     alte_timer_isr = getvect(INT_TIMER);
+                     setvect(INT_TIMER, menu_interrupt_service_routine);
+                     break;
+        case F2   :  setvect(INT_TIMER, alte_timer_isr);
+                     level_laden(0);
+                     demo (0);
+                     level_out();
+                     menuausgabe();
+                     alte_timer_isr = getvect(INT_TIMER);
+                     setvect(INT_TIMER, menu_interrupt_service_routine);
+                     break;
+       }
+     }
+   }
+  setvect(INT_TIMER, alte_timer_isr);        //Alten Interrupt wiederherstellen
+ }
+
+/* Demofohrfhrung ********************************************************/
+
+void demo(BYTE nr)
+ {
+  BYTE c=NULL;                          //Buffer fr Tastatureingabe
+  BYTE r=NULL;                          //Buffer fr Demosteuerung
+  BYTE pr=NULL;                         //Demo ausfhrung
+  FILE *dz;                             //Dateizeiger
+
+  // Speicherreservierung fr Demo
+  // Demodatei ”ffnen
+  // Demostring lesen
+  // Datei schlieáen
+
+  if ((f_zeiger=(BYTE*) calloc(256,sizeof(BYTE)))==NULL) Prog_Exit ("demo: calloc() FAILED",DEINSTALL);
+  if ((dz=fopen(f_name,"r+b"))==NULL) Prog_Exit ("demo: fopen(f_name) FAILED",DEINSTALL);
+  fread(f_zeiger,sizeof(BYTE),256,dz);
+  fclose(dz);
+
+  Init_Timer(INSTALL);          // Timer Initialisierung
+  Init_ISR(INSTALL,0);          // Game ISR installieren
+
+  BYTE *demo_zeiger=f_zeiger;   // Zeiger zuweisung
+
+  delay(7000);                  // Warten bis Demo aufgebaut ist
+
+  while (r!='1')                // Demoabbruch Bediengung
+   {
+    if (kbhit()!=0) c=getch();  // Demoabbruch bei Tastendruck
+    r=*demo_zeiger;             // Demobuffer laden
+    if ((clk_1==0)&&(pr==0)) pr=1, demo_zeiger++;  // Warten auf nechsten
+    if ((clk_1==1)&&(pr==1)) pr=0;                 // Timer-Click
+
+    Mov_Rockford (r);           // Ausfhrung der Bewegungen
+
+    if (flags<0x10) flags=0, richtung=0;
+    if (level_ende==0xFF) break;
+    if (stat!=0) break;
+
+    Send_Message ();              // Statusanzeige
+   }
+  Level_End ();                   // Level beenden
+  Init_ISR (DEINSTALL,0);         // Alte ISR restaurieren
+  Init_Timer (DEINSTALL);
+ }
+
+/* Spielablauf ************************************************************/
+
+void game_start(void)
+ {
+  BYTE c=NULL;                          // Buffer fr Tastatureingabe
+
+  Init_Timer(INSTALL);
+  Init_Keyboard(INSTALL);
+  Init_ISR(INSTALL,0);
+
+  while (c!=0x01)
+   {
+    c=tastatur_code();
+    Mov_Rockford(c);    // Bewegung ausfhren
+
+    if (flags<0x10) flags=0, richtung=0;
+    if (level_ende==0xFF) break;
+    if (stat!=0) break;
+
+    if (pause==1) gotoxy(1,1), printf("      N O   O N E   I S   W A I T I N G ");
+
+    Send_Message();            // Statuszeilen Ausgabe
+   }
+
+  Level_End();                 // Level beenden
+
+  Init_Keyboard(DEINSTALL);    // Tastatur IRQ erlauben
+
+  if (stat!=0)
+   {
+    leben--;
+    if (leben==0)
+     {
+      delay(1000);
+      gotoxy(1,1);
+      printf("  G    A    M    E       O   V   E   R  ");
+     }
+    delay(1000);
+    getch();
+   }
+  Init_ISR (DEINSTALL,0);      // Alte ISR restaurieren
+  Init_Timer(DEINSTALL);       // Timerwerte wiederherstellen
+ }
+
+/**************************************************************************/
+/* Unterfunktionen                                                        */
+/**************************************************************************/
+
+/* Ausgabe des Hauptmens **************************************************/
+
+void menuausgabe (void)
+ {
+   WORD i=NULL;
+
+   grundfarbe[0]=0;
+   grundfarbe[1]=1;
+   grundfarbe[2]=6;
+   grundfarbe[3]=2;
+   setnewpalette();
+
+   BYTE menu[]="44444444444444444444"
+               "45555555555555555554"
+               "45555555555555555554"
+               "45555555555555555554"
+               "45555555555555555554"
+               "45555555555555555554"
+               "44444444444444444444"
+               "00000000000000000000"
+               "00000000000000000000"
+               "00000000000000000000"
+               "00000000000000000000"
+               "00000000000000000000";
+
+  for (i=0;i<240;i++) menu[i]=menu[i]-0x30;
+
+  maske=menu;
+  copy64();
+  gotoxy(1,1) ; printf("                                        ");
+  gotoxy(10,5); printf("ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+  gotoxy(10,6); printf("³ Boulder Dash v1.1 ³");
+  gotoxy(10,7); printf("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+  gotoxy(1,16); printf("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+  gotoxy(1,17); printf("      Copyright 1999 by Jan Hoppe       ");
+  gotoxy(1,18); printf("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+  gotoxy(1,19); printf(" F1 - Spiel starten  F2 - Demo          ");
+  gotoxy(1,21); printf(" F3 - Hilfe          F4 - Ende          ");
+  gotoxy(1,22); printf("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+ }
+
+/* GRAFIKROUTINE: Bildschirm nach oben scrolen ***************************/
+
+void level_out (void)
+ {
+  WORD zaehler=0;
+  for (zaehler=0;zaehler<21;zaehler++)
+    movedata(0xA000,zaehler*320, 0xA000,0, 64320-zaehler*320);
+ }
+
+/* GRAFIKROUTINE: Setzen eines Eintrages der VGA Palette ******************/
+
+void setvgapalette (WORD nr, BYTE g, BYTE r, BYTE b)
+ {
+  asm {
+       mov ah,0x10;
+       mov al,0x10;
+       mov bx,nr;
+       mov ch,g;
+       mov cl,r;
+       mov dh,b;
+       int 0x10;
+      }
+ }
+
+/* GRAFIKROUTINE: Setzen der VGA - Palette ******************************/
+
+void setnewpalette (void)
+ {
+  WORD fn=NULL;
+  BYTE f1,f2,f3;
+
+  int palette[]= { 8,8,8, 63,63,63, 46,8,8, 28,63,63, 46,8,46, 8,46,8,
+                   8,8,46, 63,63,8, 46,28,8, 36,68,8, 63,28,28, 28,28,28,
+                   36,36,36, 28,63,28, 28,28,63, 46,46,46 };
+
+  for (fn=0;fn<4;fn++)
+   {
+    f1=palette[grundfarbe[fn]*3+1];
+    f2=palette[grundfarbe[fn]*3+2];
+    f3=palette[grundfarbe[fn]*3];
+    setvgapalette(fn,f1,f2,f3);
+   }
+ }
+
+/* GRAFIKROUTINE: Aufbau der Sprites auf dem Bildschirm *******************/
+
+void copy64 (void)
+ {
+  BYTE *zeiger_1=maske;
+  WORD x,y;
+  WORD zoff,zseg;
+  BYTE *puffer=NULL;
+
+  asm  cli;                       //Interrupt sperren
+  asm  cld;                       //Richtungsflag l”schen
+
+  for (y=2560;y<61440;y=y+5120)
+   for (x=0;x<320;x=x+16)
+    {
+     asm pusha;
+     asm push ds;
+
+     puffer=buffer[ (*zeiger_1)&0x0F ];
+
+     zoff= FP_OFF(puffer);
+     zseg= FP_SEG(puffer);
+
+        asm {
+             mov  ax,x;                 //Offset
+             add  ax,y;
+             mov  di,ax;                //in DI Register
+             mov  ax,0xA000;            //Segment Register mit der
+             mov  es,ax;                //Segmentadresse laden
+             mov  si,zoff;     //Buffer Anfangsadresse
+             mov  ax,zseg;
+             mov  ds,ax;
+             mov  dx,0x0010;
+             mov  cx,dx;
+
+            }
+        zeile:;
+        asm {
+             mov  dx,cx;
+             mov  cx,0x0008;            //Z„hler
+             rep  movsw;
+             add  di,0x0130;
+             mov  cx,dx;
+             loop zeile;
+            }
+     zeiger_1++;
+    asm pop ds;
+    asm popa;
+
+   }
+  asm   sti;                       //Interrupt erlauben
+ }
+
+/* SPIELSPEZIFISCH : Levelaufbau *****************************************/
+
+void level_in (void)
+ {
+  WORD i=NULL, j=NULL, z=NULL;
+  BYTE *mz=maske;
+  if (anfang_var<5) for (i=0;i<240;i++) newmask[i]=15;
+  else
+   {
+    for (z=0;z<4;z++)
+     {
+      i=0;
+      while (newmask[j]==0)
+       {
+        j=(rand()%240)+1;
+        if (i++>240) break;
+       }
+      newmask[j]=0;
+     }
+   }
+  for (i=0;i<240;i++)
+   if (newmask[i]==15) *(mz+i) = 15;
+ }
+
+/* SPIELSPEZIFISCH: Spriteszuordnung (Ablauf) ****************************/
+
+void sprites_wechsel(void)
+ {
+  if (wechsel_vier++>6) wechsel_vier=0;
+  if (mrun==1) buffer[MASK_MAUERU] = z_zeiger[60+wechsel_vier];
+  else buffer[MASK_MAUERU] = z_zeiger[11];
+  buffer[MASK_DIAMANT]=z_zeiger[3+wechsel_vier];
+  buffer[MASK_LAVA]   =z_zeiger[24+wechsel_vier];
+  buffer[MASK_GEIST]  =z_zeiger[32+wechsel_vier];
+  buffer[MASK_MOTYL]  =z_zeiger[40+wechsel_vier];
+  buffer[MASK_EXPLO]  =z_zeiger[52+wechsel_explo];
+  buffer[MASK_EXPLO2] =z_zeiger[68+wechsel_explo];
+  buffer[MASK_SLAUF]  =z_zeiger[76]+wechsel_vier*16;
+  if (wechsel_explo>0) wechsel_explo++;
+  if (wechsel_explo==8) wechsel_explo=7;
+ }
+
+/* SPIELSPEZIFISCH: Anmimation Rockford **********************************/
+
+void boulder_lauf (void)
+ {
+  BYTE *zeiger_1 = NULL;
+  BYTE *zeiger_2 = NULL;
+  BYTE buffer_1  = NULL;
+  BYTE i,j,k;
+
+  if (status!=rock_flag)
+   {
+    for (k=18;k<24;k++)
+     {
+      for (i=0;i<16;i++)
+       {
+        zeiger_1 = s_zeiger[k] +i*16 ;
+        zeiger_2 = s_zeiger[k] + 15 + i*16;
+        for (j=0;j<8;j++)
+         {
+          buffer_1  = *zeiger_1;
+          *zeiger_1 = *zeiger_2;
+          *zeiger_2 = buffer_1;
+          zeiger_1++;
+          zeiger_2--;
+         }
+       }
+     }
+    if (rock_flag==0) rock_flag=1;
+    else rock_flag=0;
+
+   }
+  if (richtung!=0)
+   {
+    buffer[6]=z_zeiger[wechsel_boulder+18];
+    wechsel_boulder++;
+    if (wechsel_boulder>5) wechsel_boulder=0;
+   }
+  else buffer[6]=z_zeiger[13];
+ }
+
+/* SPIELSPEZIFISCH: Eingang Animation ***********************************/
+
+void anfang (void)
+ {
+  if (anfang_var<92)
+   {
+    if (clk_4<3) buffer[MASK_HAUSE]=z_zeiger[49];
+    else buffer[MASK_HAUSE]=z_zeiger[48];
+   }
+  if (anfang_var==92) *(level+start)=12, wechsel_explo=1;
+  if (anfang_var==99) *(level+start)=6;
+  anfang_var++;
+ }
+
+/* SPIELSPEZIFISCH: Ausgang Animation ***********************************/
+
+void ende (void)
+ {
+  if (blitz==0) setvgapalette(0,63,63,63), blitz=1;
+  else setvgapalette (0,8,8,8);
+  if (clk_4<3) buffer[MASK_HAUSA]=z_zeiger[49];
+  else buffer[MASK_HAUSA]=z_zeiger[48];
+ }
+
+/* SPIELSPEZIFISCH: Aufbau der Bildschirmmaske ***************************/
+
+void BildschirmMaske (SWORD bild_xpos, SWORD bild_ypos)
+ {
+  int i,j;
+  BYTE *zeiger1 = level;
+  BYTE *zeiger2 = bsp;
+
+  zeiger1 = zeiger1 + ((bild_ypos)*level_xgr) + bild_xpos;
+
+  for (i=0;i<12;i++)
+   {
+    _fmemcpy (zeiger2,zeiger1,20);
+    zeiger1 = zeiger1 + level_xgr;
+    zeiger2 = zeiger2 + 20;
+   }
+ }
+
+/* SPIELSPEZIFISCH: Explosionsprfung ***********************************/
+
+void explosion (BYTE anim, BYTE *zeiger_1)
+ {
+  if ( *(zeiger_1-level_xgr-1) != 5 ) *(zeiger_1-level_xgr-1)=anim;
+  if ( *(zeiger_1-level_xgr) != 5 ) *(zeiger_1-level_xgr)=anim;
+  if ( *(zeiger_1-level_xgr+1) != 5 ) *(zeiger_1-level_xgr+1)=anim;
+  if ( *(zeiger_1-1) != 5 ) *(zeiger_1-1)=anim;
+  if (*zeiger_1 != 5) *zeiger_1=anim;
+  if (*(zeiger_1+1) != 5) *(zeiger_1+1)=anim;
+  if ( *(zeiger_1+level_xgr-1) != 5 ) *(zeiger_1+level_xgr-1)=anim;
+  if ( *(zeiger_1+level_xgr) != 5 ) *(zeiger_1+level_xgr)=anim;
+  if ( *(zeiger_1+level_xgr+1) != 5 ) *(zeiger_1+level_xgr+1)=anim;
+  wechsel_explo=1;
+ }
+
+/* SPIELSPEZIFISCH: Festlegung der Spielregel ***************************/
+
+void regel (void)
+ {
+  WORD i=0;
+  BYTE lava_var=0;
+  BYTE lava_nr=(rand()%96)+1;
+  BYTE j=0,w=0;
+  BYTE *ptr = level;
+  BYTE lf=3;
+
+  if ((anfang_var>100)&&(stat==0)) stat=1;
+
+  for (j=0;j<level_ygr;j++)
+   {
+    for (i=0;i<level_xgr;i++)
+     {
+  /************* Explosion -> Diamant ******************************/
+  /************* Explosion -> Leer *********************************/
+      if (((*ptr&0x1F)==12) && (wechsel_explo==7)) *ptr = 0x80;
+      if (((*ptr&0x1F)==14) && (wechsel_explo==7)) *ptr = 0x83;
+  /************* Lava **********************************************/
+      if ((*ptr&0x9F)==0x07)
+       {
+        lava_var++;
+        if (lava_var==lava_nr)
+         {
+          if ( (*(ptr-level_xgr)&0xFE)==0 ) *(ptr-level_xgr)=0x87;
+          else if ( (*(ptr+level_xgr)&0xFE)==0 ) *(ptr+level_xgr)=0x87;
+          else if ( (*(ptr-1)&0xFE)==0 ) *(ptr-1)=0x87;
+          else if ( (*(ptr+1)&0xFE)==0 ) *(ptr+1)=0x87;
+         }
+       }
+
+  /************* Schmeterling **************************************/
+      if ( ((*ptr&0x8F)==9) )
+       {
+        // Lava | Rockford //
+        if ( (*(ptr-level_xgr)&0xFE)==6 ) explosion(0xCE,ptr);
+        else if ( (*(ptr+level_xgr)&0xFE)==6 ) explosion(0xCE,ptr);
+        else if ( (*(ptr-1)&0xFE)==6 ) explosion(0xCE,ptr);
+        else if ( (*(ptr+1)&0xFE)==6 ) explosion(0xCE,ptr);
+        else if ( (*(ptr-level_xgr)&0x4C)==0x40) explosion(0xCE,ptr);
+        else
+         {
+          for (w=0;w<4;w++)
+           {
+            switch (*ptr&0x60)
+             {
+              case 0x00 : if (*(ptr-level_xgr)==0) *ptr=(*ptr&0x99)|0xA9, w=5;
+                          else if (*(ptr-1)==0) w=5;
+                          else *ptr=0x39; break;
+              case 0x20 : if (*(ptr+1)==0) *ptr=(*ptr&0x99)|0xC9, w=5;
+                          else if (*(ptr-level_xgr)==0) w=5;
+                          else *ptr=0x59; break;
+              case 0x40 : if (*(ptr+level_xgr)==0) *ptr=(*ptr&0x99)|0xE9, w=5;
+                          else if (*(ptr+1)==0) w=5;
+                          else *ptr=0x79; break;
+              case 0x60 : if (*(ptr-1)==0) *ptr=(*ptr&0x99)|0x89, w=5;
+                          else if (*(ptr+level_xgr)==0) w=5;
+                          else *ptr=0x19; break;
+              default   : break;
+            }
+           }
+          switch (*ptr&0x70)
+           {
+            case 0x00 : *(ptr-1) = 0x89; *ptr=0; break;
+            case 0x20 : *(ptr-level_xgr) = 0xA9; *ptr=0; break;
+            case 0x40 : *(ptr+1) = 0xC9; *ptr=0; break;
+            case 0x60 : *(ptr+level_xgr) = 0xE9;*ptr=0; break;
+            default   : break;
+           }
+          *ptr=*ptr|0x80;
+          *ptr=*ptr&0xEF;
+         }
+       }
+
+  /************* Geist *********************************************/
+      if ( ((*ptr&0x8F)==8) )
+       {
+        if ( (*(ptr-level_xgr)&0x7E)==6 ) explosion(0xCC,ptr);
+        else if ( (*(ptr+level_xgr)&0x7E)==6 ) explosion(0xCC,ptr);
+        else if ( (*(ptr-1)&0x7E)==6 ) explosion(0xCC,ptr);
+        else if ( (*(ptr+1)&0x7E)==6 ) explosion(0xCC,ptr);
+        else if ( (*(ptr-level_xgr)&0x42)==0x42  ) explosion(0xCC,ptr);
+        else
+         {
+          for (w=0;w<4;w++)
+           {
+            switch (*ptr&0x60)
+             {
+              case 0x00 : if (*(ptr+level_xgr)==0) *ptr=(*ptr&0x99)|0xE8, w=5;
+                          else if (*(ptr-1)==0) w=5;
+                          else *ptr=0x38; break;
+              case 0x20 : if (*(ptr-1)==0) *ptr=(*ptr&0x99)|0x88, w=5;
+                          else if (*(ptr-level_xgr)==0) w=5;
+                          else *ptr=0x58; break;
+              case 0x40 : if (*(ptr-level_xgr)==0) *ptr=(*ptr&0x99)|0xA8, w=5;
+                          else if (*(ptr+1)==0) w=5;
+                          else *ptr=0x78; break;
+              case 0x60 : if (*(ptr+1)==0) *ptr=(*ptr&0x99)|0xC8, w=5;
+                          else if (*(ptr+level_xgr)==0) w=5;
+                          else *ptr=0x18; break;
+              default   : break;
+            }
+           }
+          switch (*ptr&0x70)
+           {
+            case 0x00 : *(ptr-1) = 0x88; *ptr=0; break;
+            case 0x20 : *(ptr-level_xgr) = 0xA8; *ptr=0; break;
+            case 0x40 : *(ptr+1) = 0xC8; *ptr=0; break;
+            case 0x60 : *(ptr+level_xgr) = 0xE8;*ptr=0; break;
+            default   : break;
+           }
+          *ptr=*ptr|0x80;
+          *ptr=*ptr&0xEF;
+         }
+     }
+  /************* Stein, Diamant ****************************************/
+      if (((*ptr&0x9F) == 3) || ((*ptr&0x9F) == 2))  //Stein oder Diamant?
+       {
+        switch ( *(ptr+level_xgr)&0x0F )         //Was ist drunter?
+         {
+          default: *ptr = *ptr&0x1F;
+          case 9 :
+          case 8 : break;
+          case 0 : *(ptr+level_xgr) = *ptr|0xC0;  //nichts?
+                     *ptr = 0x80;
+                     break;
+          case 2 :                                     //Stein?
+          case 3 :                                     //Diamant? oder Mauer?
+          case 4 : if ((*(ptr-1)== 0) && (*(ptr-1+level_xgr)==0))
+                    {
+                     *(ptr-1) = *ptr|0x80;
+                     *ptr = 0x80;
+                     *(ptr-1+level_xgr)= 0x80;
+                    }
+                   else
+                   if ( ( *(ptr+1)==0) && (*(ptr+1+level_xgr)==0))
+                    {
+                     *(ptr+1) = *ptr|0x80;
+                     *ptr = 0x80;
+                     *(ptr+1+level_xgr)= 0x80;
+                    }
+
+                     else *ptr = *ptr&0x1F;
+                     break;
+          case 13 : if (mtime>0)
+                     {
+                      if ((*ptr&0x40)==0x40)
+                       {
+                        mrun=1;
+                        if (*(ptr+2*level_xgr)==0)
+                         *(ptr+2*level_xgr) = (*ptr - 1)|0xC2;
+                        *ptr=0x80;
+                       }
+
+                     }
+                    else if ((*ptr&0x40)==0x40) *ptr=0;
+                    break;
+          case 6  : if (((*(ptr+level_xgr)&0x06)==0x06)&&
+                      ((*ptr&0x4C)==0x40)) explosion(0x8C,ptr+level_xgr);
+                    break;
+           }
+         }
+
+  /************* Boulder ****************************************/
+    if ((*ptr&0x9F) == 6)
+       {
+        stat=0;
+        if ((bild_xpos+17<i)&&(bild_xpos<level_xgr-20)) relx=7;
+        if ((bild_xpos+1==i)&&(bild_xpos>0)) relx=-7;
+        if ((bild_ypos+9<j)&&(bild_ypos<level_ygr-12)) rely=5;
+        if ((bild_ypos+1==j)&&(bild_ypos>0)) rely=-5;
+        else
+        switch ( *(ptr+richtung)&0x9F)
+         {
+          default: break;
+          case 11: if (diamanten<level_dnt) break;
+                   level_ende=0xFF;
+                   level_next=1;
+                   anfang_var=0;
+          case 3 : diamanten++;
+                   if (diamanten>=level_dnt) pkt_d1=pkt_d2;
+                   score=score+pkt_d1;
+          case 0 :
+          case 1 : *(ptr+richtung) = 0x86 ^ kop;
+                   *ptr=0x80 ^ kop;
+                   break;
+          case 2 : if  ((*(ptr+(richtung*2))==0)&&(clk_4==0))
+                      {
+                       if ((richtung==1)||(richtung==-1))
+                        {
+                         *(ptr+richtung) = 0x86 ^ kop;
+                         *(ptr+(2*richtung))= 0x82;
+                         *ptr=0x80 ^ kop;
+                       }
+                      }
+                     break;
+         }
+       }
+      ptr++;
+     }
+   }
+
+  ptr=level;
+
+  for (i=0;i<level_xgr*level_ygr;i++)
+   {
+    *ptr=*ptr&0x7F;
+    ptr++;
+   }
+  ptr=level;
+
+  for (i=0;i<level_xgr*level_ygr;i++)
+   {
+    if (*ptr==7)
+     {
+      if ( ((*(ptr-level_xgr)&0xFE)|1)==1 ) lf=2;
+      else if ( ((*(ptr+level_xgr)&0xFE)|1)==1 ) lf=2;
+      else if ( ((*(ptr-1)&0xFE)|1)==1 ) lf=2;
+      else if ( ((*(ptr+1)&0xFE)|1)==1 ) lf=2;
+     }
+    ptr++;
+   }
+
+ ptr=level;
+
+  if ((lava_var>95)||(lf==3))
+   for (i=0;i<level_xgr*level_ygr;i++)
+    {
+     if (*ptr==7) *ptr=lf;
+     ptr++;
+    }
+
+  ptr=level;
+ }
+
+/* TASTATURZUGRIFF: Scancode holen **************************************/
+
+BYTE tastatur_code(void)
+ {
+  BYTE code     = NULL;
+
+  asm in   al,0x60;
+  asm mov  code,al;
+
+  return (code);
+ }
+
+/* DATEIZUGRIFF: Level laden und initialisieren **************************/
+
+void level_laden(BYTE level_nr)
+ {
+  stop=NULL;
+  start=NULL;
+  diamanten=NULL;
+  blitz  = NULL;
+  kop    = NULL;
+  flags  = NULL;
+  level_ende = NULL;
+  clk_1 = NULL;
+  clk_2 = NULL;
+  clk_4 = NULL;
+  clk_18= NULL;
+  relx  = NULL;
+  rely  = NULL;
+  mrun  = NULL;
+  richtung        = NULL;
+  wechsel_vier    = NULL;
+  wechsel_boulder = NULL;
+  wechsel_explo   = NULL;
+  stat            = NULL;
+
+  wechsel_haus    = NULL;
+  anfang_var      = NULL;
+
+  buffer[MASK_HAUSA]=buffer[MASK_STAHL];
+
+  BYTE *zeiger_1 = NULL;
+  FILE *dz;
+  BYTE xg,yg;
+  WORD j;
+
+  if ((dz=fopen(d_name,"r+b"))==NULL) Prog_Exit ("Level_Load: fopen(d_name) FAILED",DEINSTALL);
+
+  fseek(dz,(40*22+18)*level_nr,0);
+  fread(&level_kopie, sizeof(BYTE), 40*22+16, dz);
+  fclose(dz);
+
+  level=level_kopie;                    //Level laden
+  level_xgr = *level; level++;          //Level X-Gr”áe
+  level_ygr = *level; level++;          //Level Y-Gr”áe
+  level_dnt = *level; level++;          //Minimale Diamanten Anzahl
+  level_clk = *level; level++;          //Level Zeit
+  grundfarbe[0] = *level; level++;      //Grungfarbe 1
+  grundfarbe[1] = *level; level++;      //Grungfarbe 2
+  grundfarbe[2] = *level; level++;      //Grungfarbe 3
+  grundfarbe[3] = *level; level++;      //Grungfarbe 4
+  bild_xpos = *level; level++;          //Levelstart X-Pos.
+  bild_ypos = *level; level++;          //Levelstart Y-Pos.
+  mtime = *level; level++;              //Umwandlungszeit
+  pkt_d1 = *level; level++;             //Punkte pro Diamant 1
+  pkt_d2 = *level; level++;             //Punkte pro Diamant 2
+  game_speed = *level; level++;         //Spiel Geschwiendigkeit
+
+  level = level_kopie;
+  level = level +16;
+
+  zeiger_1 = level;                         //Boulder Start
+  while ( *zeiger_1++ != 10 ) start++;
+  zeiger_1 = level;                         //Boulder Stop
+  while ( *zeiger_1++ != 11 ) stop++;
+
+  for (j=0;j<240;j++) newmask[j]=48;
+
+  setnewpalette();
+ }
+
+
+/* In entwicklung **********************************************************/
+
+/******************* Fertige Funktionen *****************/
+
+/*
+void boulder_wait (void)
+ {
+  if (wechsel_boulder>2)
+   {
+    buffer[MASK_ROCK] = buffer[augen+SPRITE_ROCK];
+    augen++;
+    if (augen>3) augen=0, buffer[MASK_ROCK]=buffer[SPRITE_ROCK];
+   }
+  else
+   {
+    buffer[MASK_ROCK] = buffer[augen+SPRITE_ROCK+3];
+    augen++;
+    if (augen>2) augen=0, haende++, buffer[MASK_ROCK]=buffer[SPRITE_ROCK];
+    if (haende>3) haende=0, buffer[MASK_ROCK]=buffer[SPRITE_ROCK];
+   }
+ }*/
+
+/* SOUND */
+
+/*void FX(void)
+ {
+  LAUT_AUS(500,e_zeiger,16000,0x61);
+ }*/
+
+
+
+
+
