@@ -12,7 +12,7 @@ namespace BoulderDash.Core.Data;
 /// </summary>
 public static class SpriteTables
 {
-    /// <summary>z_zeiger[i] -> Index in die 49 Rohsprites (SpriteTextRepository.RawSprites).</summary>
+    /// <summary>z_zeiger[i] -> Index in die 49 Rohsprites (ISpriteRepository.RawSprites).</summary>
     public static readonly int[] FrameToRawSprite =
     [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, // 0-10

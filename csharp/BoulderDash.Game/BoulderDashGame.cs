@@ -62,7 +62,8 @@ public class BoulderDashGame : XnaGame
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
         var assets = Path.Combine(AppContext.BaseDirectory, "Assets");
-        _spriteAtlas = new SpriteAtlas(GraphicsDevice, Path.Combine(assets, "Sprites"));
+        var sprites = new SpriteTextRepository(Path.Combine(assets, "Sprites"));
+        _spriteAtlas = new SpriteAtlas(GraphicsDevice, sprites);
         _caveRenderer = new CaveRenderer(_spriteAtlas);
         _font = new BiosFont(GraphicsDevice);
         _menuRenderer = new MenuRenderer(_spriteAtlas, _font);

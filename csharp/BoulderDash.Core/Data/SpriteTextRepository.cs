@@ -1,51 +1,49 @@
 namespace BoulderDash.Core.Data;
 
 /// <summary>
-/// Lädt die 49 Rohsprites aus den Sprite-Textdateien eines Verzeichnisses (eine Datei pro
-/// Objekt, Format siehe SpriteTextFile). Das Manifest legt Lade-Reihenfolge und erwartete
-/// Frame-Zahl fest — die laufende Nummer über alle Frames ist der Rohsprite-Index, den
-/// SpriteTables.FrameToRawSprite referenziert (ursprünglich die Reihenfolge in SPRITES.BIN,
-/// Load_Sprites in src/INTRO.CPP:133-151).
+/// ISpriteRepository-Implementierung für das Sprite-Textformat: lädt die Sprite-Objekte aus den
+/// Textdateien eines Verzeichnisses (eine Datei pro Objekt, Format siehe SpriteTextFile).
+/// Das Manifest legt Lade-Reihenfolge, Frame-Zahl und Frame-Höhe fest — die laufende Nummer über
+/// alle Frames ist der Rohsprite-Index.
 /// </summary>
-public sealed class SpriteTextRepository
+public sealed class SpriteTextRepository : ISpriteRepository
 {
-    public const int SpriteWidth = 16;
-    public const int NormalSpriteHeight = 16;
-    public const int LastSpriteHeight = 24;
-    public const int SpriteCount = 49;
-    public const int LastSpriteIndex = SpriteCount - 1;
+    /// <summary>Alle Sprites sind 16 Pixel breit und (bis auf border-fill) 16 Pixel hoch.</summary>
+    private const int SpriteWidth = 16;
+    private const int NormalHeight = 16;
+
+    /// <summary>border-fill (MASK_SLAUF) ist das 16x24 hohe Gleit-Sprite des Randaufbaus.</summary>
+    private const int BorderFillHeight = 24;
 
     /// <summary>
     /// Dateiname (ohne .txt, BDCFF-Objektname), erwartete Frame-Zahl und Frame-Höhe;
     /// die Reihenfolge ergibt die Rohsprite-Indizes (Summe der Frames = 49).
-    /// "outbox" ist der Blinkframe der Ein-/Ausgangstür, "border-fill" das 16x24 hohe
-    /// Gleit-Sprite des Randaufbaus (MASK_SLAUF).
+    /// "outbox" ist der Blinkframe der Ein-/Ausgangstür.
     /// </summary>
     public static readonly IReadOnlyList<(string FileName, int FrameCount, int Height)> Manifest =
     [
-        ("space", 1, NormalSpriteHeight),
-        ("dirt", 1, NormalSpriteHeight),
-        ("boulder", 1, NormalSpriteHeight),
-        ("diamond", 8, NormalSpriteHeight),
-        ("brick-wall", 1, NormalSpriteHeight),
-        ("steel-wall", 1, NormalSpriteHeight),
-        ("rockford", 11, NormalSpriteHeight),
-        ("amoeba", 4, NormalSpriteHeight),
-        ("firefly", 4, NormalSpriteHeight),
-        ("butterfly", 3, NormalSpriteHeight),
-        ("outbox", 1, NormalSpriteHeight),
-        ("explosion", 3, NormalSpriteHeight),
-        ("magic-wall", 4, NormalSpriteHeight),
-        ("diamond-explosion", 5, NormalSpriteHeight),
-        ("border-fill", 1, LastSpriteHeight),
+        ("space", 1, NormalHeight),
+        ("dirt", 1, NormalHeight),
+        ("boulder", 1, NormalHeight),
+        ("diamond", 8, NormalHeight),
+        ("brick-wall", 1, NormalHeight),
+        ("steel-wall", 1, NormalHeight),
+        ("rockford", 11, NormalHeight),
+        ("amoeba", 4, NormalHeight),
+        ("firefly", 4, NormalHeight),
+        ("butterfly", 3, NormalHeight),
+        ("outbox", 1, NormalHeight),
+        ("explosion", 3, NormalHeight),
+        ("magic-wall", 4, NormalHeight),
+        ("diamond-explosion", 5, NormalHeight),
+        ("border-fill", 1, BorderFillHeight),
     ];
 
-    /// <summary>Rohe Pixeldaten je Sprite (Palettenindex 0-3 je Byte, zeilenweise, 16 Pixel breit).</summary>
-    public IReadOnlyList<byte[]> RawSprites { get; }
+    private readonly IReadOnlyList<SpriteData> _sprites;
 
     public SpriteTextRepository(string spritesDirectory)
     {
-        var sprites = new List<byte[]>(SpriteCount);
+        var sprites = new List<SpriteData>(Manifest.Count);
         foreach (var (fileName, frameCount, height) in Manifest)
         {
             var path = Path.Combine(spritesDirectory, fileName + ".txt");
@@ -57,9 +55,11 @@ public sealed class SpriteTextRepository
                     $"gefunden {data.Frames.Count} Frames à {data.Width}x{data.Height}.");
             }
 
-            sprites.AddRange(data.Frames);
+            sprites.Add(data);
         }
 
-        RawSprites = sprites;
+        _sprites = sprites;
     }
+
+    public IEnumerable<SpriteData> Get() => _sprites;
 }
