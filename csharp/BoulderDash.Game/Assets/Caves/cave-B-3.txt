@@ -1,0 +1,46 @@
+# Boulder Dash — Cave B, Level 3
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = B
+Name        = Rooms
+Description = Pick up jewels, but you must move boulders
+Kind        = Normal
+Level       = 3
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 9
+CaveTime        = 70
+MagicWallTime   = 20
+JewelValue      = 20
+JewelValueExtra = 50
+Colors          = 10, 4, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+W.. r...w .. ..rw... ...w.....r.wr.....W
+W.r.rr..w......rw..r ...w...r...w..r.r.W
+W                                      W
+W.... ..w..F....wr.. .. w.......wr r..rW
+W..r...rw...r..rwr.. ...w.......w .r..rW
+Wwwwwwwwwwwwwwwwwwww wwwwwwwwwwwwwwwwwwW
+W....r..w.F.. ..w.   ...wr.rd..dw...r..W
+W..d. ..w. r....w... ...w.r r..rw......W
+W                                      W
+Wr.r... w r.....w... ...w....r..w..r...W
+W......rw r.....w... r..w.......wr.....W
+W.rr....w. ..r..w... .r.w...r.  w...d..W
+Wwwwwwwwwwwwwwwwwwww wwwwwwwwwwwwwwwwwwW
+W..r....w... ..rw .. .rrw.......wr.rd..W
+W.. ..r.w.d.... w...  ..w...... wr..r..W
+W                                      W
+W.......w.....r.w... ..rwrd..d..w r...rW
+W..r..F.w.... ..w... ..rw r..r..w. ...rW
+Wr.....rw.......w.P. ...w.r..r..w.....rW
+W... ..dwr .....w.X. ...w. ....rw...r..W
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

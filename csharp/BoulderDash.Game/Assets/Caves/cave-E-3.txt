@@ -1,0 +1,46 @@
+# Boulder Dash — Cave E, Level 3
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = E
+Name        = Guards
+Description = Jewels guarded by deadly fireflies
+Kind        = Normal
+Level       = 3
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 6
+CaveTime        = 90
+MagicWallTime   = 20
+JewelValue      = 50
+JewelValueExtra = 90
+Colors          = 9, 10, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+WP.....................................W
+W......................................W
+W......................................W
+W......................................W
+W......................................W
+W......................................W
+W......................................W
+W.......  F.....  F.....  F.....  F....W
+W.......   .....   .....   .....   ....W
+W....... d ..... d ..... d ..... d ....W
+W......................................W
+W......................................W
+W......................................W
+W.......  F.....  F.....  F.....  F....W
+W.......   .....   .....   .....   ....W
+W....... d ..... d ..... d ..... d ....W
+W......................................W
+W......................................W
+W......................................W
+W......................................W
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

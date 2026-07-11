@@ -1,0 +1,46 @@
+# Boulder Dash — Cave I, Level 5
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = I
+Name        = Greed
+Description = Get many jewels; many available
+Kind        = Normal
+Level       = 5
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 90
+CaveTime        = 120
+MagicWallTime   = 20
+JewelValue      = 5
+JewelValueExtra = 10
+Colors          = 8, 4, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+W.drdd.drrdddddrdrdrddrrdddr.ddrrdddrrrW
+Wrddrr.rrdddddrrdrd.ddrrddrrdrddrrdrddrW
+Wdrdrd.dr.ddddrrdr.r.drrrddrrdddrrdrddrW
+Wdrdrdddrdrdrddrrddrrdddrrdrddrrrddr.rrW
+W.rddddrrdrrrrdrdrdrrddrddr.rrr.drdddddW
+Wr.ddddrrdrdrrrddrrdddrrrdrddrr.rrrdrrdW
+Wrdrrrrdrdd.rdrdddrrrrrrrdrddr..rrrdrrdW
+Wrdr.wwwwwww.wwwwwdrddrrrwwwwww.wwwwwwrW
+Wrddrw           wdrddrrrw           wrW
+Wrrrdw PX        wrrrdrddw           wrW
+Wdd.rw           wrrrdrrdw           wrW
+Wdrrdw           wddrrddrw           wdW
+Wdrr.w           wdd..rdrw           wrW
+Wddddw           wrrddrrdw           wrW
+Wddddw           wrdrddrrw           wdW
+Wddddw           wwwwwwwww           wdW
+Wrdrdw                               wdW
+Wrrrrw           w.rrr.drw           wrW
+Wrdrrw           wddrrrrrw           wdW
+Wdrrdwwwwwwwwwwwwwddrr.rrwwwwwwwwwwwwwdW
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

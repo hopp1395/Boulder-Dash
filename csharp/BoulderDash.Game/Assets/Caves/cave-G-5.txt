@@ -1,0 +1,46 @@
+# Boulder Dash — Cave G, Level 5
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = G
+Name        = Amoeba
+Description = Surround amoeba with boulders; pick up created jewels
+Kind        = Normal
+Level       = 5
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 25
+CaveTime        = 120
+MagicWallTime   = 75
+JewelValue      = 10
+JewelValueExtra = 20
+Colors          = 9, 10, 13
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+W .  ....  ... ..r. P..r.  ... ....r.rrW
+W.... ..r. .r.... ...r......r.r.. dr..rW
+W.  .. r..F. ..r.r.... .  ..wwwwwwwwwwwW
+Wr. d.. .. .  .. .  .....rr r..r. . r..W
+Wwwwwwwwwwwww.. .  ......r  r..r. .  ..W
+W..r.  ..r.  ... .r.r. ...  r.. .... ..W
+W.....  .r.  ... .r.r. .r. . r.. r.... W
+Wr.  .... ....  .. r r..r.... ...r... .W
+W...... .  .rr. ...  r.. .r... r..r.r..W
+W. r...... ..r. .r.... .  ..r.  r.d....W
+W. r...... .. r..r.... ...r......r.rr..W
+W.. d.r. ... ..r.  ..r.  ... ....r.rr..W
+W.. ..rF..r.... ...r......r.rF......r..W
+W ..  ..r. ..r. r... .....r.rr...... ..W
+W r.F.r .r.... .  .....   r..r. . r.. rW
+W. r..r.r.... .  ......   r..r...  ... W
+Wr.  ..r.  .... rrr. ...   .. .F... r..W
+WF.. ..r.  .....r. r..r. . r.. r..r. ..W
+W  .... ..... ..   aa.r.... ...r... .  W
+W...d .  Frr. ...   .. .r... r..r.d... W
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

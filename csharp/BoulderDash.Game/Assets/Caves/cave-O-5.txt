@@ -1,0 +1,46 @@
+# Boulder Dash — Cave O, Level 5
+# Erzeugt aus den BD1-Rohdaten (Boulder-Dash-C64/extracted/caves).
+
+[Cave]
+Cave        = O
+Name        = Funnel
+Description = Enchanted wall at tunnel bottom
+Kind        = Normal
+Level       = 5
+Width       = 40
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 30
+CaveTime        = 140
+MagicWallTime   = 8
+JewelValue      = 10
+JewelValueExtra = 20
+Colors          = 8, 14, 9
+
+[Map]
+# Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+Wrr..rrr....rrr..r. Prr.. r..F.r..r.r..W
+Wrw  ..F.r..rrr..r..r.r.w.r..r.  ..r.  W
+W..wrrrr..r.r.rr..rr...wr..r.r....r.rr.W
+W...wrrr..r. . r...r..w.rr..r.rr... .r.W
+W ...wrr..r.... ...r.w...rr.r.rr... .r.W
+W .r.rwrr.. r....r..w.rr....r.... r.. rW
+W..r...wr...r... .rw......r.rr.rr.r...rW
+W..r.r..w r..r.r..wr.rr......r..r. .r..W
+Wr.  ..r.wrr.....w.r.rr...... ..rr..r..W
+W ...r....w.r.rrw.....r..r.r...r..r.rr.W
+W.rr...r...wr.rw......r..rF..r....r...rW
+W....r.rF......r... r.. r..r.r..r.rr...W
+W....r.rr...MMMr..r. r.F.rr.r....r.  ..W
+W.rrrr..r. .rr..rr... r..r.r....r. r...W
+W.rrrr..r... r...r..r.r ..r.rr.... rrr.W
+W..rrr..r.F...rr... F..r..r.rr.....r.rrW
+Wr.r.rr.. r..r.r..r.rr.... .....r.. rrrW
+Wr....r...r... .rr......r. rFrr. ...rrrW
+Wr.r... r..r.r...r.rr......r..r. .r....W
+W  ..r.rrr.......r.rX...... ..rr..r....W
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

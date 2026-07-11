@@ -11,6 +11,10 @@ public class CavePhysicsTests
         byte pointsBefore = 10, byte pointsAfter = 20, byte enchantedWallSeconds = 0) => new()
     {
         Index = 0,
+        Name = "Test",
+        Description = "",
+        Letter = 'A',
+        IsIntermission = false,
         Width = (byte)width,
         Height = (byte)height,
         JewelQuota = jewelQuota,
@@ -25,9 +29,9 @@ public class CavePhysicsTests
         Tiles = tiles,
     };
 
-    private static (Cave Cave, GameState State) Setup(CaveData data)
+    private static (BoulderDash.Core.Simulation.Cave Cave, GameState State) Setup(CaveData data)
     {
-        var cave = new Cave(data);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
         var state = new GameState();
         state.ResetForCave(data);
         return (cave, state);

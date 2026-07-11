@@ -69,7 +69,7 @@ public class BoulderDashGame : XnaGame
         _audioPlayer = new AudioPlayer();
         _inputAdapter = new InputAdapter();
 
-        var caves = CaveFile.LoadAll(Path.Combine(assets, "LEVEL.BIN"));
+        var caves = new CaveTextRepository(Path.Combine(assets, "Caves"));
         var demoScancodes = DemoFile.Load(Path.Combine(assets, "DEMO.BIN"));
         _session = new GameSession(caves, demoScancodes);
 

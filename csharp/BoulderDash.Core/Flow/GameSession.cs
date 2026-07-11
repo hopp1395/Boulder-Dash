@@ -1,5 +1,6 @@
 using BoulderDash.Core.Data;
 using BoulderDash.Core.Simulation;
+using CaveId = BoulderDash.Core.Data.Cave;
 
 namespace BoulderDash.Core.Flow;
 
@@ -47,15 +48,23 @@ public enum TransitionReason
 /// - Nur ein Ausgangs-Erfolg (AdvanceToNextCave) rückt zur nächsten Cave vor.
 /// - Escape während des Spiels beendet die Session und kehrt ins Menü zurück (nicht nur die Cave),
 ///   durchläuft aber noch die Übergangs-Pause wie jedes andere Cave-Ende.
-/// - Die Menü-Cave-Auswahl ist auf 0..15 (A-P) begrenzt (Original: cavenr&gt;15→15), obwohl
-///   LEVEL.BIN 21 Datensätze enthält — passend zum Handbuch ("16 CAVES... A through P").
-///   Caves 16..20 sind nur über erfolgreiche Fortschritts-Kette erreichbar; Cave 20 ist ein
-///   leerer, nie fertiggestellter Platzhalter (siehe CaveFileTests) — wird beim Laden übersprungen,
-///   um die im Original mögliche Endlosschleife/undefinierte Speicherlesung zu vermeiden.
+/// - Die Menü-Cave-Auswahl ist auf die 16 reg. Caves A-P begrenzt (passend zum Handbuch
+///   "16 CAVES... A through P"); die 4 Intermissions (Q-T) sind nur über die Fortschritts-Kette
+///   nach jeder 4. Cave erreichbar (Original-BD1-Struktur), siehe PlayOrder.
 /// </summary>
 public sealed class GameSession
 {
-    private const int MaxCaveIndex = 15; // Menü-Auswahl A..P (Original: cavenr>15 -> 15)
+    /// <summary>Spielreihenfolge der 20 BD1-Caves: nach je 4 regulären Caves eine Intermission
+    /// (Original-BD1-Struktur). CaveIndex indiziert in diese Tabelle.</summary>
+    private static readonly CaveId[] PlayOrder =
+    [
+        CaveId.CaveA, CaveId.CaveB, CaveId.CaveC, CaveId.CaveD, CaveId.CaveQ,
+        CaveId.CaveE, CaveId.CaveF, CaveId.CaveG, CaveId.CaveH, CaveId.CaveR,
+        CaveId.CaveI, CaveId.CaveJ, CaveId.CaveK, CaveId.CaveL, CaveId.CaveS,
+        CaveId.CaveM, CaveId.CaveN, CaveId.CaveO, CaveId.CaveP, CaveId.CaveT,
+    ];
+
+    private const int MaxCaveIndex = 18; // Menü-Auswahl A..P (letzte reguläre Cave in PlayOrder, Index 18=P)
     private const double BonusSecondsPerPoint = 0.02; // delay(20) pro Punkt, GAME.CPP:58
     private const double PostBonusPauseSeconds = 1.0; // delay(1000) nach der Bonuszählung
     private const double DeathPauseSeconds = 1.0; // delay(1000)
@@ -73,7 +82,7 @@ public sealed class GameSession
         "iel zu starten                          " +
         "                                        ";
 
-    private readonly IReadOnlyList<CaveData> _caves;
+    private readonly ICaveRepository _caves;
     private readonly BorlandRandom _random;
     private readonly CavePhysics _physics;
     private readonly Dissolve _dissolve;
@@ -106,14 +115,14 @@ public sealed class GameSession
     public InputState Input { get; }
     public Camera Camera { get; }
     public Clocks Clocks { get; }
-    public Cave? Cave { get; private set; }
+    public Simulation.Cave? Cave { get; private set; }
     public CaveData? CurrentCaveData { get; private set; }
 
     /// <summary>Auflöse-Overlay für die Rendering-Schicht (newmask-Äquivalent) — eine Instanz für
     /// die gesamte Session, da level_in() und regel() im Original denselben rand()-Strom teilen.</summary>
     public Dissolve Dissolve => _dissolve;
 
-    public GameSession(IReadOnlyList<CaveData> caves, byte[]? demoScancodes = null)
+    public GameSession(ICaveRepository caves, byte[]? demoScancodes = null)
     {
         _caves = caves;
         _demoScancodes = demoScancodes;
@@ -131,13 +140,7 @@ public sealed class GameSession
     public string MarqueeVisibleText => MarqueeText.Substring(_marqueeOffset, 40);
 
     /// <summary>Cave-Buchstabe der aktuell im Menü gewählten (nicht zwingend geladenen) Cave.</summary>
-    public char SelectedCaveLetter => LetterFor(CaveIndex);
-
-    private static char LetterFor(int caveIndex)
-    {
-        var korrektur = (caveIndex - 1) / 4;
-        return (char)(caveIndex + 'A' - korrektur);
-    }
+    public char SelectedCaveLetter => CaveLetter.ToChar(PlayOrder[CaveIndex]);
 
     public void Update(double deltaSeconds)
     {
@@ -193,7 +196,7 @@ public sealed class GameSession
     public void MenuUp()
     {
         if (Phase != SessionPhase.Menu) return;
-        if (DifficultyLevel++ > 3) DifficultyLevel = 4;
+        if (DifficultyLevel++ > 4) DifficultyLevel = 5;
     }
 
     public void MenuDown()
@@ -205,15 +208,17 @@ public sealed class GameSession
     public void MenuNextCave()
     {
         if (Phase != SessionPhase.Menu) return;
-        CaveIndex++;
-        if (CaveIndex > MaxCaveIndex) CaveIndex = MaxCaveIndex;
+        var next = CaveIndex + 1;
+        while (next <= MaxCaveIndex && CaveLetter.IsIntermission(PlayOrder[next])) next++;
+        CaveIndex = next > MaxCaveIndex ? (sbyte)MaxCaveIndex : (sbyte)next;
     }
 
     public void MenuPreviousCave()
     {
         if (Phase != SessionPhase.Menu) return;
-        CaveIndex--;
-        if (CaveIndex < 0) CaveIndex = 0;
+        var previous = CaveIndex - 1;
+        while (previous >= 0 && CaveLetter.IsIntermission(PlayOrder[previous])) previous--;
+        CaveIndex = previous < 0 ? (sbyte)0 : (sbyte)previous;
     }
 
     public void MenuQuit()
@@ -244,7 +249,7 @@ public sealed class GameSession
 
         _isDemo = true;
         _menuCaveIndexBeforeDemo = CaveIndex;
-        LoadCaveWithSkip(0);
+        LoadCaveWithSkip(0, CaveLevel.Level1);
 
         if (Phase != SessionPhase.Playing)
         {
@@ -480,7 +485,7 @@ public sealed class GameSession
         {
             case TransitionReason.Success:
                 var next = CaveIndex + 1;
-                CaveIndex = (sbyte)(next >= _caves.Count ? 0 : next);
+                CaveIndex = (sbyte)(next >= PlayOrder.Length ? 0 : next);
                 LoadCaveWithSkip(CaveIndex);
                 break;
             case TransitionReason.TimeoutAlive:
@@ -513,16 +518,17 @@ public sealed class GameSession
         _phaseTimer = CaveTransitionPauseSeconds;
     }
 
-    /// <summary>Lädt eine Cave; überspringt (mit Sicherheitsgrenze) Caves ohne Eingang, wie den
-    /// leeren Platzhalter Cave 20 — das Original würde dort in level_laden's Eingangssuche
-    /// unbegrenzt weiterlesen (kein Byte==10 vorhanden), siehe CaveFileTests.</summary>
-    private void LoadCaveWithSkip(int caveIndex)
+    /// <summary>Lädt eine Cave über PlayOrder/DifficultyLevel (oder dem optionalen Level-Override,
+    /// für die Demo, die immer Level 1 spielt); überspringt (mit Sicherheitsgrenze) Caves ohne
+    /// Eingang, falls ein Repository doch einmal eine unspielbare Cave liefert.</summary>
+    private void LoadCaveWithSkip(int caveIndex, CaveLevel? levelOverride = null)
     {
-        for (var attempt = 0; attempt < _caves.Count; attempt++)
+        var level = levelOverride ?? (CaveLevel)DifficultyLevel;
+        for (var attempt = 0; attempt < PlayOrder.Length; attempt++)
         {
-            var index = (caveIndex + attempt) % _caves.Count;
-            var data = _caves[index];
-            var cave = new Cave(data);
+            var index = (caveIndex + attempt) % PlayOrder.Length;
+            var data = _caves.Get(PlayOrder[index], level);
+            var cave = new Simulation.Cave(data);
             var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
             if (entranceIndex < 0)
             {
