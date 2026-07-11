@@ -1,0 +1,53 @@
+Sprites Format: Grundsprites
+====================================================================
+
+        0:   Leer               => 2 Sprites
+        1:   Erde
+        2:   Stein
+        3:   Diamant            => 8 Strites
+        4:   Mauer
+        5:   Stahl
+        6:   Rockford           => 12 Sprites
+        7:   Lava               =>  4 Sprites
+        8:   Geist              =>  4 Sprites
+        9:   Schmeterling       =>  4 Sprites
+       10:   Haus (Eingang)     =>  2 Sprites
+       11:   Haus (Ausgang)     =>  2 Sprites
+       12:   Explosion          =>  4 Sprites
+       13:   Mauer (Umwandlung) =>  4 Sprites
+       14:   Reserviert
+       15:   Reserviert
+
+Sprites Format: Erweitert
+====================================================================
+
+       16-17: Leer (Schwartz,Weiá)      x2
+       18-21: Leer (Leben)              x4
+       22-25: Lava                      x4
+       26-29: Geist                     x4
+       30-33: Schmeterling              x4
+       34-37: Explosion                 x4
+       38-51: Mauer                     x4
+       52-53: Haus                      x2
+       54-66: Rockford                  x12
+
+Level Format:
+====================================================================
+
+BYTE  0:     X-Gr”áe des Levels
+BYTE  1:     Y-Gr”áe des Levels
+BYTE  2:     Anzahl der aufzusamelnden Diamanten
+BYTE  3:     Zeit [s]
+BYTE  4:     Grundfarbe 1
+BYTE  5:     Grundfarbe 2
+BYTE  6:     Grundfarbe 3
+BYTE  7:     Grundfarbe 4
+BYTE  8:     Startposition des Levels X-Koordinate
+BYTE  9:     Startposition des Levels Y-Koordinate
+BYTE 10:     Umwandlungszeit [s]
+BYTE 11:     Punkte pro Diamanten 1
+BYTE 12:     Punkte pro Diamanten 2
+BYTE 13:     Reserviert
+BYTE 14:     Reserviert
+BYTE 15:     Reserviert
+BYTE 16:     Levelmaske von Byte 16 bis Byte 0 * Byte 1 + 16

@@ -1,0 +1,59 @@
+/**************************************************************************/
+/* Programmm    : Game.h                                                  */
+/* Autor        : Jan Hoppe                                               */
+/* Version      : 1.00                                                    */
+/* Beschreibung :                                                         */
+/* Speichermodel: LARGE                                                   */
+/**************************************************************************/
+
+/* Bewegungsablauf Steuerung *********************************************/
+
+void Mov_Rockford (BYTE eingabe)
+ {
+  switch(eingabe)
+   {
+    case 0x1D : kop=6; break;
+    case 0x9D : kop=0; break;
+    case 0x4D : richtung=1;              flags=0x40; status=0; break;
+    case 0x4B : richtung= (-1);          flags=0x10; status=1; break;
+    case 0x50 : richtung=level_xgr;      flags=0x20;           break;
+    case 0x48 : richtung=(-1)*level_xgr; flags=0x80;           break;
+    case 0xCD : flags=flags&0xBF; break;
+    case 0xCB : flags=flags&0xEF; break;
+    case 0xD0 : flags=flags&0xDF; break;
+    case 0xC8 : flags=flags&0x7F; break;
+    default   : break;
+   }
+ }
+
+/* Statusanzeige **********************************************************/
+
+void Send_Message (void)
+ {
+  if (anfang_var<99)
+   {
+    gotoxy(1,1);
+    printf("  P L A Y E R   1 ,   %01i  M E N   %c / %i",leben,cavenr+'A'-((cavenr-1)/4),levelnr);
+   }
+  else
+   {
+    gotoxy(1,1);
+    printf("%02i  -  %02i     %02i      %03i         %06i",level_dnt,pkt_d1,diamanten,level_clk,score);
+   }
+ }
+
+/* Level beenden **********************************************************/
+
+void Level_End (void)
+ {
+  if ((level_ende==0xFF)&&(stat==0))
+   {
+    for (level_clk;level_clk>0;level_clk--)
+     {
+      score++;
+      gotoxy(1,1); printf("%02i  -  %02i     %02i      %03i         %06i",level_dnt,pkt_d1,diamanten,level_clk-1,score);
+      delay(20);
+     }
+    delay(1000);
+   }
+ }

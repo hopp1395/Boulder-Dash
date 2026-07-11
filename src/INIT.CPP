@@ -1,0 +1,209 @@
+/**************************************************************************/
+/* Programmm    : Init.h                                                  */
+/* Autor        : Jan Hoppe                                               */
+/* Version      : 1.00                                                    */
+/* Beschreibung :                                                         */
+/* Speichermodel: LARGE                                                   */
+/**************************************************************************/
+
+/* Fehelrhafter Programmabbruch ********************************************/
+
+void Prog_Exit (BYTE *message, BYTE flag)
+ {
+  WORD i=NULL;
+
+  if (flag==DEINSTALL)
+   {
+    inregs.x.ax = 0x0003;                 //Textmodus
+    int86 (0x10,&inregs,&outregs);
+   }
+
+  for (i=0;i<40;i++) farfree(s_zeiger[i]);
+  for (i=0;i<90;i++) farfree(z_zeiger[i]);
+  farfree (f_zeiger);
+  farfree (e_zeiger);
+
+  fcloseall();
+
+  printf("%s\n",message);
+  printf("Prog_Exit: OK\n\n");
+  exit(0);
+ }
+
+/* Soundblaster Programmierung *******************************************/
+
+void Play_Sound (BYTE reg, BYTE val)
+ {
+  outp(FMAdr,reg);
+  inp(FMAdr);           //Warten
+  outp(FMAdr+1,val);
+ }
+
+/* Timer Programmierung **************************************************/
+
+void Init_Timer (BYTE flag)
+ {
+  WORD speed = game_speed;      //Geschwiendiegkeitsvariable laden
+
+  if (flag==INSTALL)
+   {
+    // Geschwiendigkeit berechnung
+    // Aufteilung fr den Timer-Interrupt in Low-High Anteil
+
+    speed = 59659 / speed;
+    BYTE zeit_low = speed & 0x00FF;
+    BYTE zeit_high= ( speed >> 8 ) & 0x00FF;
+
+    // Programmierung des Timer Bausteins
+
+    outp(0x43,0x34);
+    outp(0x40,zeit_low);          // low
+    outp(0x40,zeit_high);         // high
+   }
+  if (flag==DEINSTALL)
+   {
+    outp(0x43,0x34);
+    outp(0x40,0x00);
+    outp(0x40,0x00);
+   }
+ }
+
+/* Installation der Haupt Interrupt Service Routine **********************/
+
+void Init_ISR (BYTE flag, BYTE isr)
+ {
+  if ((flag==INSTALL)&&(isr==0))
+   {
+    // Game ISR installieren
+    alte_timer_isr = getvect(INT_TIMER);                 //Interrupt sichern
+    setvect(INT_TIMER, timer_interrupt_service_routine); //neuen Installieren
+   }
+  if ((flag==INSTALL)&&(isr==1))
+   {
+    // Game ISR installieren
+    alte_timer_isr = getvect(INT_TIMER);                 //Interrupt sichern
+    setvect(INT_TIMER, menu_interrupt_service_routine); //neuen Installieren
+   }
+  if (flag==DEINSTALL)
+   {
+    // Alte Timer-ISR restaurieren
+    setvect(INT_TIMER, alte_timer_isr);
+   }
+ }
+
+/* Tastaturinitialisierung ************************************************/
+
+void Init_Keyboard (BYTE flag)
+ {
+  if (flag==INSTALL)
+   {
+    // Tastatur ISR sperrung
+
+    outp (0x21,0x02);      //IRQ 1 sperren
+    outp (0x60,0xED);      //NUM-LOCK OFF
+    warten:;               //Warte bis Tastatur bereit
+    asm in      al,0x64;
+    asm test    al,0x02;
+    asm jnz     warten;
+    outp (0x60,0x00);
+   }
+  if (flag==DEINSTALL)
+   {
+    outp (0x21,0x02);                     //IRQ 1 sperren
+    outp (0x60,0xF6);                     //Tastaturbefehl Standartwerte*/
+    outp (0x21,0x00);                     //IRQ 1 freigeben
+   }
+ }
+
+/* Grafikinitialisierung ***************************************************/
+
+void Init_Graph (BYTE flag)
+ {
+  if (flag==INSTALL)
+   {
+    inregs.x.ax = 0x0013;                 //Grafikmodus 320x200x256
+    int86 (0x10,&inregs,&outregs);        //Bildschirspeicher ab A0000 (64k)
+   }
+  if (flag==DEINSTALL)
+   {
+    inregs.x.ax = 0x0003;                 //Textmodus
+    int86 (0x10,&inregs,&outregs);
+   }
+  textcolor(0);
+  textbackground(1);
+ }
+
+/* Zeigerinitialisierung ***************************************************/
+
+void Init_Pointer(BYTE flag)
+ {
+  BYTE i=NULL;
+
+  if (flag==INSTALL)
+   {
+    z_zeiger[0]=s_zeiger[0];                               //Leer
+    z_zeiger[1]=s_zeiger[1];                               //Erde
+    z_zeiger[2]=s_zeiger[2];                               //Stein
+    z_zeiger[3]=s_zeiger[3]; z_zeiger[4]=s_zeiger[4];      //Diamant
+    z_zeiger[5]=s_zeiger[5]; z_zeiger[6]=s_zeiger[6];
+    z_zeiger[7]=s_zeiger[7]; z_zeiger[8]=s_zeiger[8];
+    z_zeiger[9]=s_zeiger[9]; z_zeiger[10]=s_zeiger[10];
+    z_zeiger[11]=s_zeiger[11];                             //Mauer
+    z_zeiger[12]=s_zeiger[12];                             //Stahl
+    z_zeiger[13]=s_zeiger[13]; z_zeiger[14]=s_zeiger[14];  //Rock
+    z_zeiger[15]=s_zeiger[15]; z_zeiger[16]=s_zeiger[16];
+    z_zeiger[17]=s_zeiger[17]; z_zeiger[18]=s_zeiger[18];
+    z_zeiger[19]=s_zeiger[19]; z_zeiger[20]=s_zeiger[20];
+    z_zeiger[21]=s_zeiger[21]; z_zeiger[22]=s_zeiger[22];
+    z_zeiger[23]=s_zeiger[23];
+    z_zeiger[24]=s_zeiger[24]; z_zeiger[25]=s_zeiger[25];      //Lava
+    z_zeiger[26]=s_zeiger[26]; z_zeiger[27]=s_zeiger[27];
+    z_zeiger[28]=s_zeiger[24]; z_zeiger[29]=s_zeiger[25];
+    z_zeiger[30]=s_zeiger[26]; z_zeiger[31]=s_zeiger[27];
+    z_zeiger[32]=s_zeiger[28]; z_zeiger[33]=s_zeiger[28];      //Geist
+    z_zeiger[34]=s_zeiger[29]; z_zeiger[35]=s_zeiger[29];
+    z_zeiger[36]=s_zeiger[30]; z_zeiger[37]=s_zeiger[30];
+    z_zeiger[38]=s_zeiger[31]; z_zeiger[39]=s_zeiger[31];
+    z_zeiger[40]=s_zeiger[32]; z_zeiger[41]=s_zeiger[32];      //Motyl
+    z_zeiger[42]=s_zeiger[33]; z_zeiger[43]=s_zeiger[34];
+    z_zeiger[44]=s_zeiger[34]; z_zeiger[45]=s_zeiger[33];
+    z_zeiger[46]=s_zeiger[32]; z_zeiger[47]=s_zeiger[32];
+    z_zeiger[48]=s_zeiger[12]; z_zeiger[49]=s_zeiger[35];      //Haus ein
+    z_zeiger[50]=s_zeiger[12]; z_zeiger[51]=s_zeiger[35];      //Haus aus
+    z_zeiger[52]=s_zeiger[36]; z_zeiger[53]=s_zeiger[36];      //Explo1
+    z_zeiger[54]=s_zeiger[37]; z_zeiger[55]=s_zeiger[38];
+    z_zeiger[56]=s_zeiger[38]; z_zeiger[57]=s_zeiger[37];
+    z_zeiger[58]=s_zeiger[36]; z_zeiger[59]=s_zeiger[36];
+    z_zeiger[60]=s_zeiger[39]; z_zeiger[61]=s_zeiger[40];      //Maueru
+    z_zeiger[62]=s_zeiger[41]; z_zeiger[63]=s_zeiger[42];
+    z_zeiger[64]=s_zeiger[39]; z_zeiger[65]=s_zeiger[40];
+    z_zeiger[66]=s_zeiger[41]; z_zeiger[67]=s_zeiger[42];
+    z_zeiger[68]=s_zeiger[43]; z_zeiger[69]=s_zeiger[44];      //Explo2
+    z_zeiger[70]=s_zeiger[44]; z_zeiger[71]=s_zeiger[45];
+    z_zeiger[72]=s_zeiger[46]; z_zeiger[73]=s_zeiger[46];
+    z_zeiger[74]=s_zeiger[47]; z_zeiger[75]=s_zeiger[47];
+    z_zeiger[76]=s_zeiger[48];                                 //Stahl lauf
+
+    buffer[MASK_LEER]    =z_zeiger[0];
+    buffer[MASK_ERDE]    =z_zeiger[1];
+    buffer[MASK_STEIN]   =z_zeiger[2];
+    buffer[MASK_DIAMANT] =z_zeiger[3];
+    buffer[MASK_MAUER]   =z_zeiger[11];
+    buffer[MASK_STAHL]   =z_zeiger[12];
+    buffer[MASK_ROCK]    =z_zeiger[13];
+    buffer[MASK_LAVA]    =z_zeiger[24];
+    buffer[MASK_GEIST]   =z_zeiger[32];
+    buffer[MASK_MOTYL]   =z_zeiger[40];
+    buffer[MASK_HAUSE]   =z_zeiger[48];
+    buffer[MASK_HAUSA]   =z_zeiger[50];
+    buffer[MASK_EXPLO]   =z_zeiger[52];
+    buffer[MASK_MAUERU]  =z_zeiger[11];
+    buffer[MASK_EXPLO2]  =z_zeiger[68];
+    buffer[MASK_SLAUF]   =z_zeiger[76];
+   }
+  if (flag==DEINSTALL)
+   {
+    for (i=0;i<40;i++) farfree(s_zeiger[i]);
+    farfree(e_zeiger);
+   }
+ }
