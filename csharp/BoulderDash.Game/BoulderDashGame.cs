@@ -70,8 +70,8 @@ public class BoulderDashGame : XnaGame
         _inputAdapter = new InputAdapter();
 
         var caves = new CaveTextRepository(Path.Combine(assets, "Caves"));
-        var demoScancodes = DemoFile.Load(Path.Combine(assets, "DEMO.BIN"));
-        _session = new GameSession(caves, demoScancodes);
+        var demoSteps = DemoTextFile.Load(Path.Combine(assets, "demo.txt"));
+        _session = new GameSession(caves, demoSteps);
 
         SyncPalette();
     }

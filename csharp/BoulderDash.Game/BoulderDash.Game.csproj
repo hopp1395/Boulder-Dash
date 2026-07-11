@@ -26,10 +26,10 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Keine Content-Pipeline (kein MGCB): Assets werden zur Laufzeit direkt geladen, siehe Assets/.
-         Caves liegen als menschenlesbare Textdateien in Assets/Caves/ (BD1-Rohformat, siehe
-         BoulderDash.Core/Data/CaveTextFile.cs), Sprites als Textdateien in Assets/Sprites/ (eine
-         Datei pro Objekt, siehe BoulderDash.Core/Data/SpriteTextFile.cs); nur DEMO.BIN bleibt eine
-         Original-Binärdatei. Sound wird vollständig synthetisiert (BoulderDash.Core/Audio). -->
+         Alle Assets sind menschenlesbare Textdateien: Caves in Assets/Caves/ (CaveTextFile.cs),
+         Sprites in Assets/Sprites/ (eine Datei pro Objekt, SpriteTextFile.cs), die Demo in
+         Assets/demo.txt (DemoTextFile.cs, jeweils BoulderDash.Core/Data/). Sound wird
+         vollständig synthetisiert (BoulderDash.Core/Audio), keine Audiodateien nötig. -->
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
   </ItemGroup>
   <ItemGroup>
