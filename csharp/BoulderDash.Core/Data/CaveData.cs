@@ -3,9 +3,9 @@ using BoulderDash.Core.Simulation;
 namespace BoulderDash.Core.Data;
 
 /// <summary>
-/// Eine geladene Cave: Header-Werte plus Kachelkarte, aufgebaut aus der BD1-Rohformat-Textdatei
-/// (siehe CaveMapBuilder). Die Kacheln sind hier noch roh (reine Element-IDs ohne Verarbeitungs-/
-/// Bewegungs-Flags), wie unmittelbar nach dem Aufbau.
+/// Eine geladene Cave: Kopfdaten plus Kachelkarte, gelesen aus einer Cave-Textdatei
+/// (siehe CaveTextFile). Die Kacheln sind hier noch roh (reine Element-IDs ohne Verarbeitungs-/
+/// Bewegungs-Flags), wie unmittelbar nach dem Laden.
 /// </summary>
 public sealed class CaveData
 {

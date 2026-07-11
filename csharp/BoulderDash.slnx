@@ -2,5 +2,4 @@
   <Project Path="BoulderDash.Core/BoulderDash.Core.csproj" />
   <Project Path="BoulderDash.Game/BoulderDash.Game.csproj" />
   <Project Path="BoulderDash.Tests/BoulderDash.Tests.csproj" />
-  <Project Path="tools/CaveConverter/CaveConverter.csproj" />
 </Solution>
