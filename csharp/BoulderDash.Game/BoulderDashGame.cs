@@ -70,7 +70,8 @@ public class BoulderDashGame : XnaGame
         _inputAdapter = new InputAdapter();
 
         var caves = CaveFile.LoadAll(Path.Combine(assets, "LEVEL.BIN"));
-        _session = new GameSession(caves);
+        var demoScancodes = DemoFile.Load(Path.Combine(assets, "DEMO.BIN"));
+        _session = new GameSession(caves, demoScancodes);
 
         SyncPalette();
     }
@@ -121,7 +122,8 @@ public class BoulderDashGame : XnaGame
                 if (_inputAdapter.IsJustPressed(Keys.Right)) _session.MenuNextCave();
                 if (_inputAdapter.IsJustPressed(Keys.Left)) _session.MenuPreviousCave();
                 if (_inputAdapter.IsJustPressed(Keys.F1)) _session.MenuStart();
-                // F2 (Demo) folgt in M5; F3 (Hilfe) ist bereits im Original ohne Funktion.
+                if (_inputAdapter.IsJustPressed(Keys.F2)) _session.MenuDemo();
+                // F3 (Hilfe) ist bereits im Original ohne Funktion.
                 if (_inputAdapter.IsJustPressed(Keys.F4)) _session.MenuQuit();
                 break;
             case SessionPhase.Playing:

@@ -11,6 +11,11 @@ public enum SessionPhase
     DeathPause,
     GameOverMessage,
     CaveTransition,
+
+    /// <summary>Wartephase nach F2, vor dem ersten Demo-Scancode — entspricht delay(7000) in
+    /// demo() (BOULDER.CPP:359), während dem der Eingang sich bereits aufbaut.</summary>
+    DemoWait,
+    DemoPlaying,
 }
 
 /// <summary>
@@ -24,6 +29,10 @@ public enum TransitionReason
     DeathRetry,
     GameOver,
     EscQuit,
+
+    /// <summary>Demo endet (Terminator, Cave-Ende oder Tod) — kehrt immer ins Menü zurück, wie
+    /// der F2-Zweig in Start_menu (BOULDER.CPP:321-328).</summary>
+    DemoEnd,
 }
 
 /// <summary>
@@ -53,6 +62,7 @@ public sealed class GameSession
     private const double GameOverExtraPauseSeconds = 1.0; // zweites delay(1000) vor GAME OVER
     private const double CaveTransitionPauseSeconds = 0.5; // delay(500) vor level_out()
     private const double MarqueeSecondsPerChar = 3.0 / 18.2; // clk_18-Periode 3 bei 18,2 Hz Standardtimer
+    private const double DemoWaitSeconds = 7.0; // delay(7000), BOULDER.CPP:359
 
     // Original-Marquee-Text (BOULDER.CPP:206-210), Umlaut ü->ue ersetzt (siehe BiosFont).
     // "Boulde Dash" (ohne r) ist ein Tippfehler im Original und wird bewusst nicht korrigiert.
@@ -81,6 +91,11 @@ public sealed class GameSession
     private int _entranceIndex;
     private TransitionReason _transitionReason;
 
+    private readonly byte[]? _demoScancodes;
+    private DemoPlayer? _demoPlayer;
+    private bool _isDemo;
+    private sbyte _menuCaveIndexBeforeDemo;
+
     public SessionPhase Phase { get; private set; } = SessionPhase.Menu;
     public sbyte CaveIndex { get; private set; }
     public sbyte DifficultyLevel { get; private set; } = 1;
@@ -98,9 +113,10 @@ public sealed class GameSession
     /// die gesamte Session, da level_in() und regel() im Original denselben rand()-Strom teilen.</summary>
     public Dissolve Dissolve => _dissolve;
 
-    public GameSession(IReadOnlyList<CaveData> caves)
+    public GameSession(IReadOnlyList<CaveData> caves, byte[]? demoScancodes = null)
     {
         _caves = caves;
+        _demoScancodes = demoScancodes;
         _random = new BorlandRandom();
         _physics = new CavePhysics(_random);
         _dissolve = new Dissolve(_random);
@@ -144,6 +160,12 @@ public sealed class GameSession
                 break;
             case SessionPhase.CaveTransition:
                 UpdateCaveTransition(deltaSeconds);
+                break;
+            case SessionPhase.DemoWait:
+                UpdateDemoWait(deltaSeconds);
+                break;
+            case SessionPhase.DemoPlaying:
+                UpdateDemoPlaying(deltaSeconds);
                 break;
         }
     }
@@ -206,6 +228,34 @@ public sealed class GameSession
         if (Phase != SessionPhase.Menu) return;
         State.Chances = 3;
         LoadCaveWithSkip(CaveIndex);
+    }
+
+    /// <summary>F2: Demo starten — lädt IMMER Cave A (level_laden(0) in Start_menu, BOULDER.CPP:322),
+    /// unabhängig von der Menü-Cave-Auswahl. Chances/leben bleiben unangetastet (das Original
+    /// fasst leben nur in F1 an). level_laden(0) schreibt (anders als die F1-Progression) NICHT
+    /// in cavenr — die Menü-Auswahl muss daher separat gesichert und danach wiederhergestellt
+    /// werden (LoadCaveWithSkip setzt CaveIndex sonst dauerhaft auf 0).</summary>
+    public void MenuDemo()
+    {
+        if (Phase != SessionPhase.Menu || _demoScancodes is null)
+        {
+            return;
+        }
+
+        _isDemo = true;
+        _menuCaveIndexBeforeDemo = CaveIndex;
+        LoadCaveWithSkip(0);
+
+        if (Phase != SessionPhase.Playing)
+        {
+            // Cave A war nicht ladbar (Sicherheitsnetz in LoadCaveWithSkip) — kein Demo-Start.
+            _isDemo = false;
+            return;
+        }
+
+        _demoPlayer = new DemoPlayer(_demoScancodes);
+        Phase = SessionPhase.DemoWait;
+        _phaseTimer = DemoWaitSeconds;
     }
 
     /// <summary>Escape während des Spiels: beendet die Session, kehrt (nach der üblichen
@@ -282,6 +332,72 @@ public sealed class GameSession
         }
     }
 
+    private void UpdateDemoWait(double deltaSeconds)
+    {
+        AdvanceSimulation(deltaSeconds); // ISR läuft weiter, Eingang baut sich auf (wie im Original während delay(7000)).
+
+        _phaseTimer -= deltaSeconds;
+        if (_phaseTimer > 0)
+        {
+            return;
+        }
+
+        Phase = SessionPhase.DemoPlaying;
+        _demoPlayer!.ApplyCurrent(Input, Cave!.Width);
+    }
+
+    /// <summary>Eigene Tick-Schleife statt AdvanceSimulation: der Demo-Vorschub muss nach JEDEM
+    /// einzelnen GameTick.Tick()-Aufruf laufen (siehe DemoPlayer-Klassenkommentar), nicht erst
+    /// nach der ganzen Frame-Charge.</summary>
+    private void UpdateDemoPlaying(double deltaSeconds)
+    {
+        if (Cave is null || CurrentCaveData is null || _demoPlayer is null)
+        {
+            return;
+        }
+
+        _tickAccumulator += deltaSeconds;
+        const int maxTicksPerFrame = 8;
+        var ticks = 0;
+        while (_tickAccumulator >= _secondsPerTick && ticks < maxTicksPerFrame)
+        {
+            _gameTick.Tick(Cave, State, Input, Camera, Clocks, _entranceIndex);
+            _demoPlayer.AdvanceIfDue(Clocks, Input, Cave.Width);
+            _tickAccumulator -= _secondsPerTick;
+            ticks++;
+
+            if (State.Stat != 0 || State.IsCaveEnded || _demoPlayer.IsAtEnd)
+            {
+                break;
+            }
+        }
+
+        EvaluateDemoEnd();
+    }
+
+    /// <summary>Abbruchprioritäten wie in demo() pro Foreground-Iteration geprüft (BOULDER.CPP:
+    /// 369-374): zuerst Cave-Ende (level_ende, zählt bei stat==0 noch Bonus wie im Normalspiel),
+    /// dann Tod (kein Bonus, keine Chances/DeathPause — das Original fasst leben in demo() nicht
+    /// an), erst danach der Demo-Terminator.</summary>
+    private void EvaluateDemoEnd()
+    {
+        if (Cave is null || _demoPlayer is null)
+        {
+            return;
+        }
+
+        if (State.IsCaveEnded)
+        {
+            Phase = SessionPhase.LevelEndBonus;
+            _bonusSubTimer = 0;
+            _postBonusPauseActive = false;
+        }
+        else if (State.Stat != 0 || _demoPlayer.IsAtEnd)
+        {
+            BeginTransition(TransitionReason.DemoEnd);
+        }
+    }
+
     private double _bonusSubTimer;
     private bool _postBonusPauseActive;
 
@@ -317,7 +433,10 @@ public sealed class GameSession
         if (_phaseTimer <= 0)
         {
             _postBonusPauseActive = false;
-            BeginTransition(State.AdvanceToNextCave ? TransitionReason.Success : TransitionReason.TimeoutAlive);
+            var reason = _isDemo
+                ? TransitionReason.DemoEnd
+                : State.AdvanceToNextCave ? TransitionReason.Success : TransitionReason.TimeoutAlive;
+            BeginTransition(reason);
         }
     }
 
@@ -374,6 +493,15 @@ public sealed class GameSession
                 Cave = null;
                 CurrentCaveData = null;
                 ShowGameOverMessage = false;
+                break;
+            case TransitionReason.DemoEnd:
+                Phase = SessionPhase.Menu;
+                Cave = null;
+                CurrentCaveData = null;
+                ShowGameOverMessage = false;
+                _isDemo = false;
+                _demoPlayer = null;
+                CaveIndex = _menuCaveIndexBeforeDemo;
                 break;
         }
     }
