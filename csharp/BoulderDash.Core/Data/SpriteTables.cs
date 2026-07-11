@@ -5,13 +5,14 @@ namespace BoulderDash.Core.Data;
 /// <summary>
 /// Statische Frame-Tabellen für die Sprite-Zuordnung, 1:1 aus Init_Pointer (src/INIT.CPP:138-208)
 /// übernommen. z_zeiger (dort: 90 Einträge, hier nur die 77 tatsächlich belegten 0-76) ordnet
-/// "geordnete" Animationsframes den 49 Rohsprites aus SPRITES.BIN zu; DefaultFrame liefert je
+/// "geordnete" Animationsframes den 49 Rohsprites aus den Sprite-Textdateien zu (Reihenfolge
+/// siehe SpriteTextRepository.Manifest); DefaultFrame liefert je
 /// Element den z_zeiger-Index, den ein frisch geladenes, noch nicht angelaufenes Spiel zeigt
 /// (buffer[MASK_*]-Initialwerte, INIT.CPP:187-202, inklusive der Sonderbehandlung des Ausgangs).
 /// </summary>
 public static class SpriteTables
 {
-    /// <summary>z_zeiger[i] -> Index in die 49 Rohsprites aus SPRITES.BIN.</summary>
+    /// <summary>z_zeiger[i] -> Index in die 49 Rohsprites (SpriteTextRepository.RawSprites).</summary>
     public static readonly int[] FrameToRawSprite =
     [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, // 0-10

@@ -1,13 +1,13 @@
 namespace BoulderDash.Tests;
 
 /// <summary>
-/// Stellt sicher, dass die nach csharp/BoulderDash.Game/Assets kopierten Original-Binärdateien
-/// nicht von den Archivdateien in src/ abweichen (reiner Lesevergleich, src/ wird nie verändert).
+/// Stellt sicher, dass die nach csharp/BoulderDash.Game/Assets kopierte Original-Binärdatei
+/// (nur noch DEMO.BIN — Caves und Sprites liegen als Textdateien vor) nicht von der
+/// Archivdatei in src/ abweicht (reiner Lesevergleich, src/ wird nie verändert).
 /// </summary>
 public class AssetIntegrityTests
 {
     [Theory]
-    [InlineData("SPRITES.BIN")]
     [InlineData("DEMO.BIN")]
     public void Kopie_ist_byteidentisch_zum_Original(string dateiname)
     {

@@ -1,0 +1,29 @@
+# Boulder Dash — Sprite: Boulder (1 Frame, 16x16)
+# Ein Zeichen pro Pixel, Werte sind Indizes in die 4-Farben-Cave-Palette:
+# . = Farbe 0 (Hintergrund), : = Farbe 1, x = Farbe 2, # = Farbe 3
+# Innerhalb der [Frame]-Abschnitte sind keine Kommentarzeilen möglich,
+# da Pixelzeilen mit '#' beginnen dürfen.
+
+[Sprite]
+Name   = Boulder
+Width  = 16
+Height = 16
+Frames = 1
+
+[Frame 1]
+....::::::......
+..::xx::##::....
+::##::xx::::::..
+xx::##xx##::::::
+xxxxxx##xx::::::
+xx##xxxxxx##xx::
+xxxx####xxxx::::
+xxxxxxxxxx##xx::
+xx..xxxxxxxxxx##
+xxxx..xxxx##xx##
+xx..xxxxxxxxxxxx
+xxxx..xxxxxxxxxx
+xxxxxx..xxxxxx..
+..xxxxxxxxxxxx..
+....xx..##xx....
+......xxxx......
