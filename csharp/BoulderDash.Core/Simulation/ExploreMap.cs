@@ -34,9 +34,22 @@ public enum TileVisibility
 /// </summary>
 public sealed class ExploreMap
 {
-    /// <summary>Rockfords Blickradius in Kacheln. Kreisförmig (dx² + dy² ≤ Radius²), also 81 Kacheln —
-    /// die Ecken des 11x11-Quadrats bleiben dunkel.</summary>
+    /// <summary>Rockfords Blickradius in Kacheln.</summary>
     public const int SightRadius = 5;
+
+    /// <summary>
+    /// Womit der quadrierte Abstand verglichen wird — und das ist NICHT <c>SightRadius²</c>.
+    ///
+    /// Die naheliegende Prüfung <c>dx² + dy² ≤ r²</c> rastert schlecht: Sie nimmt eine Kachel nur auf,
+    /// wenn deren ECKE noch im Kreis liegt. Auf den Achsen bleiben dadurch einzelne Zacken stehen
+    /// (bei r=5 ganz oben und unten je eine einzelne Kachel), und die Flanken werden flach — die Form
+    /// wirkt wie ein Kreuz, nicht wie eine Scheibe.
+    ///
+    /// Verglichen wird deshalb mit <c>(r + 0,5)²</c>, also dem Kreis durch die MITTE der Randkacheln.
+    /// Ganzzahlig ist das <c>r² + r</c> (der Rest 0,25 ändert bei ganzen Quadratzahlen nichts). Das
+    /// ergibt eine runde Scheibe mit den Zeilenbreiten 5-7-9-11-11-11-11-11-9-7-5, zusammen 97 Kacheln.
+    /// </summary>
+    private const int SightRadiusSquared = (SightRadius * SightRadius) + SightRadius;
 
     private bool[] _explored = [];
     private int _width;
@@ -120,6 +133,6 @@ public sealed class ExploreMap
     {
         var dx = x - centreX;
         var dy = y - centreY;
-        return (dx * dx) + (dy * dy) <= SightRadius * SightRadius;
+        return (dx * dx) + (dy * dy) <= SightRadiusSquared;
     }
 }
