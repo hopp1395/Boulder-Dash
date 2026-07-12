@@ -67,9 +67,6 @@ public sealed class BiosFont
         ['!'] = ["...#....", "...#....", "...#....", "...#....", "........", "...#....", "........", "........"],
         // Auswahlpfeil des Testmodus (TestMenuRenderer) — im BIOS-Zeichensatz gibt es kein '>'.
         ['>'] = ["..#.....", "..##....", "..###...", "..####..", "..###...", "..##....", "..#.....", "........"],
-        // Klammern: gebraucht für die Zoom-Anzeige in der Statuszeile (BoulderDashGame.BuildZoomLine).
-        ['('] = ["....##..", "...#....", "..#.....", "..#.....", "..#.....", "...#....", "....##..", "........"],
-        [')'] = ["..##....", "....#...", ".....#..", ".....#..", ".....#..", "....#...", "..##....", "........"],
     };
 
     public BiosFont(GraphicsDevice device)

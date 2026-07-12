@@ -360,6 +360,8 @@ public class BoulderDashGame : XnaGame
         GraphicsDevice.Clear(Color.Black);
 
         // Bildschirm-Zoom: skalieren und im Fenster zentrieren; was übrig bleibt, ist schwarzer Rand.
+        // Erst hier, denn GetScale liest GraphicsDevice.Viewport — solange das RenderTarget gesetzt
+        // ist, ist das dessen eigene Größe und der Maßstab käme immer auf 1.
         var scale = GetScale(logicalWidth, logicalHeight);
         var width = (int)(logicalWidth * scale);
         var height = (int)(logicalHeight * scale);
@@ -432,7 +434,7 @@ public class BoulderDashGame : XnaGame
             // Die Spielwerte weichen so lange, statt sich mit ihr zu drängeln.
             if (_zoomMessageSeconds > 0)
             {
-                var zoomText = BuildZoomLine(logicalWidth, logicalHeight);
+                var zoomText = BuildZoomLine();
                 var zoomLeft = textLeft + ((MenuWidth - (zoomText.Length * BiosFont.GlyphSize)) / 2);
                 _font.DrawText(_spriteBatch, zoomText, new Vector2(zoomLeft, 0), Color.White);
             }
@@ -471,16 +473,14 @@ public class BoulderDashGame : XnaGame
                $"{state.JewelsCollected:D2}      {state.CaveTimeRemaining:D3}         {state.Score:D6}";
     }
 
-    /// <summary>Die Zoom-Anzeige: die gezeigte Stufe als Sichtfenster und Kachelmaßstab, etwa
-    /// "ZOOM 40X22 (3X)" — genau die beiden Größen, aus denen eine Stufe besteht (siehe ViewportSteps).
-    /// Der Maßstab kommt nicht aus der Stufe selbst, sondern aus dem, was am Ende wirklich gezeichnet
-    /// wird (GetScale) — dann stimmt die Anzeige auch, wenn das Fenster für die Stufe zu klein ist.</summary>
-    private string BuildZoomLine(int logicalWidth, int logicalHeight)
+    /// <summary>Die Zoom-Anzeige: die gezeigte Stufe als Sichtfenster, etwa "MASSSTAB 40X22" (siehe
+    /// ViewportSteps). Der Kachelmaßstab, aus dem die Stufe abgeleitet ist, steht bewusst nicht dabei —
+    /// er ist die Mechanik dahinter, den Spieler interessiert, wie viel Cave er sieht.</summary>
+    private string BuildZoomLine()
     {
         var viewport = _session.Camera.Viewport;
-        var scale = Math.Max(1, (int)GetScale(logicalWidth, logicalHeight));
 
-        return $"ZOOM {viewport.Columns}X{viewport.Rows} ({scale}X)";
+        return $"MASSSTAB {viewport.Columns}X{viewport.Rows}";
     }
 
     private void SyncPalette()
