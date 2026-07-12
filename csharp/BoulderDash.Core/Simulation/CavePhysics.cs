@@ -273,22 +273,30 @@ public sealed class CavePhysics
 
                 break;
             case 13:
+                // Nur ein FALLENDES Objekt trifft auf die Mauer — ein ruhendes liegt einfach darauf.
+                if ((cave.GetRaw(idx) & 0x40) != 0x40)
+                {
+                    break;
+                }
+
+                EnqueueEnchantedWallSound(state, raw);
+
                 if (state.EnchantedWallTimeRemaining > 0)
                 {
-                    if ((cave.GetRaw(idx) & 0x40) == 0x40)
+                    state.EnchantedWallRunning = true;
+                    if (cave.GetRaw(idx + (2 * width)) == 0)
                     {
-                        state.EnchantedWallRunning = true;
-                        if (cave.GetRaw(idx + (2 * width)) == 0)
-                        {
-                            var minusOne = (byte)(cave.GetRaw(idx) - 1);
-                            cave.SetRaw(idx + (2 * width), (byte)(minusOne | 0xC2));
-                        }
-
-                        cave.SetRaw(idx, 0x80);
+                        var minusOne = (byte)(cave.GetRaw(idx) - 1);
+                        cave.SetRaw(idx + (2 * width), (byte)(minusOne | 0xC2));
                     }
+
+                    // Steht unter der Mauer etwas im Weg, wird das Objekt trotzdem gelöscht:
+                    // "the boulder or diamond is lost" (BDCFF 0002).
+                    cave.SetRaw(idx, 0x80);
                 }
-                else if ((cave.GetRaw(idx) & 0x40) == 0x40)
+                else
                 {
+                    // Abgelaufene (oder nie aktivierte) Mauer: das Objekt verschwindet ersatzlos.
                     cave.SetRaw(idx, 0);
                 }
 
@@ -309,6 +317,13 @@ public sealed class CavePhysics
                 break;
         }
     }
+
+    /// <summary>Auftreffen auf der Zaubermauer. Gemeldet wird der Klang des Objekts, das unten wieder
+    /// HERAUSKOMMT — ein Boulder klingt hier also nach Jewel und umgekehrt (BDCFF 0000: "When falling
+    /// boulders hit magic walls, a diamond sound plays regardless of outcome"). Das gilt in allen drei
+    /// Zuständen der Mauer, auch wenn sie das Objekt verschluckt. Das DOS-Original schwieg hier ganz.</summary>
+    private static void EnqueueEnchantedWallSound(GameState state, byte raw) =>
+        state.SoundEvents.Enqueue((raw & 0x0F) == 3 ? SoundEvent.BoulderLand : SoundEvent.JewelLand);
 
     /// <summary>Meldet BoulderLand/JewelLand nur, wenn das Objekt gerade wirklich aktiv fiel
     /// (Momentum-Bit 0x40 gesetzt) — ein bereits ruhendes Objekt löst kein Sound-Ereignis aus.</summary>
