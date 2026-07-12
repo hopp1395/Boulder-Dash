@@ -19,6 +19,4 @@ public sealed class EmptyObject : CaveObject
     public override int DefaultFrame => 0;
 
     public override bool IsFreeSpace => !ScannedThisFrame;
-
-    public override bool CanAmoebaGrowInto => !ScannedThisFrame;
 }

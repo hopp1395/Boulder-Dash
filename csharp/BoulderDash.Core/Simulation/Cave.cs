@@ -26,17 +26,15 @@ namespace BoulderDash.Core.Simulation;
 /// </summary>
 public sealed class Cave
 {
-    /// <summary>Ab dieser Zellzahl erstarrt die ganze Amoeba zu Steinen. Feste BD1-Konstante (in BD1
-    /// nicht pro Cave einstellbar); das DOS-Original wandelte schon ab 96 Zellen um (BOULDER.CPP:951).</summary>
-    private const int AmoebaMaxSize = 200;
-
     private readonly CaveObject[] _tiles;
-
-    private int _amoebaFound;
-    private bool _amoebaCanGrow;
 
     public int Width { get; }
     public int Height { get; }
+
+    /// <summary>Alle Objekte der Höhle, zeilenweise. Damit kann ein Objekt Fragen beantworten, die
+    /// über seine Nachbarschaft hinausgehen — die Amoeba etwa zählt hier ihre eigene Gesamtgröße
+    /// (siehe AmoebaObject.TakeCensus).</summary>
+    public IEnumerable<CaveObject> Objects => _tiles;
 
     /// <summary>Fortschritt der laufenden Cave — was der Höhle gehört, nicht einer Kachel.</summary>
     public GameState State { get; }
@@ -52,11 +50,6 @@ public sealed class Cave
     /// <summary>Der Animationstakt der Höhle (früher der globale Zähler wechsel_vier): Alle Objekte
     /// laufen in ihm, und frisch entstehende übernehmen ihn, damit sie nicht aus der Reihe tanzen.</summary>
     public byte AnimationPhase { get; private set; }
-
-    /// <summary>Wozu die Amoeba in diesem Scan zerfällt — oder null, wenn sie weiterwächst. Sie
-    /// entscheidet aus den Zahlen des VORIGEN Scans: "zu groß" und "eingeschlossen" wirken laut
-    /// Spezifikation erst im Folge-Scan, und "zu groß" hat Vorrang.</summary>
-    public Element? AmoebaFate { get; private set; }
 
     public Cave(CaveData data, GameState state, InputState input, Camera camera, Random random)
     {
@@ -114,19 +107,13 @@ public sealed class Cave
     }
 
     /// <summary>
-    /// Ein Cave-Scan: Jedes Objekt spielt sein Verhalten aus (regel(), BOULDER.CPP:725-959). Was hier
-    /// bleibt, ist nur, was kein einzelnes Objekt entscheiden kann — Rockfords Todeserkennung und die
-    /// Amoeba, die ihr Schicksal aus der Zählung des GESAMTEN vorigen Scans zieht.
+    /// Ein Cave-Scan: Jedes Objekt spielt sein Verhalten aus (regel(), BOULDER.CPP:725-959). Die
+    /// Spielregeln stehen bei den Objekten; hier bleibt nur, was den GANZEN Scan überblicken muss und
+    /// deshalb keine einzelne Kachel entscheiden kann — Rockfords Todeserkennung (er ist ja weg, wenn
+    /// er stirbt) und der Zeitpunkt, zu dem die Amoeba sich vermisst.
     /// </summary>
     public void NextState()
     {
-        AmoebaFate = State.AmoebaCountLastScan >= AmoebaMaxSize
-            ? Element.Boulder
-            : State.AmoebaSuffocatedLastScan ? Element.Jewel : null;
-
-        _amoebaFound = 0;
-        _amoebaCanGrow = false;
-
         // stat: 0, solange Rockford im Scan gefunden wurde — er selbst setzt es zurück.
         var wasAlive = State.Stat == 0;
         if (State.EntranceProgress > 100 && State.Stat == 0)
@@ -146,26 +133,16 @@ public sealed class Cave
             State.SoundEvents.Enqueue(SoundEvent.Death);
         }
 
+        // Die Amoeba vermisst sich selbst. Sie tut es hier und nicht in ihrem eigenen Zug, weil nur
+        // die Höhle weiß, wann der Scan zu Ende ist — und weil noch VOR dem EndScan gezählt werden
+        // muss (siehe AmoebaObject.TakeCensus).
+        AmoebaObject.TakeCensus(this);
+
         // Jedes Objekt schließt seinen Scan ab — das Verarbeitet-Flag fällt (:930-934).
         foreach (var tile in _tiles)
         {
             tile.EndScan();
         }
-
-        State.AmoebaCountLastScan = _amoebaFound;
-        State.AmoebaSuffocatedLastScan = _amoebaFound > 0 && !_amoebaCanGrow;
-
-        // Für die Amoeba-Drone (kein Original-Äquivalent, siehe AudioPlayer/SoundRecipes).
-        State.AmoebaPresent = _amoebaFound > 0;
-    }
-
-    /// <summary>Eine Amoeba-Zelle meldet sich für die Zählung dieses Scans. Ob sie WÄCHST, entscheidet
-    /// sie selbst — die Höhle muss nur wissen, wie viele es sind und ob überhaupt eine noch Platz hat
-    /// (sonst erstickt die ganze Amoeba).</summary>
-    public void ReportAmoeba(bool canGrow)
-    {
-        _amoebaFound++;
-        _amoebaCanGrow |= canGrow;
     }
 
     /// <summary>Setzt ALLE Explosionen der Höhle auf die erste Phase zurück — auch die, die anderswo

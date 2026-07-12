@@ -114,10 +114,6 @@ public abstract class CaveObject
     /// nackte Byte 0 (statt nur auf die Element-ID).</summary>
     public virtual bool IsFreeSpace => false;
 
-    /// <summary>Ob die Amoeba in diese Kachel hineinwachsen kann: Leerraum oder Erde, und in diesem
-    /// Scan noch unberührt (Original: die wiederkehrende Prüfung "(x &amp; 0xFE) == 0").</summary>
-    public virtual bool CanAmoebaGrowInto => false;
-
     /// <summary>Zündet eine benachbarte Kreatur. Das sind Rockford und die Amoeba — im Original die
     /// Maske "(x &amp; 0x7E) == 6", die Bit 0 offen lässt und damit die Element-IDs 6 UND 7 trifft.</summary>
     public virtual bool TriggersCreature => false;

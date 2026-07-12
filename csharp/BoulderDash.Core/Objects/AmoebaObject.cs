@@ -8,16 +8,21 @@ namespace BoulderDash.Core.Objects;
 /// vier Richtungen, sofern dort Leerraum oder Erde liegt (BDCFF 000A). Sie zündet Kreaturen, die sie
 /// berührt.
 ///
-/// Ihr Schicksal entscheidet sie nicht allein: Wird sie zu groß, erstarrt sie zu Steinen; wird sie
-/// eingeschlossen, zerfällt sie zu Diamanten. Beides hängt an der Zählung der GESAMTEN Amoeba und
-/// wirkt erst im Folge-Scan — deshalb meldet sich jede Zelle bei der Cave (Cave.ReportAmoeba) und
-/// fragt dort ihr Schicksal ab (Cave.AmoebaFate).
+/// Ihr Schicksal hängt an ihrer GESAMTHEIT: Wird sie zu groß, erstarrt sie zu Steinen; wird sie
+/// eingeschlossen, zerfällt sie zu Diamanten. Beides kann eine einzelne Zelle nicht sehen — sie zählt
+/// sich dafür in der Objekt-Auflistung der Cave selbst durch (<see cref="TakeCensus"/>). Gemessen
+/// wird am Ende jedes Scans; gewirkt wird erst im FOLGENDEN, denn beide Regeln greifen laut
+/// Spezifikation eine Generation später ("zu groß" hat dabei Vorrang).
 ///
 /// Das DOS-Original ließ pro Scan nur eine einzige, per rand()%96 gewählte Zelle wachsen, und die
 /// immer in fester Richtungspriorität (BOULDER.CPP:745-755, dort "lava" genannt).
 /// </summary>
 public sealed class AmoebaObject : CaveObject
 {
+    /// <summary>Ab dieser Zellzahl erstarrt die ganze Amoeba zu Steinen. Feste BD1-Konstante (in BD1
+    /// nicht pro Cave einstellbar); das DOS-Original wandelte schon ab 96 Zellen um (BOULDER.CPP:951).</summary>
+    public const int MaxSize = 200;
+
     public AmoebaObject(Cave? cave = null)
         : base(cave)
     {
@@ -34,6 +39,68 @@ public sealed class AmoebaObject : CaveObject
     public override TileAppearance Appearance(in RenderContext ctx) =>
         TileAppearance.Of(DefaultFrame + AnimationPhase);
 
+    /// <summary>Ob diese Zelle irgendwo Platz zum Wachsen hat.</summary>
+    public bool CanGrow
+    {
+        get
+        {
+            var width = Cave.Width;
+            foreach (var direction in (ReadOnlySpan<int>)[-width, width, -1, 1])
+            {
+                if (CanEat(Neighbour(direction)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Wozu die Amoeba zerfällt — oder null, wenn sie weiterwächst. Maßgeblich sind die Zahlen des
+    /// VORIGEN Scans (<see cref="TakeCensus"/> schreibt sie erst an dessen Ende), sie stehen also für
+    /// den ganzen laufenden Scan fest: Alle Zellen teilen dasselbe Schicksal, egal wann der Scan sie
+    /// besucht. "Zu groß" hat Vorrang vor "eingeschlossen".
+    /// </summary>
+    private Element? Fate => Cave.State.AmoebaCountLastScan >= MaxSize
+        ? Element.Boulder
+        : Cave.State.AmoebaSuffocatedLastScan ? Element.Jewel : null;
+
+    /// <summary>
+    /// Die Amoeba vermisst sich selbst: Sie zählt ihre Zellen in der Objekt-Auflistung der Cave und
+    /// merkt sich Größe und Platznot für den Folge-Scan. Die Cave ruft das einmal am Ende jedes Scans
+    /// auf — nur sie weiß, wann ein Scan zu Ende ist.
+    ///
+    /// Gezählt wird VOR dem Zurücksetzen der Verarbeitet-Flags, und zwar aus einem Grund: Frisch
+    /// gewachsene Zellen tragen das Flag noch und zählen bewusst nicht mit ("newly grown amoeba
+    /// cannot expand until the following frame"). Danach wäre die Unterscheidung verloren, und die
+    /// Amoeba risse die 200er-Schwelle eine Generation zu früh.
+    /// </summary>
+    public static void TakeCensus(Cave cave)
+    {
+        var size = 0;
+        var canGrow = false;
+
+        foreach (var tile in cave.Objects)
+        {
+            if (tile is not AmoebaObject { ScannedThisFrame: false } cell)
+            {
+                continue;
+            }
+
+            size++;
+            canGrow |= cell.CanGrow;
+        }
+
+        var state = cave.State;
+        state.AmoebaCountLastScan = size;
+        state.AmoebaSuffocatedLastScan = size > 0 && !canGrow;
+
+        // Für die Amoeba-Drone (kein Original-Äquivalent, siehe AudioPlayer/SoundRecipes).
+        state.AmoebaPresent = size > 0;
+    }
+
     public override void Interact()
     {
         if (ScannedThisFrame)
@@ -41,7 +108,7 @@ public sealed class AmoebaObject : CaveObject
             return;
         }
 
-        if (Cave.AmoebaFate is { } fate)
+        if (Fate is { } fate)
         {
             // Mit Verarbeitet-Flag, damit ein so entstandener Stein nicht schon im selben Scan
             // weiterfällt (dasselbe Muster wie bei der auslaufenden Explosion).
@@ -54,18 +121,6 @@ public sealed class AmoebaObject : CaveObject
         var width = Cave.Width;
         ReadOnlySpan<int> directions = [-width, width, -1, 1];
 
-        var canGrow = false;
-        foreach (var direction in directions)
-        {
-            if (Neighbour(direction).CanAmoebaGrowInto)
-            {
-                canGrow = true;
-                break;
-            }
-        }
-
-        Cave.ReportAmoeba(canGrow);
-
         var slowly = Cave.State.AmoebaSlowGrowthRemaining > 0;
         if (Cave.Random.Next(slowly ? 128 : 16) >= 4)
         {
@@ -73,11 +128,26 @@ public sealed class AmoebaObject : CaveObject
         }
 
         var target = Index + directions[Cave.Random.Next(directions.Length)];
-        if (Cave.Get(target).CanAmoebaGrowInto)
+        if (CanEat(Cave.Get(target)))
         {
             // Mit Verarbeitet-Flag: Sie wächst erst im nächsten Scan weiter und zählt auch erst dann
             // mit ("newly grown amoeba cannot expand until the following frame").
             Cave.Spawn(target, new AmoebaObject(Cave) { ScannedThisFrame = true });
         }
     }
+
+    /// <summary>
+    /// Der Speiseplan der Amoeba: Sie frisst sich in Leerraum und Erde hinein — an allem anderen
+    /// (Wände, Steine, Diamanten, Kreaturen) prallt sie ab. Im Original war das die wiederkehrende
+    /// Prüfung "(x &amp; 0xFE) == 0", die genau die Element-IDs 0 und 1 trifft.
+    ///
+    /// Eine Kachel, die in diesem Scan schon angefasst wurde, ist tabu — sonst würde sich die Amoeba
+    /// in eine Zelle fressen, die gerade erst freigeräumt wurde, und im selben Scan der eigenen
+    /// Bewegung hinterherwachsen.
+    ///
+    /// Dass die Amoeba weiß, was sie frisst (und nicht die Erde, dass sie gefressen wird), ist
+    /// Absicht: Der Speiseplan gehört zum Fressenden.
+    /// </summary>
+    private static bool CanEat(CaveObject target) =>
+        target is EmptyObject or EarthObject && !target.ScannedThisFrame;
 }
