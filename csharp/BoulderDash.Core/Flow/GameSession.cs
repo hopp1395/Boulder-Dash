@@ -530,6 +530,15 @@ public sealed class GameSession
                 State.CaveTimeRemaining--;
                 State.Score++;
                 State.SoundEvents.Enqueue(SoundEvent.BonusCount);
+
+                // "Note that for the last 10 seconds, the running out of time sound is still played,
+                // at higher speed than normal" (Peter Broadribb, Bonus points sound): dieselbe
+                // Zeitwarnung wie im Spiel (GameTick), hier aber im 20-ms-Takt der Bonuszählung statt
+                // im Sekundentakt — der Zähler läuft ja durch dieselben Restsekunden 9..0.
+                if (State.CaveTimeRemaining <= 9)
+                {
+                    State.SoundEvents.Enqueue(SoundEvent.TimeWarning);
+                }
             }
 
             if (State.CaveTimeRemaining > 0)

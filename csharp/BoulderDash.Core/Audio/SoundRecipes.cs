@@ -87,9 +87,16 @@ public static class SoundRecipes
     public const double EnchantedWallDroneHzMin = 2091.5;
     public const double EnchantedWallDroneHzMax = 2481.7;
 
-    public static readonly Envelope BonusSweepNote = new()
+    /// <summary>Bonuszählung am Cave-Ende: pro gezählter Bonussekunde EIN Ton, dessen Frequenz in
+    /// 15 Stufen (x=15..1, je 1 ms) nach oben gezogen wird. Die Hüllkurve läuft über den ganzen
+    /// 15-ms-Sweep, nicht über die einzelne Stufe — im SID wird das Gate nur zu Sweep-Beginn neu
+    /// gesetzt ("Triangle, start attacking"), währenddessen ändert sich allein das Frequenzregister.
+    /// Hold = Gate-Dauer (15 x 1 ms) abzüglich Attack und Decay.</summary>
+    public static readonly Envelope BonusSweep = new()
     {
-        AttackSeconds = 0.0, DecaySeconds = 0.0, SustainLevel = 1.0, HoldSeconds = 0.001, ReleaseSeconds = 0.0,
+        AttackSeconds = 0.002, DecaySeconds = 0.006, SustainLevel = 10.0 / 15,
+        HoldSeconds = (BonusSweepNoteCount * BonusSweepNoteSeconds) - 0.002 - 0.006,
+        ReleaseSeconds = 0.006,
     };
 
     public static readonly Envelope Movement = new()
@@ -100,11 +107,21 @@ public static class SoundRecipes
     public const double WalkEmptyHz = 827.2;
     public const double WalkEarthHz = 2575.6;
 
-    /// <summary>Bonus-Sweep-Algorithmus aus der Doku: z startet bei $D0=208 und zählt je Sekunde
-    /// (je BonusCount-Ereignis) um 1 herunter; pro Ereignis 15 Noten x=15..1 absteigend.</summary>
+    /// <summary>Bonus-Sweep-Algorithmus aus der Doku: z startet bei $D0=208 und zählt je gezählter
+    /// Bonussekunde (je BonusCount-Ereignis) um 1 herunter — die Tonhöhe sinkt also mit der Zeit;
+    /// pro Sekunde 15 Stufen x=15..1.</summary>
     public const int BonusSweepInitialZ = 0xD0;
 
-    public static double BonusSweepNoteHz(int z, int x) => ((z - (x * 2)) * 256) * RegisterToHz;
+    public const int BonusSweepNoteCount = 15;
+    public const double BonusSweepNoteSeconds = 0.001;
+
+    /// <summary>z zählt als BYTE herunter und läuft nach unten heraus: bei mehr als 208 Bonussekunden
+    /// — im BD1-Bonusüberlauf (255 Sekunden) also immer — springt die Tonhöhe dabei von ganz tief
+    /// zurück nach ganz hoch ("the sound will wrap around from its low pitch back to a high pitch").</summary>
+    public static int BonusSweepNextZ(int z) => (z - 1) & 0xFF;
+
+    /// <summary>Highbyte des Frequenzregisters ist z-2x, ebenfalls byteweise gerechnet (Lowbyte 0).</summary>
+    public static double BonusSweepNoteHz(int z, int x) => (byte)(z - (x * 2)) * 256 * RegisterToHz;
 
     /// <summary>Zeitwarn-Tonhöhe für die angegebene verbleibende Sekundenzahl (0-9, wie in der Doku).</summary>
     public static double TimeWarningHz(int secondsRemaining)

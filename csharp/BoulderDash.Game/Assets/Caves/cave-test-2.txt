@@ -20,7 +20,7 @@ Height      = 12
 
 [Rules]
 JewelsNeeded    = 1
-CaveTime        = 250
+CaveTime        = 100
 GameSpeed       = 150
 MagicWallTime   = 0
 AmoebaTime      = 0

@@ -205,6 +205,56 @@ public class GameSessionTests
         Assert.Equal(255, session.State.Score);
     }
 
+    /// <summary>"For the last 10 seconds, the running out of time sound is still played, at higher
+    /// speed than normal" (Peter Broadribb, Bonus points sound): Die Bonuszählung läuft durch dieselben
+    /// Restsekunden 9..0 wie das Spiel selbst und meldet dort dieselbe Zeitwarnung — nur eben im
+    /// 20-ms-Takt statt im Sekundentakt. Vorher (Restzeit über 9) darf sie nicht erklingen.</summary>
+    [Fact]
+    public void Bonuszaehlung_meldet_die_Zeitwarnung_fuer_die_letzten_zehn_Sekunden()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+
+        session.State.IsCaveEnded = true;
+        session.State.Stat = 0;
+        session.State.AdvanceToNextCave = true;
+        session.State.CaveTimeRemaining = 20;
+
+        session.Update(0.001);
+        Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
+
+        // Die ersten 10 Bonuspunkte (20 -> 10) zählen ohne Zeitwarnung...
+        var warningsAbove9 = 0;
+        while (session.State.CaveTimeRemaining > 10)
+        {
+            session.Update(1.0 / 60.0);
+            warningsAbove9 += DrainSoundEvents(session).Count(e => e == SoundEvent.TimeWarning);
+        }
+
+        Assert.Equal(0, warningsAbove9);
+
+        // ...die letzten 10 (9 -> 0) jeweils mit — zusammen mit dem Bonus-Sweep.
+        var warnings = 0;
+        var bonusCounts = 0;
+        while (session.Phase == SessionPhase.LevelEndBonus && session.State.CaveTimeRemaining > 0)
+        {
+            session.Update(1.0 / 60.0);
+            var events = DrainSoundEvents(session);
+            warnings += events.Count(e => e == SoundEvent.TimeWarning);
+            bonusCounts += events.Count(e => e == SoundEvent.BonusCount);
+        }
+
+        Assert.Equal(10, bonusCounts);
+        Assert.Equal(10, warnings);
+    }
+
+    private static List<SoundEvent> DrainSoundEvents(GameSession session)
+    {
+        var events = session.State.SoundEvents.ToList();
+        session.State.SoundEvents.Clear();
+        return events;
+    }
+
     /// <summary>Gegenprobe: Bloßer Zeitablauf (kein Ausgang, AdvanceToNextCave==false) löst den
     /// Überlauf NICHT aus — es bleibt bei 0 Bonuspunkten.</summary>
     [Fact]

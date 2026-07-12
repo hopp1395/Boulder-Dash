@@ -28,7 +28,8 @@ public sealed class AudioPlayer
     private readonly SoundEffect _crack;
     private readonly SoundEffect _walkEmpty;
     private readonly SoundEffect _walkEarth;
-    private readonly SoundEffect[] _timeWarningBySecond; // Index 0..9
+    private readonly SoundEffectInstance[] _timeWarningBySecond; // Index 0..9
+    private SoundEffectInstance? _timeWarningPlaying;
 
     private readonly SoundEffectInstance _amoebaLoop;
     private readonly SoundEffectInstance _enchantedWallLoop;
@@ -47,10 +48,11 @@ public sealed class AudioPlayer
         _walkEmpty = RenderNoiseEffect(SoundRecipes.WalkEmptyHz, SoundRecipes.Movement);
         _walkEarth = RenderNoiseEffect(SoundRecipes.WalkEarthHz, SoundRecipes.Movement);
 
-        _timeWarningBySecond = new SoundEffect[10];
+        _timeWarningBySecond = new SoundEffectInstance[10];
         for (var second = 0; second <= 9; second++)
         {
-            _timeWarningBySecond[second] = RenderTriangleEffect(SoundRecipes.TimeWarningHz(second), SoundRecipes.TimeWarning);
+            _timeWarningBySecond[second] =
+                RenderTriangleEffect(SoundRecipes.TimeWarningHz(second), SoundRecipes.TimeWarning).CreateInstance();
         }
 
         _amoebaLoop = BuildDroneLoop(SoundRecipes.AmoebaDrone, SoundRecipes.AmoebaDroneHzMin, SoundRecipes.AmoebaDroneHzMax).CreateInstance();
@@ -125,7 +127,7 @@ public sealed class AudioPlayer
                 _crack.Play();
                 break;
             case SoundEvent.TimeWarning:
-                _timeWarningBySecond[Math.Clamp((int)state.CaveTimeRemaining, 0, 9)].Play();
+                PlayTimeWarning(Math.Clamp((int)state.CaveTimeRemaining, 0, 9));
                 break;
             case SoundEvent.Uncover:
                 var uncoverHz = SoundRecipes.UncoverHzMin + (_random.NextDouble() * (SoundRecipes.UncoverHzMax - SoundRecipes.UncoverHzMin));
@@ -139,22 +141,36 @@ public sealed class AudioPlayer
         }
     }
 
+    /// <summary>Der Zeitwarnton klingt lang nach (Decay 1,5 s). Während der Bonuszählung feuert er
+    /// alle 20 ms — ein neuer Ton schneidet den vorherigen deshalb ab, statt sich mit ihm zu
+    /// überlagern (im SID liegen beide auf Stimme 1, ein neues Gate startet die Hüllkurve neu).
+    /// Genau das erzeugt das schnelle Aufwärtstrillern am Ende der Bonuszählung.</summary>
+    private void PlayTimeWarning(int secondsRemaining)
+    {
+        _timeWarningPlaying?.Stop();
+        _timeWarningPlaying = _timeWarningBySecond[secondsRemaining];
+        _timeWarningPlaying.Play();
+    }
+
     /// <summary>Bei jedem Betreten von LevelEndBonus aufrufen (siehe BoulderDashGame) — entspricht
     /// dem "z = $D0"-Start am Anfang von Level_End() im Original (GAME.CPP:54).</summary>
     public void ResetBonusSweep() => _bonusSweepZ = SoundRecipes.BonusSweepInitialZ;
 
+    /// <summary>Ein Bonus-Sweep = EIN Ton je gezählter Bonussekunde: z zählt zuerst herunter, dann
+    /// durchläuft die Frequenz in 15 Stufen (x=15..1) den Sweep — die Hüllkurve liegt über dem
+    /// Ganzen, nicht über der einzelnen Stufe (siehe SoundRecipes.BonusSweep).</summary>
     private void PlayBonusSweep()
     {
-        const int noteCount = 15;
-        var notes = new short[noteCount][];
-        for (var x = noteCount; x >= 1; x--)
+        _bonusSweepZ = SoundRecipes.BonusSweepNextZ(_bonusSweepZ);
+
+        var frequencies = new double[SoundRecipes.BonusSweepNoteCount];
+        for (var x = SoundRecipes.BonusSweepNoteCount; x >= 1; x--)
         {
-            var hz = SoundRecipes.BonusSweepNoteHz(_bonusSweepZ, x);
-            notes[noteCount - x] = SidSynth.RenderTriangle(hz, SoundRecipes.BonusSweepNote);
+            frequencies[SoundRecipes.BonusSweepNoteCount - x] = SoundRecipes.BonusSweepNoteHz(_bonusSweepZ, x);
         }
 
-        _bonusSweepZ--;
-        BuildEffectFromSegments(notes).Play();
+        BuildEffect(SidSynth.RenderTriangleSweep(frequencies, SoundRecipes.BonusSweepNoteSeconds, SoundRecipes.BonusSweep))
+            .Play();
     }
 
     public void PlayMusic()
