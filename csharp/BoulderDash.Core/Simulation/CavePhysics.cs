@@ -357,6 +357,9 @@ public sealed class CavePhysics
     /// Die vier Kamerabedingungen setzen nur das Scroll-Ziel und beeinflussen die Bewegung nicht.
     /// Abweichung vom Original (:893-896): Die vier Schwellen liegen je eine Kachel weiter
     /// innen, damit das Scrollen einen Schritt früher einsetzt als im DOS-Original.
+    /// Schwellen und Scrollweiten leiten sich aus der Sichtfenstergröße ab (siehe ViewportSize) und
+    /// sind beim Original-Sichtfenster 20x12 identisch mit den dortigen Konstanten (16/8/7/5); zeigt
+    /// das Sichtfenster die ganze Cave, greifen die Wächter unten und es wird gar nicht gescrollt.
     /// Im DOS-Original hing die Bewegungsverarbeitung durch ein Dangling-Else an der vierten
     /// Bedingung: löste Rockford den Aufwärtsscroll aus, blieb seine Bewegung den ganzen Scan über
     /// aus — er hakte sichtbar. Ein reiner Programmierfehler ohne BD1-Entsprechung, hier behoben.</summary>
@@ -372,24 +375,26 @@ public sealed class CavePhysics
 
         state.Stat = 0;
 
-        if (camera.X + 16 < col && camera.X < width - 20)
+        var viewport = camera.Viewport;
+
+        if (camera.X + viewport.ScrollTriggerRight < col && camera.X < width - viewport.Columns)
         {
-            camera.Relx = 7;
+            camera.Relx = (sbyte)viewport.ScrollAmountX;
         }
 
-        if (camera.X + 2 == col && camera.X > 0)
+        if (camera.X + ViewportSize.ScrollTriggerNear == col && camera.X > 0)
         {
-            camera.Relx = -7;
+            camera.Relx = (sbyte)-viewport.ScrollAmountX;
         }
 
-        if (camera.Y + 8 < row && camera.Y < height - 12)
+        if (camera.Y + viewport.ScrollTriggerBottom < row && camera.Y < height - viewport.Rows)
         {
-            camera.Rely = 5;
+            camera.Rely = (sbyte)viewport.ScrollAmountY;
         }
 
-        if (camera.Y + 2 == row && camera.Y > 0)
+        if (camera.Y + ViewportSize.ScrollTriggerNear == row && camera.Y > 0)
         {
-            camera.Rely = -5;
+            camera.Rely = (sbyte)-viewport.ScrollAmountY;
         }
 
         var target = cave.GetRaw(idx + input.Direction) & 0x9F;

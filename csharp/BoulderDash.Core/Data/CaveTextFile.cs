@@ -11,10 +11,6 @@ namespace BoulderDash.Core.Data;
 /// </summary>
 public static class CaveTextFile
 {
-    /// <summary>Sichtfenster der Kamera in Kacheln (siehe Camera.Step).</summary>
-    private const int ViewportWidth = 20;
-    private const int ViewportHeight = 12;
-
     public static CaveData Parse(string text, string sourceName)
     {
         var caveFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -104,15 +100,12 @@ public static class CaveTextFile
         var height = RequireByte(caveFields, "Height", sourceName);
         var tiles = ParseMap(sourceName, mapLines, width, height);
 
-        var entranceIndex = Array.IndexOf(tiles, (byte)Element.Entrance);
-        if (entranceIndex < 0)
+        // Der Eingang legt die Startposition der Kamera fest (Camera.CenterOn beim Cave-Start) —
+        // ohne ihn wäre die Cave unspielbar.
+        if (Array.IndexOf(tiles, (byte)Element.Entrance) < 0)
         {
             throw new FormatException($"{sourceName}: [Map] enthält keinen Eingang ('P').");
         }
-
-        // Kamera so setzen, dass der Eingang möglichst mittig im Sichtfenster liegt.
-        var cameraStartX = Math.Clamp((entranceIndex % width) - (ViewportWidth / 2), 0, Math.Max(0, width - ViewportWidth));
-        var cameraStartY = Math.Clamp((entranceIndex / width) - (ViewportHeight / 2), 0, Math.Max(0, height - ViewportHeight));
 
         return new CaveData
         {
@@ -128,8 +121,6 @@ public static class CaveTextFile
             // Konvention des ursprünglichen 1999er-Ports (empirisch aus LEVEL.BIN übernommen):
             // BaseColors=[0,1,Farbe2,Farbe1] - die dritte BD1-Rohfarbe bleibt ungenutzt.
             BaseColors = [0, 1, ParseByte(colorsText[1], sourceName, "Colors"), ParseByte(colorsText[0], sourceName, "Colors")],
-            CameraStartX = (byte)cameraStartX,
-            CameraStartY = (byte)cameraStartY,
             EnchantedWallSeconds = RequireByte(rulesFields, "MagicWallTime", sourceName),
             AmoebaSlowGrowthSeconds = RequireByte(rulesFields, "AmoebaTime", sourceName),
             PointsPerJewelBeforeQuota = RequireByte(rulesFields, "JewelValue", sourceName),

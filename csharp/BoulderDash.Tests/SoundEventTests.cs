@@ -19,8 +19,6 @@ public class SoundEventTests
         JewelQuota = 0,
         TimeSeconds = 20,
         BaseColors = [0, 1, 2, 3],
-        CameraStartX = 0,
-        CameraStartY = 0,
         EnchantedWallSeconds = enchantedWallSeconds,
         AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = 10,

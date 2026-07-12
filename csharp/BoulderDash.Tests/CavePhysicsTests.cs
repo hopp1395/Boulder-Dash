@@ -20,8 +20,6 @@ public class CavePhysicsTests
         JewelQuota = jewelQuota,
         TimeSeconds = 99,
         BaseColors = [0, 1, 2, 3],
-        CameraStartX = 0,
-        CameraStartY = 0,
         EnchantedWallSeconds = enchantedWallSeconds,
         AmoebaSlowGrowthSeconds = 0,
         PointsPerJewelBeforeQuota = pointsBefore,
@@ -477,6 +475,60 @@ public class CavePhysicsTests
         Assert.Equal(Element.Empty, cave.GetElement(1, 3)); // Rockford ist weitergegangen
         Assert.Equal(Element.Rockford, cave.GetElement(2, 3)); // Erde weggegraben
         Assert.Equal((sbyte)-5, camera.Rely); // und das Scroll-Ziel steht trotzdem
+    }
+
+    /// <summary>Baut eine Cave in voller Größe (40x22) mit Rockford an der angegebenen Stelle —
+    /// Grundlage für die Scroll-Auslöser, die es nur in einer Cave gibt, die größer als das
+    /// Sichtfenster ist.</summary>
+    private static (BoulderDash.Core.Simulation.Cave Cave, GameState State) SetupFullCave(int rockfordCol, int rockfordRow)
+    {
+        const int width = 40;
+        const int height = 22;
+        var tiles = new byte[width * height];
+        tiles[(rockfordRow * width) + rockfordCol] = 6; // Rockford
+        return Setup(BuildCaveData(width, height, tiles));
+    }
+
+    /// <summary>Treue-Wächter: Beim Original-Sichtfenster stehen die Scroll-Auslöser weiterhin bei
+    /// 16/8 Kacheln und die Scrollweiten bei 7/5 (BOULDER.CPP:893-896, je eine Kachel weiter innen).</summary>
+    [Fact]
+    public void Scroll_Ausloeser_bleiben_beim_Original_Sichtfenster_original()
+    {
+        var (cave, state) = SetupFullCave(rockfordCol: 17, rockfordRow: 9); // > camera+16 bzw. > camera+8
+        var camera = new Camera(); // Sichtfenster 20x12, Position 0/0
+
+        NewPhysics().Regel(cave, state, new InputState(), camera);
+
+        Assert.Equal((sbyte)7, camera.Relx);
+        Assert.Equal((sbyte)5, camera.Rely);
+    }
+
+    /// <summary>Beim Spielflächen-Zoom wachsen Auslöser und Scrollweiten mit dem Sichtfenster mit:
+    /// bei 24x14 also Auslöser 20/10 und Weiten 9/6.</summary>
+    [Fact]
+    public void Scroll_Ausloeser_skalieren_mit_dem_Sichtfenster()
+    {
+        var (cave, state) = SetupFullCave(rockfordCol: 21, rockfordRow: 11); // > camera+20 bzw. > camera+10
+        var camera = new Camera { Viewport = new ViewportSize(24, 14) };
+
+        NewPhysics().Regel(cave, state, new InputState(), camera);
+
+        Assert.Equal((sbyte)9, camera.Relx);
+        Assert.Equal((sbyte)6, camera.Rely);
+    }
+
+    /// <summary>Zeigt das Sichtfenster die ganze Cave, gibt es nichts mehr zu scrollen — die Wächter
+    /// (camera.X &lt; width - Spalten) greifen und lassen das Scroll-Ziel auf 0.</summary>
+    [Fact]
+    public void Kamera_scrollt_nicht_wenn_das_Sichtfenster_die_ganze_Cave_zeigt()
+    {
+        var (cave, state) = SetupFullCave(rockfordCol: 38, rockfordRow: 20);
+        var camera = new Camera { Viewport = new ViewportSize(40, 22) };
+
+        NewPhysics().Regel(cave, state, new InputState(), camera);
+
+        Assert.Equal((sbyte)0, camera.Relx);
+        Assert.Equal((sbyte)0, camera.Rely);
     }
 
     /// <summary>Würfelt immer die 0 — jeder 1:8-Wurf (Schieben) gelingt.</summary>

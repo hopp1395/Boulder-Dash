@@ -16,6 +16,11 @@ public sealed class TestMenuRenderer
 {
     private const int TileSize = CaveRenderer.TileSize;
 
+    // Der Testmodus behält den DOS-Look und damit das feste 20x12-Kachelraster (320x200) — der
+    // Spielflächen-Zoom des Spielfelds gilt hier nicht.
+    private const int MenuColumns = 20;
+    private const int MenuRows = 12;
+
     // menu[] aus menuausgabe() (BOULDER.CPP:441-452): 4=Mauer, 5=Stahl, 0=Leer.
     private static readonly Element[] BackgroundPattern = ParsePattern(
         "44444444444444444444" +
@@ -79,11 +84,11 @@ public sealed class TestMenuRenderer
 
     private void DrawBackground(SpriteBatch batch)
     {
-        for (var row = 0; row < CaveRenderer.ViewportRows; row++)
+        for (var row = 0; row < MenuRows; row++)
         {
-            for (var col = 0; col < CaveRenderer.ViewportColumns; col++)
+            for (var col = 0; col < MenuColumns; col++)
             {
-                var element = BackgroundPattern[(row * CaveRenderer.ViewportColumns) + col];
+                var element = BackgroundPattern[(row * MenuColumns) + col];
                 var (texture, source) = _atlas.GetDefaultSprite(element);
                 var destination = new Rectangle(
                     col * TileSize, CaveRenderer.StatusLineHeight + (row * TileSize), TileSize, TileSize);

@@ -58,7 +58,9 @@ Schichten in Core:
   - `Screens/title.txt` und `Screens/option-logo.txt`: die beiden BD1-Titelgrafiken (320×200 bzw. 320×152) im Sprite-Textformat, mit festen C64-Farben gerendert (siehe BD1-Ausnahmen und `TitleRenderer`).
 - **Audio/** — vollständig synthetisierter Sound (`SidSynth`, `SoundRecipes`, `ThemeTune` nach Peter Broadribbs C64-Analyse, elmerproductions.com/sp/peterb/) — es gibt keine Audiodateien.
 
-In Game: `SpriteAtlas` hält die 49 Rohsprites als Texturen und färbt sie bei jedem Palettenwechsel per SetData mit der 4-Farben-Cave-Palette neu ein (wie das Original per VGA-DAC); `CaveRenderer` zeichnet das 20×12-Sichtfenster und wählt die Animationsframes.
+In Game: `SpriteAtlas` hält die 49 Rohsprites als Texturen und färbt sie bei jedem Palettenwechsel per SetData mit der 4-Farben-Cave-Palette neu ein (wie das Original per VGA-DAC); `CaveRenderer` zeichnet das Sichtfenster und wählt die Animationsframes.
+
+**Skalierung (keine Original-Entsprechung):** Zwei unabhängige Zooms, gemerkt in `%APPDATA%\BoulderDash\settings.json` (`GameSettings`/`SettingsFile`, tolerant gegen fehlende/defekte Datei). *Bildschirm-Zoom*: das Fenster ist frei skalierbar, F11 schaltet randloses Vollbild; gezeichnet wird auf ein RenderTarget in logischer Auflösung, das ganzzahlig und zentriert hochskaliert wird (PointClamp, schwarzer Rand). *Spielflächen-Zoom*: +/− ändern die Sichtfenstergröße in Stufen von 20×12 (Original) bis zur vollen Cave 40×22 (`ViewportSize`, hängt als `Camera.Viewport` an der Kamera); das Fenster wächst dabei mit, damit die Kacheln gleich groß bleiben. Die Scroll-Auslöser und -weiten in `CavePhysics.ProcessRockford` leiten sich aus der Sichtfenstergröße ab und ergeben bei 20×12 exakt die Originalwerte (16/8/7/5); zeigt das Sichtfenster die ganze Cave, wird gar nicht mehr gescrollt. Ist das Sichtfenster größer als die Cave (Intermissions), klemmt die Kamera auf 0 und `CaveRenderer` zentriert die Cave. Die Menübildschirme (Titel/Option/Testmodus) bleiben fest 320×200. Die Kamera-Startposition (Eingang mittig) rechnet seitdem `Camera.CenterOn` beim Cave-Start statt der Cave-Parser.
 
 ### Konventionen
 

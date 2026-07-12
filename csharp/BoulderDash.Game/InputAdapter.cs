@@ -11,6 +11,12 @@ namespace BoulderDash.Game;
 /// </summary>
 public sealed class InputAdapter
 {
+    /// <summary>Bildschirm-/Spielflächen-Zoom sind Bedienung der Schale, keine Spieleingabe: sie
+    /// dürfen weder den Titelbildschirm weiterschalten noch die Demo oder eine Pause abbrechen und
+    /// zählen deshalb nicht als "beliebige Taste".</summary>
+    public static readonly Keys[] ShellKeys =
+        [Keys.F11, Keys.OemPlus, Keys.OemMinus, Keys.Add, Keys.Subtract];
+
     private KeyboardState _previous;
     private KeyboardState _current;
 
@@ -22,10 +28,30 @@ public sealed class InputAdapter
 
     public bool IsJustPressed(Keys key) => _current.IsKeyDown(key) && !_previous.IsKeyDown(key);
 
+    /// <summary>True, sobald eine der angegebenen Tasten neu gedrückt wurde (z. B. die
+    /// gleichwertigen Zoom-Tasten auf Haupt- und Zehnerblock).</summary>
+    public bool IsAnyJustPressed(params Keys[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (IsJustPressed(key))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public bool IsAnyKeyJustPressed()
     {
         foreach (var key in _current.GetPressedKeys())
         {
+            if (Array.IndexOf(ShellKeys, key) >= 0)
+            {
+                continue;
+            }
+
             if (!_previous.IsKeyDown(key))
             {
                 return true;
