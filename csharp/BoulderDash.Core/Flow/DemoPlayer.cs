@@ -5,10 +5,9 @@ namespace BoulderDash.Core.Flow;
 
 /// <summary>
 /// Treibt die Demo-Wiedergabe (src/BOULDER.CPP: demo(), :337-378) — wendet die Züge aus der
-/// Demo-Textdatei (siehe DemoTextFile) auf ein InputState an. Ein Zug hält eine Richtung für
-/// genau eine clk_1-Periode; da Press* im InputState Flags/Richtung komplett überschreibt
-/// (Original-Quirk aus Mov_Rockford), ist das wiederholte Anwenden derselben Richtung pro
-/// Periode äquivalent zum Gedrückthalten der Taste. Wait löst alle Richtungen.
+/// Demo-Textdatei (siehe DemoTextFile) auf ein InputState an. Ein Zug hält genau eine Richtung für
+/// eine clk_1-Periode; das wiederholte Anwenden desselben Zugs pro Periode ist äquivalent zum
+/// Gedrückthalten der Taste. Wait löst alle Richtungen.
 ///
 /// Timing wie beim Original-Scancode-Format: das Original rückt den Bytezeiger im
 /// Foreground-Loop über ein pr-Latch genau einmal pro clk_1-Periode vor — hier nachgebildet
@@ -56,20 +55,22 @@ public sealed class DemoPlayer
 
     public static void ApplyStep(DemoStep step, InputState input, int caveWidth)
     {
+        // Ein Demo-Zug hält genau EINE Richtung. InputState führt inzwischen eine echte Menge
+        // gehaltener Tasten (statt wie das DOS-Original nur die zuletzt gedrückte zu merken) —
+        // deshalb müssen die übrigen Richtungen hier ausdrücklich losgelassen werden. Die Demo
+        // enthält ohnehin nie zwei Richtungen gleichzeitig, das Ergebnis bleibt also dasselbe.
+        input.ReleaseRight();
+        input.ReleaseLeft();
+        input.ReleaseDown();
+        input.ReleaseUp();
+
         switch (step)
         {
             case DemoStep.Right: input.PressRight(); break;
             case DemoStep.Left: input.PressLeft(); break;
             case DemoStep.Down: input.PressDown(caveWidth); break;
             case DemoStep.Up: input.PressUp(caveWidth); break;
-            case DemoStep.Wait:
-                input.ReleaseRight();
-                input.ReleaseLeft();
-                input.ReleaseDown();
-                input.ReleaseUp();
-                break;
+            case DemoStep.Wait: break;
         }
-
-        input.SettleIdleState();
     }
 }

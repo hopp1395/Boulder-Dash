@@ -9,27 +9,39 @@ public class DemoPlayerTests
     private const int CaveWidth = 40;
 
     [Fact]
-    public void ApplyStep_Rechts_setzt_Richtung_Flags_und_Blickrichtung()
+    public void ApplyStep_Rechts_setzt_Richtung_und_Blickrichtung()
     {
         var input = new InputState();
 
         DemoPlayer.ApplyStep(DemoStep.Right, input, CaveWidth);
 
         Assert.Equal(1, input.Direction);
-        Assert.Equal(0x40, input.Flags);
         Assert.Equal((byte)0, input.FacingLeft);
     }
 
     [Fact]
-    public void ApplyStep_Links_setzt_Richtung_Flags_und_Blickrichtung()
+    public void ApplyStep_Links_setzt_Richtung_und_Blickrichtung()
     {
         var input = new InputState();
 
         DemoPlayer.ApplyStep(DemoStep.Left, input, CaveWidth);
 
         Assert.Equal(-1, input.Direction);
-        Assert.Equal(0x10, input.Flags);
         Assert.Equal((byte)1, input.FacingLeft);
+    }
+
+    /// <summary>Jeder Zug hält genau eine Richtung: der neue Zug muss die vorige loslassen. Sonst
+    /// bliebe die alte Richtung im Halte-Zustand von InputState hängen und würde die neue (bei
+    /// waagerecht vor senkrecht) sogar überstimmen.</summary>
+    [Fact]
+    public void ApplyStep_loest_die_Richtung_des_vorigen_Zugs()
+    {
+        var input = new InputState();
+
+        DemoPlayer.ApplyStep(DemoStep.Right, input, CaveWidth);
+        DemoPlayer.ApplyStep(DemoStep.Down, input, CaveWidth);
+
+        Assert.Equal(CaveWidth, input.Direction); // runter, nicht mehr rechts
     }
 
     [Fact]
@@ -45,16 +57,15 @@ public class DemoPlayerTests
     }
 
     [Fact]
-    public void ApplyStep_Wait_loest_alle_Richtungen_und_stoppt_ueber_SettleIdleState()
+    public void ApplyStep_Wait_loest_alle_Richtungen_und_stoppt_Rockford()
     {
         var input = new InputState();
         DemoPlayer.ApplyStep(DemoStep.Right, input, CaveWidth); // rechts halten
-        Assert.Equal(0x40, input.Flags);
+        Assert.Equal(1, input.Direction);
 
         DemoPlayer.ApplyStep(DemoStep.Wait, input, CaveWidth);
 
-        Assert.Equal(0, input.Flags);
-        Assert.Equal(0, input.Direction); // SettleIdleState: Flags<0x10 -> Direction=0
+        Assert.Equal(0, input.Direction);
     }
 
     [Fact]

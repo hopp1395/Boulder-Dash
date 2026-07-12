@@ -90,6 +90,7 @@ public sealed class GameSession
         new("cave-test-7", "AUSGANG ZAEHLT NICHT ALS DIAMANT"),
         new("cave-test-8", "EXPLOSION VERSCHONT DEN AUSGANG"),
         new("cave-test-9", "HOCHLAUFEN RUCKELT NICHT MEHR"),
+        new("cave-test-10", "WAAGERECHT SCHLAEGT SENKRECHT"),
     ];
 
     private const int MaxCaveIndex = 18; // Menü-Auswahl A..P (letzte reguläre Cave in PlayOrder, Index 18=P)

@@ -132,10 +132,14 @@ public class BoulderDashGame : XnaGame
             case SessionPhase.TestMenu:
                 if (_inputAdapter.IsJustPressed(Keys.Up)) _session.TestMenuPrevious();
                 if (_inputAdapter.IsJustPressed(Keys.Down)) _session.TestMenuNext();
-                for (var i = 0; i < GameSession.TestCaves.Count; i++)
+                // Direktwahl über die Zifferntasten: 1-9, die zehnte Cave liegt auf der 0. Darüber
+                // hinaus bleibt nur die Auswahl über Hoch/Runter.
+                for (var i = 0; i < GameSession.TestCaves.Count && i < 9; i++)
                 {
                     if (_inputAdapter.IsJustPressed(Keys.D1 + i)) _session.TestMenuSelect(i);
                 }
+
+                if (_inputAdapter.IsJustPressed(Keys.D0)) _session.TestMenuSelect(9);
 
                 if (_inputAdapter.IsJustPressed(Keys.F1) || _inputAdapter.IsJustPressed(Keys.Enter)) _session.TestMenuStart();
                 if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.TestMenuBack();

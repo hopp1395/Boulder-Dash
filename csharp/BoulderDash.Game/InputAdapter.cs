@@ -43,8 +43,6 @@ public sealed class InputAdapter
         HandleKey(Keys.Down, () => input.PressDown(caveWidth), input.ReleaseDown);
         HandleKey(Keys.Up, () => input.PressUp(caveWidth), input.ReleaseUp);
         HandleKey(Keys.LeftControl, input.PressGrab, input.ReleaseGrab);
-
-        input.SettleIdleState();
     }
 
     private void HandleKey(Keys key, Action onPress, Action onRelease)

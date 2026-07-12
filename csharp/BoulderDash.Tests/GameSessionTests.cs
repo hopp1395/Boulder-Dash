@@ -205,7 +205,6 @@ public class GameSessionTests
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
         Assert.Equal(0, session.Input.Direction);
-        Assert.Equal(0, session.Input.Flags);
     }
 
     [Fact]
