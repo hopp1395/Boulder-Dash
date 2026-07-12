@@ -71,6 +71,50 @@ public class GameTickTests
         Assert.Equal(Element.Rockford, cave.GetElement(entranceIndex % 5, entranceIndex / 5));
     }
 
+    /// <summary>Levelaufbau nach Spezifikation: Erst wenn die Höhle komplett aufgedeckt ist und das
+    /// Startsignal (die Eingangs-Explosion bei EntranceProgress==92) ertönt ist, beginnen Steine zu
+    /// fallen — vorher hängt der Boulder unbewegt über dem Leerraum.</summary>
+    [Fact]
+    public void Physik_startet_erst_nach_Aufdecken_und_Startsignal()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 10, 2, 0, Wall,
+            Wall, 0, 0, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var data = BuildCaveData(5, 4, tiles);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
+        var input = new InputState();
+        var camera = new Camera();
+        var clocks = new Clocks();
+        var random = new Random(1);
+        var cover = new ScreenCover(random);
+        cover.BeginUncover(data.Width, data.Height);
+        var tick = new GameTick(new CavePhysics(random), cover);
+
+        // Während des Aufdeckens (69 Runden) und bis zum Startsignal (Tick 93 sieht beim Eintritt
+        // EntranceProgress==92) rührt sich der Stein nicht.
+        for (var i = 0; i < 93; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            Assert.Equal(Element.Boulder, cave.GetElement(2, 1));
+        }
+
+        // Der nächste Physik-Scan (spätestens 3 Ticks später) lässt ihn fallen.
+        for (var i = 0; i < 3; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+        }
+
+        Assert.Equal(Element.Empty, cave.GetElement(2, 1));
+        Assert.Equal(Element.Boulder, cave.GetElement(2, 2));
+    }
+
     /// <summary>Baut Rockford direkt vor den offenen Ausgang (Quote 0), mit fertigem Eingang und
     /// genau einer verbleibenden Spielsekunde.</summary>
     private static (BoulderDash.Core.Simulation.Cave Cave, GameState State, GameTick Tick, Clocks Clocks) SetupLetzteSekundeVorDemAusgang()

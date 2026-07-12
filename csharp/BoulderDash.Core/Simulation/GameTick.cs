@@ -100,10 +100,14 @@ public sealed class GameTick
 
         if (!state.IsCaveEnded)
         {
-            // Anders als im Original (dort "anfang_var>65", BOULDER.CPP:255) läuft die Cave schon
-            // während des Aufdeckens ganz normal weiter — BD1-Verhalten, siehe ScreenCover.
-            // Ungefährlich vor Rockfords Geburt: Regel() erkennt einen Tod erst ab EntranceProgress>100.
-            if (clocks.Clk1 == 0)
+            // Die Physik startet erst nach dem Levelaufbau: Höhle komplett aufgedeckt UND das
+            // Startsignal (die Eingangs-Explosion bei EntranceProgress==92, siehe Entrance())
+            // ertönt — vorher fällt kein Stein und bewegt sich kein Gegner. Das DOS-Original
+            // wartete ähnlich, nur mit anderer Schwelle ("anfang_var>65", BOULDER.CPP:255).
+            // Beim ZUDECKEN am Cave-Ende (Covering) läuft die Physik dagegen weiter — wie im
+            // Original die ISR bis zum Ende von game_start().
+            var buildUpDone = _cover.Phase != ScreenCoverPhase.Uncovering && state.EntranceProgress > 92;
+            if (clocks.Clk1 == 0 && buildUpDone)
             {
                 _physics.Regel(cave, state, input, camera);
             }
