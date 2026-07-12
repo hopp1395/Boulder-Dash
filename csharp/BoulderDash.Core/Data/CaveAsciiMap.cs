@@ -44,9 +44,38 @@ public static class CaveAsciiMap
         ['a'] = Element.Amoeba,
     };
 
+    /// <summary>Sonderglyphen, die ein ROHES Kachelbyte setzen statt nur ein Element — nämlich ein
+    /// Objekt mit bereits gesetztem Fall-Bit (0x40). Gedacht für die Prüfstand-Caves: manche Zustände
+    /// entstehen im normalen Spiel nur für einen einzigen Cave-Scan und lassen sich sonst nicht
+    /// gezielt herstellen (siehe cave-test-6.txt). In den 100 BD1-Caves kommen sie nicht vor.</summary>
+    private static readonly Dictionary<char, byte> CharToFallingRaw = new()
+    {
+        ['R'] = 0x40 | (byte)Element.Boulder,
+        ['D'] = 0x40 | (byte)Element.Jewel,
+    };
+
     public static char ToChar(Element element) => ElementToChar.TryGetValue(element, out var c) ? c : '?';
 
     public static bool TryToElement(char c, out Element element) => CharToElement.TryGetValue(c, out element);
+
+    /// <summary>Kartenzeichen zum rohen Kachelbyte — die maßgebliche Richtung für den [Map]-Parser.
+    /// Deckt die normale Legende ab (Rohbyte = Element-ID) plus die Fall-Bit-Sonderglyphen.</summary>
+    public static bool TryToRaw(char c, out byte raw)
+    {
+        if (CharToFallingRaw.TryGetValue(c, out raw))
+        {
+            return true;
+        }
+
+        if (TryToElement(c, out var element))
+        {
+            raw = (byte)element;
+            return true;
+        }
+
+        raw = 0;
+        return false;
+    }
 
     public static string[] Render(CaveData cave)
     {

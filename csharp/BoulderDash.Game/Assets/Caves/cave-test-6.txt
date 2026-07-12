@@ -1,0 +1,53 @@
+# Prüfstand 6 — Abrollen nur von RUHENDEN Objekten (kein BD1-Original, nur über den Testmodus F5).
+#
+# Zu prüfen: "Rounded" sind nach BDCFF 0000 nur die Brick Wall und RUHENDE Boulder/Jewels. Liegt ein
+# Stein auf einem noch FALLENDEN Stein, weicht er also NICHT zur Seite aus, sondern bleibt liegen.
+# Vorher (DOS): Es zählte nur die Element-ID — der obere Stein rollte auch von einem fallenden ab.
+#
+# Rechts im Schacht liegt ein ruhender Stein ('r') direkt auf einem bereits FALLENDEN Stein ('R').
+# Nach rechts ist Stahl, nach links ist frei — der obere Stein hat also genau eine Rollrichtung:
+#
+#   JETZT (richtig):  Er bleibt liegen, fällt gerade nach unten und landet auf dem unteren Stein.
+#                     -> am Ende liegen ZWEI Steine übereinander im rechten Schacht.
+#   FRÜHER (falsch):  Er wäre nach links abgerollt und über die Ziegeltreppe bis ganz nach links
+#                     unten kaskadiert. -> ein Stein links unten, nur einer im rechten Schacht.
+#
+# Die Ziegeltreppe links ist nur dafür da, den Unterschied weithin sichtbar zu machen; ohne sie
+# lägen die beiden möglichen Endpositionen nur eine Spalte auseinander.
+#
+# 'R' ist eine Sonderglyphe der Kartenlegende (Stein MIT Fall-Bit, siehe CaveAsciiMap). Sie ist nötig,
+# weil dieser Zustand im normalen Spiel nur einen einzigen Cave-Scan lang existiert: fallende Steine
+# trennen sich sonst immer um mindestens eine Zeile und liegen daher nie direkt aufeinander.
+
+[Cave]
+Cave        = Z
+Name        = Abrollen
+Description = Kein Abrollen von einem fallenden Stein
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W           rW     W
+W           RW     W
+W          w W     W
+W         wW W     W
+W        w W W     W
+W       w  W W     W
+W      w   W W     W
+W     w    W W     W
+W..................W
+W.P............d..XW
+WWWWWWWWWWWWWWWWWWWW
