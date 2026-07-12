@@ -14,6 +14,10 @@ public readonly record struct ViewportSize(int Columns, int Rows)
     /// <summary>Das Sichtfenster des Originals — die Referenzgröße für alles Verhalten.</summary>
     public static readonly ViewportSize Original = new(20, 12);
 
+    /// <summary>Die ganze Cave auf einmal — die größte Stufe, bei der gar nicht mehr gescrollt wird.
+    /// Voreinstellung beim ersten Start (siehe GameSettings).</summary>
+    public static readonly ViewportSize Full = new(40, 22);
+
     /// <summary>Wählbare Stufen: vom Original bis zur vollen Cave (40x22), je +4 Spalten/+2 Zeilen.
     /// Bewusst keine Stufe unter dem Original: die Statuszeile ist genau 20 Kacheln (320 px) breit,
     /// und ein kleineres Bild liefert schon der Bildschirm-Zoom (Fenstergröße).</summary>

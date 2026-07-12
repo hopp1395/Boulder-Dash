@@ -10,15 +10,18 @@ public class SettingsFileTests
     private static string NewTempPath() =>
         Path.Combine(Path.GetTempPath(), $"boulderdash-test-{Guid.NewGuid():N}", "settings.json");
 
+    /// <summary>Erster Start (noch keine Einstellungsdatei): Vollbild mit der vollen Cave — der
+    /// größtmögliche sichtbare Bereich.</summary>
     [Fact]
-    public void Fehlende_Datei_liefert_Standardwerte()
+    public void Fehlende_Datei_liefert_Vollbild_mit_voller_Cave()
     {
         var settings = SettingsFile.Load(NewTempPath());
 
-        Assert.Equal(ViewportSize.Original, settings.Viewport);
+        Assert.Equal(ViewportSize.Full, settings.Viewport);
+        Assert.Equal(ViewportSize.Steps[^1], settings.Viewport); // die größte Zoomstufe
+        Assert.True(settings.Fullscreen);
         Assert.Equal(GameSettings.DefaultWindowWidth, settings.WindowWidth);
         Assert.Equal(GameSettings.DefaultWindowHeight, settings.WindowHeight);
-        Assert.False(settings.Fullscreen);
     }
 
     [Fact]
@@ -32,7 +35,7 @@ public class SettingsFileTests
 
             var settings = SettingsFile.Load(path);
 
-            Assert.Equal(ViewportSize.Original, settings.Viewport);
+            Assert.Equal(ViewportSize.Full, settings.Viewport);
             Assert.Equal(GameSettings.DefaultWindowWidth, settings.WindowWidth);
         }
         finally
