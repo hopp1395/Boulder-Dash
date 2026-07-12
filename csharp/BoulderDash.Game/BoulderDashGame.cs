@@ -157,14 +157,15 @@ public class BoulderDashGame : XnaGame
             ToggleFullscreen();
         }
 
-        var larger = _inputAdapter.IsAnyJustPressed(Keys.OemPlus, Keys.Add);
-        var smaller = _inputAdapter.IsAnyJustPressed(Keys.OemMinus, Keys.Subtract);
-        if (larger == smaller)
+        // Hineinzoomen (+) heißt näher heran, also WENIGER Kacheln im Bild — das kleinere Sichtfenster.
+        var zoomIn = _inputAdapter.IsAnyJustPressed(Keys.OemPlus, Keys.Add);
+        var zoomOut = _inputAdapter.IsAnyJustPressed(Keys.OemMinus, Keys.Subtract);
+        if (zoomIn == zoomOut)
         {
             return;
         }
 
-        var next = larger ? _viewport.NextLarger() : _viewport.NextSmaller();
+        var next = zoomIn ? _viewport.NextSmaller() : _viewport.NextLarger();
         if (next == _viewport)
         {
             return;
