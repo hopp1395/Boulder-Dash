@@ -172,7 +172,7 @@ public class BoulderDashGame : XnaGame
     {
         GraphicsDevice.SetRenderTarget(_renderTarget);
         GraphicsDevice.Clear(Color.Black);
-        DrawScene();
+        DrawScene(gameTime.TotalGameTime.TotalSeconds);
         GraphicsDevice.SetRenderTarget(null);
 
         GraphicsDevice.Clear(Color.Black);
@@ -186,17 +186,17 @@ public class BoulderDashGame : XnaGame
         base.Draw(gameTime);
     }
 
-    private void DrawScene()
+    private void DrawScene(double totalSeconds)
     {
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
         if (_session.Phase == SessionPhase.TitleScreen)
         {
-            _titleRenderer.DrawTitle(_spriteBatch);
+            _titleRenderer.DrawTitle(_spriteBatch, totalSeconds);
         }
         else if (_session.Phase == SessionPhase.Menu)
         {
-            _titleRenderer.DrawOptionScreen(_spriteBatch, _session);
+            _titleRenderer.DrawOptionScreen(_spriteBatch, _session, totalSeconds);
         }
         else if (_session.Phase == SessionPhase.TestMenu)
         {

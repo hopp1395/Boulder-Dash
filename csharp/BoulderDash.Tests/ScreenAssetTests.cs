@@ -23,4 +23,38 @@ public class ScreenAssetTests
         Assert.Single(data.Frames);
         Assert.Equal(width * height, data.Frames[0].Length);
     }
+
+    /// <summary>Der TitleRenderer extrahiert das animierte Hintergrundmuster aus Zelle (8,8)
+    /// des Titelbilds und kachelt es 8x8-periodisch — beide Annahmen müssen im Asset stimmen,
+    /// sonst läuft die Muster-Animation gegen falsche Pixel.</summary>
+    [Fact]
+    public void Titelbild_traegt_bei_Zelle_8_8_das_8x8_periodische_Hintergrundmuster()
+    {
+        var path = Path.Combine(TestPaths.GameAssets, "Screens", "title.txt");
+        var data = SpriteTextFile.Parse(File.ReadAllText(path), "title.txt");
+        var frame = data.Frames[0];
+
+        byte At(int x, int y) => frame[(y * data.Width) + x];
+
+        for (var y = 8; y < 16; y++)
+        {
+            for (var x = 8; x < 16; x++)
+            {
+                Assert.Equal(At(x, y), At(x + 8, y)); // horizontal periodisch (Nachbarzelle rechts)
+                Assert.Equal(At(x, y), At(x, y + 8)); // vertikal periodisch (Nachbarzelle unten)
+            }
+        }
+
+        // Kein degeneriertes Muster (z. B. einfarbige Fläche) — die Zelle muss mehrere Farben tragen.
+        var distinct = new HashSet<byte>();
+        for (var y = 8; y < 16; y++)
+        {
+            for (var x = 8; x < 16; x++)
+            {
+                distinct.Add(At(x, y));
+            }
+        }
+
+        Assert.True(distinct.Count >= 3, "Musterzelle (8,8) sieht nicht nach dem Mauermuster aus.");
+    }
 }

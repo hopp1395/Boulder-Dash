@@ -1,8 +1,10 @@
-# Boulder Dash â€” Titelbildschirm des C64-Originals (BD1), 320x200 Vollbild.
+# Boulder Dash — Titelbildschirm des C64-Originals (BD1), 320x200 Vollbild.
 # Quantisiert aus einem Emulator-Screenshot (c64-wiki.com, BoulderDashTitel.png).
 # Ein Zeichen pro Pixel mit festen C64-Farben (bewusst KEINE Cave-Palette, siehe
-# TitleRenderer): . = Schwarz, : = Blau ($3E31A2), x = Hellblau ($7C70DA), # = WeiÃŸ.
-# Das blau gemusterte Hintergrundraster ist im Original animiert â€” hier ein Standbild.
+# TitleRenderer): . = Schwarz, : = Blau ($3E31A2), x = Hellblau ($7C70DA), # = Weiß.
+# Das blau gemusterte Hintergrundraster (8x8-periodisch, ab Zelle 8/8 rein) ist im Original
+# animiert: Der TitleRenderer erkennt die reinen Musterzellen, macht sie transparent und
+# lässt das Muster dahinter vertikal durchlaufen — wie die Zudeck-Stahlwand (WechselVier).
 
 [Sprite]
 Name   = Title

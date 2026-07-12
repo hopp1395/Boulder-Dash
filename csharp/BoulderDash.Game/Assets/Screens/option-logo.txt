@@ -1,9 +1,13 @@
-# Boulder Dash â€” Logo-Teil des Option-Screens des C64-Originals (BD1), 320x152.
+# Boulder Dash — Logo-Teil des Option-Screens des C64-Originals (BD1), 320x152.
 # Quantisiert aus einem Emulator-Screenshot (c64-wiki.com, Boulderdash-option.png,
-# NutzflÃ¤che ohne C64-Rahmen). Die Bildschirmzeilen 152-199 bleiben schwarz und
+# Nutzfläche ohne C64-Rahmen). Die Bildschirmzeilen 152-199 bleiben schwarz und
 # tragen zur Laufzeit die Textzeilen des Option-Screens (TitleRenderer).
-# Farben wie title.txt: . = Schwarz, : = Blau ($3E31A2), x = Hellblau ($7C70DA), # = WeiÃŸ.
-# Das blau gemusterte Hintergrundraster ist im Original animiert â€” hier ein Standbild.
+# Farben wie title.txt: . = Schwarz, : = Blau ($3E31A2), x = Hellblau ($7C70DA), # = Weiß.
+# Das blau gemusterte Hintergrundraster ist im Original animiert: Der TitleRenderer erkennt
+# die reinen Musterzellen, macht sie transparent und lässt das Muster dahinter vertikal
+# durchlaufen — wie die Zudeck-Stahlwand (WechselVier). Dieses Asset ist gegenüber title.txt
+# in einer anderen Musterphase eingefroren (Beleg der Original-Animation), was die zellweise
+# Erkennung ausgleicht.
 
 [Sprite]
 Name   = OptionLogo
