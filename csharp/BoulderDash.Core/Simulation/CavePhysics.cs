@@ -354,9 +354,10 @@ public sealed class CavePhysics
     }
 
     /// <summary>Rockford: Kamera-Scroll-Auslöser plus Bewegung/Graben/Sammeln/Schieben (:890-923).
-    /// Original-Eigenheit (Dangling-Else): die "else"-Bewegungsverarbeitung bindet nur an die
-    /// vierte Kamerabedingung — löst diese den Aufwärtsscroll aus, bleibt die Bewegung diesen
-    /// Tick komplett aus, auch wenn keine der anderen drei Kamerabedingungen zutraf.</summary>
+    /// Die vier Kamerabedingungen setzen nur das Scroll-Ziel und beeinflussen die Bewegung nicht.
+    /// Im DOS-Original hing die Bewegungsverarbeitung durch ein Dangling-Else an der vierten
+    /// Bedingung: löste Rockford den Aufwärtsscroll aus, blieb seine Bewegung den ganzen Scan über
+    /// aus — er hakte sichtbar. Ein reiner Programmierfehler ohne BD1-Entsprechung, hier behoben.</summary>
     private void ProcessRockford(
         Cave cave, GameState state, InputState input, Camera camera,
         int idx, int width, int height, int col, int row)
@@ -387,7 +388,6 @@ public sealed class CavePhysics
         if (camera.Y + 1 == row && camera.Y > 0)
         {
             camera.Rely = -5;
-            return;
         }
 
         var target = cave.GetRaw(idx + input.Direction) & 0x9F;

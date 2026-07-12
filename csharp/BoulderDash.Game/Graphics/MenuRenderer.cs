@@ -82,13 +82,16 @@ public sealed class MenuRenderer
         _font.DrawText(batch, "|     TESTMODUS     |", RowPosition(6), Color.White);
         _font.DrawText(batch, "+-------------------+", RowPosition(7), Color.White);
 
+        // Die Liste wächst mit jeder geprüften Korrektur — Startzeile so wählen, dass sie nicht in die
+        // beiden Hinweiszeilen (19/21) läuft.
+        var firstRow = 18 - GameSession.TestCaves.Count;
         for (var i = 0; i < GameSession.TestCaves.Count; i++)
         {
             var marker = i == session.TestCaveIndex ? ">" : " ";
-            _font.DrawText(batch, $"{marker} {i + 1}  {GameSession.TestCaves[i].Title}", RowPosition(11 + i), Color.White);
+            _font.DrawText(batch, $"{marker} {i + 1}  {GameSession.TestCaves[i].Title}", RowPosition(firstRow + i), Color.White);
         }
 
-        _font.DrawText(batch, "HOCH/RUNTER ODER 1-5 WAEHLEN", RowPosition(19), Color.White);
+        _font.DrawText(batch, $"HOCH/RUNTER ODER 1-{GameSession.TestCaves.Count} WAEHLEN", RowPosition(19), Color.White);
         _font.DrawText(batch, "F1 - STARTEN        ESC - ZURUECK", RowPosition(21), Color.White);
     }
 

@@ -448,12 +448,12 @@ public class CavePhysicsTests
         Assert.Equal(Element.Jewel, cave.GetElement(2, 3));
     }
 
+    /// <summary>Der Kamera-Aufwärtsscroll setzt nur das Scroll-Ziel und blockiert die Bewegung nicht.
+    /// Im DOS-Original hing die Bewegungsverarbeitung durch ein Dangling-Else (BOULDER.CPP:896-898) an
+    /// genau dieser Bedingung: Rockford blieb den ganzen Scan stehen, obwohl eine Taste lag.</summary>
     [Fact]
-    public void Rockford_bewegt_sich_nicht_wenn_Kamera_Aufwaertsscroll_ausloest()
+    public void Rockford_bewegt_sich_auch_wenn_die_Kamera_nach_oben_scrollt()
     {
-        // Original-Dangling-Else (BOULDER.CPP:896-898): löst die Rockford-Zeile den
-        // Kamera-Aufwärtsscroll aus (camera.Y+1==row && camera.Y>0), bleibt die
-        // Bewegungsverarbeitung diesen Tick komplett aus — auch wenn eine Bewegungstaste liegt.
         byte[] tiles =
         [
             Wall, Wall, Wall, Wall, Wall,
@@ -469,9 +469,9 @@ public class CavePhysicsTests
 
         NewPhysics().Regel(cave, state, input, camera);
 
-        Assert.Equal(Element.Rockford, cave.GetElement(1, 2)); // keine Bewegung ausgeführt
-        Assert.Equal(Element.Earth, cave.GetElement(2, 2)); // Erde unverändert
-        Assert.Equal((sbyte)-5, camera.Rely); // Scroll-Ziel wurde trotzdem gesetzt
+        Assert.Equal(Element.Empty, cave.GetElement(1, 2)); // Rockford ist weitergegangen
+        Assert.Equal(Element.Rockford, cave.GetElement(2, 2)); // Erde weggegraben
+        Assert.Equal((sbyte)-5, camera.Rely); // und das Scroll-Ziel steht trotzdem
     }
 
     /// <summary>Würfelt immer die 0 — jeder 1:8-Wurf (Schieben) gelingt.</summary>
