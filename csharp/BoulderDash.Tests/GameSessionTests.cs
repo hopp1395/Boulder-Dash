@@ -648,7 +648,7 @@ public class GameSessionTests
             {
                 Index = 0, Name = "Blank", Description = "", Letter = 'A', IsIntermission = false,
                 Width = 40, Height = 22, JewelQuota = 0, TimeSeconds = 99,
-                BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
+                Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)], CameraStartX = 0, CameraStartY = 0,
                 EnchantedWallSeconds = 0, AmoebaSlowGrowthSeconds = 0,
                 PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
                 GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = blankTiles,
@@ -657,7 +657,7 @@ public class GameSessionTests
             {
                 Index = 1, Name = "Valid", Description = "", Letter = 'B', IsIntermission = false,
                 Width = 20, Height = 12, JewelQuota = 0, TimeSeconds = 99,
-                BaseColors = [0, 1, 2, 3], CameraStartX = 0, CameraStartY = 0,
+                Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)], CameraStartX = 0, CameraStartY = 0,
                 EnchantedWallSeconds = 0, AmoebaSlowGrowthSeconds = 0,
                 PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
                 GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = validTiles,

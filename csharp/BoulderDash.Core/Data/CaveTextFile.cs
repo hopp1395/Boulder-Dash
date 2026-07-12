@@ -15,6 +15,9 @@ public static class CaveTextFile
     private const int ViewportWidth = 20;
     private const int ViewportHeight = 12;
 
+    /// <summary>Farben je Cave — ein Sprite-Pixel trägt einen Palettenindex 0-3 (siehe SpriteTextFile).</summary>
+    private const int PaletteSize = 4;
+
     public static CaveData Parse(string text, string sourceName)
     {
         var caveFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -84,11 +87,7 @@ public static class CaveTextFile
             _ => throw new FormatException($"{sourceName}: Kind muss 'Normal' oder 'Intermission' sein, gefunden: '{kind}'."),
         };
 
-        var colorsText = RequireField(rulesFields, "Colors", sourceName).Split(',', StringSplitOptions.TrimEntries);
-        if (colorsText.Length != 3)
-        {
-            throw new FormatException($"{sourceName}: Colors muss genau 3 kommagetrennte Werte haben.");
-        }
+        var colors = ParseColors(sourceName, caveFields);
 
         var letter = char.ToUpperInvariant(RequireField(caveFields, "Cave", sourceName)[0]);
 
@@ -125,9 +124,7 @@ public static class CaveTextFile
             Height = height,
             JewelQuota = RequireByte(rulesFields, "JewelsNeeded", sourceName),
             TimeSeconds = RequireByte(rulesFields, "CaveTime", sourceName),
-            // Konvention des ursprünglichen 1999er-Ports (empirisch aus LEVEL.BIN übernommen):
-            // BaseColors=[0,1,Farbe2,Farbe1] - die dritte BD1-Rohfarbe bleibt ungenutzt.
-            BaseColors = [0, 1, ParseByte(colorsText[1], sourceName, "Colors"), ParseByte(colorsText[0], sourceName, "Colors")],
+            Colors = colors,
             CameraStartX = (byte)cameraStartX,
             CameraStartY = (byte)cameraStartY,
             EnchantedWallSeconds = RequireByte(rulesFields, "MagicWallTime", sourceName),
@@ -139,6 +136,27 @@ public static class CaveTextFile
             GameSpeed = CaveSpeed.FromScanMilliseconds(RequireInt(rulesFields, "GameSpeed", sourceName, 20, 1000)),
             Tiles = tiles,
         };
+    }
+
+    /// <summary>
+    /// Liest die Farbfelder Color1-Color4 des [Cave]-Abschnitts: je ein RGB-Wert (#RRGGBB). Color1
+    /// ist die Farbe des Palettenindex 0, Color4 die des Index 3 — damit werden die Sprites der Cave
+    /// eingefärbt (siehe Palette).
+    /// </summary>
+    private static Rgb[] ParseColors(string sourceName, Dictionary<string, string> caveFields)
+    {
+        var colors = new Rgb[PaletteSize];
+        for (var i = 0; i < PaletteSize; i++)
+        {
+            var key = $"Color{i + 1}";
+            var token = RequireField(caveFields, key, sourceName);
+            if (!Rgb.TryParse(token, out colors[i]))
+            {
+                throw new FormatException($"{sourceName}: '{key}' erwartet einen RGB-Wert im Format #RRGGBB, gefunden: '{token}'.");
+            }
+        }
+
+        return colors;
     }
 
     private static byte[] ParseMap(string sourceName, List<(string Line, int LineNumber)> mapLines, byte width, byte height)
