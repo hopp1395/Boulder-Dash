@@ -17,5 +17,5 @@ public sealed class JewelExplosionObject : ExplosionObject
 
     public override int DefaultFrame => 68;
 
-    public override CaveObject Remnant() => new JewelObject(Cave) { Scanned = true };
+    public override CaveObject Remnant() => new JewelObject(Cave) { ScannedThisFrame = true };
 }

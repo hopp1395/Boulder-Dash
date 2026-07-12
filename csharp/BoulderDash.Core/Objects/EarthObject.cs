@@ -16,5 +16,5 @@ public sealed class EarthObject : CaveObject
 
     public override int DefaultFrame => 1;
 
-    public override bool CanAmoebaGrowInto => !Scanned;
+    public override bool CanAmoebaGrowInto => !ScannedThisFrame;
 }

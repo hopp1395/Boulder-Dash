@@ -33,9 +33,9 @@ public abstract class FallingObject : CaveObject
 
     public override byte ToRaw() => (byte)(base.ToRaw() | (Falling ? 0x40 : 0));
 
-    public override void NextState()
+    public override void Interact()
     {
-        if (Scanned)
+        if (ScannedThisFrame)
         {
             return;
         }
@@ -63,7 +63,7 @@ public abstract class FallingObject : CaveObject
 
             // Nur ein FALLENDES Objekt erschlägt Rockford — ein ruhendes liegt einfach auf ihm.
             case RockfordObject when Falling:
-                Cave.Explode(belowIndex, () => new ExplosionObject(Cave));
+                Explode(belowIndex, () => new ExplosionObject(Cave));
                 break;
 
             // Auf einer Kreatur bleibt es liegen: Sie zündet sich beim eigenen Zug selbst.
@@ -95,7 +95,7 @@ public abstract class FallingObject : CaveObject
             MoveTo(target);
 
             // Die Zelle unter dem Ziel wird gesperrt, damit in diesem Scan nichts hineinfällt.
-            Cave.Get(belowTarget).Scanned = true;
+            Cave.Get(belowTarget).ScannedThisFrame = true;
             return;
         }
 
@@ -137,13 +137,13 @@ public abstract class FallingObject : CaveObject
         var exitIndex = Index + (2 * Cave.Width);
         if (Cave.Get(exitIndex).IsFreeSpace)
         {
-            product.Scanned = true;
+            product.ScannedThisFrame = true;
             Cave.Spawn(exitIndex, product);
         }
 
         // Steht unter der Mauer etwas im Weg, wird das Objekt trotzdem gelöscht:
         // "the boulder or diamond is lost" (BDCFF 0002).
-        Cave.Spawn(Index, new EmptyObject(Cave) { Scanned = true });
+        Cave.Spawn(Index, new EmptyObject(Cave) { ScannedThisFrame = true });
     }
 
     /// <summary>Zieht auf die Zielkachel um und lässt verarbeiteten Leerraum zurück.</summary>
@@ -151,9 +151,9 @@ public abstract class FallingObject : CaveObject
     {
         var from = Index;
 
-        Scanned = true;
+        ScannedThisFrame = true;
         Cave.Set(target, this);
-        Cave.Spawn(from, new EmptyObject(Cave) { Scanned = true });
+        Cave.Spawn(from, new EmptyObject(Cave) { ScannedThisFrame = true });
     }
 
     /// <summary>Kommt zur Ruhe. Der Aufschlag klingt nur, wenn das Objekt wirklich fiel — ein bereits

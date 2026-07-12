@@ -18,7 +18,7 @@ namespace BoulderDash.Core.Simulation;
 ///
 /// Die Scan-Richtung ist verhaltensrelevant: Weil zeilenweise von oben nach unten gescannt wird,
 /// würde ein fallendes Objekt seiner eigenen Bewegung hinterherfallen — das verhindert das
-/// Verarbeitet-Flag (<see cref="CaveObject.Scanned"/>), das jedes Objekt beim Zug setzt und das der
+/// Verarbeitet-Flag (<see cref="CaveObject.ScannedThisFrame"/>), das jedes Objekt beim Zug setzt und das der
 /// Scan am Ende wieder löscht.
 ///
 /// <see cref="CaveData"/> bleibt bewusst roh (byte[]): Es ist der unveränderliche Dateiinhalt und
@@ -138,7 +138,7 @@ public sealed class Cave
         // gelesen werden muss immer die Kachel, wie sie JETZT aussieht.
         for (var i = 0; i < _tiles.Length; i++)
         {
-            _tiles[i].NextState();
+            _tiles[i].Interact();
         }
 
         if (wasAlive && State.Stat != 0)
@@ -146,10 +146,10 @@ public sealed class Cave
             State.SoundEvents.Enqueue(SoundEvent.Death);
         }
 
-        // Verarbeitet-Flags für den nächsten Scan löschen (:930-934).
+        // Jedes Objekt schließt seinen Scan ab — das Verarbeitet-Flag fällt (:930-934).
         foreach (var tile in _tiles)
         {
-            tile.Scanned = false;
+            tile.EndScan();
         }
 
         State.AmoebaCountLastScan = _amoebaFound;
@@ -166,35 +166,6 @@ public sealed class Cave
     {
         _amoebaFound++;
         _amoebaCanGrow |= canGrow;
-    }
-
-    /// <summary>explosion(): sprengt den 3x3-Bereich um eine Kachel frei; Stahlwand, Ein- und Ausgang
-    /// bleiben stehen (:709-721). Jede getroffene Kachel bekommt ihre eigene Explosionsinstanz —
-    /// welche, entscheidet der Verursacher (ein Schmetterling hinterlässt Diamanten).</summary>
-    public void Explode(int centerIndex, Func<ExplosionObject> create)
-    {
-        ReadOnlySpan<int> offsets =
-        [
-            -Width - 1, -Width, -Width + 1,
-            -1, 0, 1,
-            Width - 1, Width, Width + 1,
-        ];
-
-        foreach (var offset in offsets)
-        {
-            var target = centerIndex + offset;
-            if (Get(target).IsExplosionProof)
-            {
-                continue;
-            }
-
-            var explosion = create();
-            explosion.Scanned = true;
-            Spawn(target, explosion);
-        }
-
-        RestartExplosions();
-        State.SoundEvents.Enqueue(SoundEvent.Explosion);
     }
 
     /// <summary>Setzt ALLE Explosionen der Höhle auf die erste Phase zurück — auch die, die anderswo

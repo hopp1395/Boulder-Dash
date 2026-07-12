@@ -67,9 +67,9 @@ public sealed class RockfordObject : CaveObject
     /// Bedingung: Löste Rockford den Aufwärtsscroll aus, blieb seine Bewegung den ganzen Scan über
     /// aus — er hakte sichtbar. Ein reiner Programmierfehler ohne BD1-Entsprechung, hier behoben.
     /// </summary>
-    public override void NextState()
+    public override void Interact()
     {
-        if (Scanned)
+        if (ScannedThisFrame)
         {
             return;
         }
@@ -87,7 +87,7 @@ public sealed class RockfordObject : CaveObject
         // Verarbeitet-Bit, das die Zielmaske (anders als alle anderen) NICHT ausblendet — ein Detail,
         // das leicht zu übersehen ist, aber Rockford daran hindert, einer gerade geräumten Zelle
         // hinterherzuziehen. Steht er still, ist das Ziel er selbst und passiert nichts.
-        if (target.Scanned)
+        if (target.ScannedThisFrame)
         {
             return;
         }
@@ -190,7 +190,7 @@ public sealed class RockfordObject : CaveObject
             return;
         }
 
-        boulder.Scanned = true;
+        boulder.ScannedThisFrame = true;
         Cave.Set(behindIndex, boulder);
 
         MoveTo(targetIndex);
@@ -206,16 +206,16 @@ public sealed class RockfordObject : CaveObject
     {
         var from = Index;
 
-        Scanned = true;
+        ScannedThisFrame = true;
 
         if (Cave.Input.IsGrabbing)
         {
-            Cave.Spawn(targetIndex, new EmptyObject(Cave) { Scanned = true });
+            Cave.Spawn(targetIndex, new EmptyObject(Cave) { ScannedThisFrame = true });
             return;
         }
 
         Cave.Set(targetIndex, this);
-        Cave.Spawn(from, new EmptyObject(Cave) { Scanned = true });
+        Cave.Spawn(from, new EmptyObject(Cave) { ScannedThisFrame = true });
     }
 
     public override TileAppearance Appearance(in RenderContext ctx)

@@ -47,9 +47,9 @@ public abstract class CreatureObject : CaveObject
 
     public override byte ToRaw() => (byte)(base.ToRaw() | (byte)Facing);
 
-    public override void NextState()
+    public override void Interact()
     {
-        if (Scanned)
+        if (ScannedThisFrame)
         {
             return;
         }
@@ -74,7 +74,7 @@ public abstract class CreatureObject : CaveObject
             Neighbour(1).TriggersCreature ||
             Neighbour(-width) is FallingObject { Falling: true })
         {
-            Cave.Explode(Index, CreateExplosion);
+            Explode(Index, CreateExplosion);
             return;
         }
 
@@ -90,7 +90,7 @@ public abstract class CreatureObject : CaveObject
         {
             // Beides versperrt: einmal zur Gegenseite drehen, aber stehen bleiben.
             Facing = BlockedFacing;
-            Scanned = true;
+            ScannedThisFrame = true;
         }
     }
 
@@ -100,9 +100,9 @@ public abstract class CreatureObject : CaveObject
         var from = Index;
 
         Facing = facing;
-        Scanned = true;
+        ScannedThisFrame = true;
 
         Cave.Set(from + facing.Offset(Cave.Width), this);
-        Cave.Spawn(from, new EmptyObject(Cave) { Scanned = true });
+        Cave.Spawn(from, new EmptyObject(Cave) { ScannedThisFrame = true });
     }
 }

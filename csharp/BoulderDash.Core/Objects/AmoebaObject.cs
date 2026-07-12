@@ -34,9 +34,9 @@ public sealed class AmoebaObject : CaveObject
     public override TileAppearance Appearance(in RenderContext ctx) =>
         TileAppearance.Of(DefaultFrame + AnimationPhase);
 
-    public override void NextState()
+    public override void Interact()
     {
-        if (Scanned)
+        if (ScannedThisFrame)
         {
             return;
         }
@@ -46,7 +46,7 @@ public sealed class AmoebaObject : CaveObject
             // Mit Verarbeitet-Flag, damit ein so entstandener Stein nicht schon im selben Scan
             // weiterfällt (dasselbe Muster wie bei der auslaufenden Explosion).
             var converted = Cave.Create(fate);
-            converted.Scanned = true;
+            converted.ScannedThisFrame = true;
             Cave.Spawn(Index, converted);
             return;
         }
@@ -77,7 +77,7 @@ public sealed class AmoebaObject : CaveObject
         {
             // Mit Verarbeitet-Flag: Sie wächst erst im nächsten Scan weiter und zählt auch erst dann
             // mit ("newly grown amoeba cannot expand until the following frame").
-            Cave.Spawn(target, new AmoebaObject(Cave) { Scanned = true });
+            Cave.Spawn(target, new AmoebaObject(Cave) { ScannedThisFrame = true });
         }
     }
 }

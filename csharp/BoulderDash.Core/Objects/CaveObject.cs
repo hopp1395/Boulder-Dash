@@ -9,13 +9,13 @@ namespace BoulderDash.Core.Objects;
 /// <b>Jedes Objekt rechnet sich selbst aus.</b> Es kennt seine <see cref="Cave"/> und seinen
 /// <see cref="Index"/> darin, kann also seine Nachbarn ansehen, sich bewegen, etwas einsammeln oder
 /// sprengen. Die Cave gibt nur den Takt vor: <see cref="NextFrame"/> je Tick (Animation),
-/// <see cref="NextState"/> je Cave-Scan (Physik). Die Spielregeln eines Objekts stehen damit beim
+/// <see cref="Interact"/> je Cave-Scan (Physik). Die Spielregeln eines Objekts stehen damit beim
 /// Objekt — der Stein weiß, wie er fällt, die Kreatur, wie sie an der Wand entlangläuft.
 ///
 /// Die Basisklasse trägt, was alle gemeinsam haben: Identität (<see cref="Element"/>, die persistente
 /// ID des Dateiformats), Platz und Scan-Zustand, Animationsphase, Aussehen und die Prädikate, an
 /// denen die anderen Objekte ihr Verhalten unterscheiden. Wer nichts tut (Erde, Wände), erbt einfach
-/// das leere <see cref="NextState"/>.
+/// das leere <see cref="Interact"/>.
 ///
 /// <b>Zustand statt Bitfelder:</b> Im Original steckte all das in den Bits EINES Kachelbytes — 0x0F
 /// die Element-ID, 0x80 "verarbeitet", 0x40 Fall-Momentum, 0x60 Blickrichtung. Weil sich Stein und
@@ -58,7 +58,7 @@ public abstract class CaveObject
     /// sich gerade bewegt hat, im selben Scan noch einmal drankommt — und wirkt nebenbei als Sperre:
     /// eine verarbeitete Zelle ist für Rockford unpassierbar und für die Amoeba kein Wuchsgrund.
     /// Die Cave löscht das Flag am Ende jedes Scans für alle Kacheln.</summary>
-    public bool Scanned { get; set; }
+    public bool ScannedThisFrame { get; set; }
 
     /// <summary>Eigener Animationstakt, Periode 8. Im Original war das der EINE globale Zähler
     /// wechsel_vier für alle Objekte; jetzt führt jedes Objekt seinen eigenen. Sie laufen dennoch
@@ -82,11 +82,22 @@ public abstract class CaveObject
     public virtual void NextFrame() =>
         AnimationPhase = (byte)((AnimationPhase + 1) % AnimationPeriod);
 
-    /// <summary>Ein Zug — einmal pro Cave-Scan. Hier stehen die Spielregeln dieses Objekts. Wer keine
-    /// hat (Erde, Wände, Türen), tut nichts.</summary>
-    public virtual void NextState()
+    /// <summary>
+    /// Der Zug dieses Objekts — einmal pro Cave-Scan. Hier stehen seine Spielregeln: Es sieht sich
+    /// über die <see cref="Cave"/> seine Nachbarn an und verändert sie und sich selbst. Wer keine
+    /// Regeln hat (Erde, Wände, Türen), tut nichts.
+    ///
+    /// Jede Regel beginnt mit der Prüfung auf <see cref="ScannedThisFrame"/>: Ein Objekt, das sich in
+    /// diesem Scan schon bewegt hat, ist fertig — sonst liefe ein fallender Stein seiner eigenen
+    /// Bewegung hinterher, weil der Scan von oben nach unten läuft.
+    /// </summary>
+    public virtual void Interact()
     {
     }
+
+    /// <summary>Schließt den Cave-Scan für dieses Objekt ab: Das Verarbeitet-Flag fällt, damit es im
+    /// nächsten Scan wieder ziehen darf (regel(), BOULDER.CPP:930-934).</summary>
+    public virtual void EndScan() => ScannedThisFrame = false;
 
     /// <summary>Unzerstörbar: Die Explosion lässt es stehen. Das sind Stahlwand, Ein- und Ausgang —
     /// in BD1 sind Ein- und Ausgang Stahlwand-Varianten, der Ausgang sieht bis zu seiner
@@ -113,8 +124,46 @@ public abstract class CaveObject
 
     /// <summary>Das Kachelbyte des Originals: Element-ID in den unteren 4 Bits, darüber die Flags.
     /// Dient nur noch der Serialisierung (Golden-Hash) — die Physik liest keine Bytes mehr.</summary>
-    public virtual byte ToRaw() => (byte)((byte)Element | (Scanned ? 0x80 : 0));
+    public virtual byte ToRaw() => (byte)((byte)Element | (ScannedThisFrame ? 0x80 : 0));
 
     /// <summary>Der Nachbar in die angegebene Gitterrichtung (-Width = oben, +1 = rechts, ...).</summary>
     protected CaveObject Neighbour(int offset) => Cave.Get(Index + offset);
+
+    /// <summary>
+    /// explosion(): Sprengt den 3x3-Bereich um eine Kachel frei (:709-721). Stahlwand, Ein- und
+    /// Ausgang bleiben stehen — sie sind <see cref="IsExplosionProof"/>. Jede getroffene Kachel
+    /// bekommt ihre EIGENE Explosionsinstanz; welche, entscheidet der Verursacher: Ein Schmetterling
+    /// hinterlässt Diamanten, alle anderen Leerraum.
+    ///
+    /// Anschließend fangen ALLE Explosionen der Höhle wieder bei Phase 1 an, auch die anderswo schon
+    /// halb abgelaufenen. Im Original war wechsel_explo eine einzige globale Variable, die jede neue
+    /// Explosion auf 1 zurücksetzte — sie verschwanden dadurch stets gemeinsam. Die Kopplung ist
+    /// bewusst erhalten (siehe ExplosionObject).
+    /// </summary>
+    protected void Explode(int centerIndex, Func<ExplosionObject> create)
+    {
+        var width = Cave.Width;
+        ReadOnlySpan<int> offsets =
+        [
+            -width - 1, -width, -width + 1,
+            -1, 0, 1,
+            width - 1, width, width + 1,
+        ];
+
+        foreach (var offset in offsets)
+        {
+            var target = centerIndex + offset;
+            if (Cave.Get(target).IsExplosionProof)
+            {
+                continue;
+            }
+
+            var explosion = create();
+            explosion.ScannedThisFrame = true;
+            Cave.Spawn(target, explosion);
+        }
+
+        Cave.RestartExplosions();
+        Cave.State.SoundEvents.Enqueue(SoundEvent.Explosion);
+    }
 }

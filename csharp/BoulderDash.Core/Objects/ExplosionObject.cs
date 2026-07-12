@@ -10,7 +10,7 @@ namespace BoulderDash.Core.Objects;
 /// <b>Der Zähler ist absichtlich gemeinsam getaktet.</b> Im Original war wechsel_explo EINE globale
 /// Variable, die jede NEUE Explosion auf 1 zurücksetzte — auch für Explosionen, die anderswo in der
 /// Cave schon halb abgelaufen waren; alle verschwanden dann gemeinsam. Jede Explosion führt ihren
-/// Zähler jetzt selbst, aber Cave.Explode setzt ihn weiterhin auf allen zurück. Aus einem
+/// Zähler jetzt selbst, aber CaveObject.Explode setzt ihn weiterhin auf allen zurück. Aus einem
 /// unsichtbaren Nebeneffekt einer geteilten Variable wird damit eine benannte Regel; das Verhalten
 /// bleibt gleich. Sollen Explosionen künftig unabhängig ablaufen, ist das eine bewusste Änderung.
 /// </summary>
@@ -42,7 +42,7 @@ public class ExplosionObject : CaveObject
     public bool CausedByCreature { get; init; }
 
     /// <summary>Was die Explosion hinterlässt, wenn sie vergeht.</summary>
-    public virtual CaveObject Remnant() => new EmptyObject(Cave) { Scanned = true };
+    public virtual CaveObject Remnant() => new EmptyObject(Cave) { ScannedThisFrame = true };
 
     public override TileAppearance Appearance(in RenderContext ctx) =>
         TileAppearance.Of(DefaultFrame + ExplosionPhase);
@@ -61,7 +61,7 @@ public class ExplosionObject : CaveObject
     }
 
     /// <summary>Ist die Animation ausgelaufen, gibt die Explosion ihre Kachel frei (:740-743).</summary>
-    public override void NextState()
+    public override void Interact()
     {
         if (ExplosionPhase == FinalPhase)
         {
