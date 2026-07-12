@@ -149,11 +149,11 @@ public sealed class CavePhysics
 
     /// <summary>Schmetterling/Butterfly: dreht sich bevorzugt im Uhrzeigersinn und explodiert zu Jewels.</summary>
     private static void ProcessButterfly(Cave cave, GameState state, int idx, int width) =>
-        ProcessCreature(cave, state, idx, width, element: 9, preferCcw: false, contactMask: 0xFE, explosionAnim: 0xCE);
+        ProcessCreature(cave, state, idx, width, element: 9, preferCcw: false, explosionAnim: 0xCE);
 
     /// <summary>Geist/Firefly: dreht sich bevorzugt gegen den Uhrzeigersinn und explodiert zu Leere.</summary>
     private static void ProcessFirefly(Cave cave, GameState state, int idx, int width) =>
-        ProcessCreature(cave, state, idx, width, element: 8, preferCcw: true, contactMask: 0x7E, explosionAnim: 0xCC);
+        ProcessCreature(cave, state, idx, width, element: 8, preferCcw: true, explosionAnim: 0xCC);
 
     /// <summary>
     /// Firefly und Butterfly nach BD1 (BDCFF-Objektspezifikationen 0008/0009,
@@ -169,10 +169,8 @@ public sealed class CavePhysics
     /// bei Blockade sogar auf seine Vorzugsseite statt auf die Gegenseite. Beides ist hier korrigiert;
     /// das Bit 0x10 entfällt ersatzlos.
     /// </summary>
-    /// <param name="contactMask">Maske der Nachbarprüfung auf Rockford/Amoeba — beim Firefly 0x7E
-    /// (Bit 7 egal), beim Butterfly noch das strengere 0xFE des Originals.</param>
     private static void ProcessCreature(
-        Cave cave, GameState state, int idx, int width, byte element, bool preferCcw, byte contactMask, byte explosionAnim)
+        Cave cave, GameState state, int idx, int width, byte element, bool preferCcw, byte explosionAnim)
     {
         var raw = cave.GetRaw(idx);
         if ((raw & 0x8F) != element)
@@ -181,10 +179,15 @@ public sealed class CavePhysics
         }
 
         // Kontakt zu Rockford (6) oder Amoeba (7) ringsum, oder ein fallendes Objekt direkt darüber.
-        if ((cave.GetRaw(idx - width) & contactMask) == 6 ||
-            (cave.GetRaw(idx + width) & contactMask) == 6 ||
-            (cave.GetRaw(idx - 1) & contactMask) == 6 ||
-            (cave.GetRaw(idx + 1) & contactMask) == 6 ||
+        // Die Maske 0x7E lässt Bit 0x80 bewusst offen: ein Rockford bzw. eine Amoeba, die sich in
+        // DIESEM Scan schon bewegt hat, trägt das Verarbeitet-Bit und zündet trotzdem — die BDCFF-
+        // Spezifikation zählt "Rockford, scanned this frame" ausdrücklich zu den Auslösern. Das
+        // DOS-Original prüfte hier beim Butterfly (anders als beim Firefly) mit 0xFE und übersah
+        // diesen Fall.
+        if ((cave.GetRaw(idx - width) & 0x7E) == 6 ||
+            (cave.GetRaw(idx + width) & 0x7E) == 6 ||
+            (cave.GetRaw(idx - 1) & 0x7E) == 6 ||
+            (cave.GetRaw(idx + 1) & 0x7E) == 6 ||
             (cave.GetRaw(idx - width) & 0x42) == 0x42)
         {
             Explode(cave, state, idx, explosionAnim);

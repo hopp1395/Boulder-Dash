@@ -132,6 +132,33 @@ public class CavePhysicsTests
         Assert.Equal(Element.Firefly, cave.GetElement(2, 1));
     }
 
+    /// <summary>Eine Kreatur zündet auch an einem Rockford, der sich in DIESEM Scan schon bewegt hat
+    /// und deshalb das Verarbeitet-Bit trägt (BDCFF: "Rockford, scanned this frame"). Rockford steht
+    /// links der Kreatur und läuft ihr entgegen; da er in der Scan-Reihenfolge vor ihr liegt, sieht sie
+    /// ihn bereits als 0x86. Das DOS-Original prüfte beim Butterfly mit 0xFE und übersah das.</summary>
+    [Theory]
+    [InlineData((byte)9, Element.JewelExplosion)] // Butterfly -> Jewels
+    [InlineData((byte)8, Element.Explosion)]      // Firefly   -> Leere
+    public void Kreatur_explodiert_an_einem_im_selben_Scan_bewegten_Rockford(byte kreatur, Element explosion)
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 0, 0, 0, Wall,
+            Wall, 6, 0, kreatur, Wall, // Rockford links, Kreatur rechts, dazwischen frei
+            Wall, 0, 0, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
+        var input = new InputState();
+        input.PressRight(); // Rockford tritt neben die Kreatur
+
+        NewPhysics().Regel(cave, state, input, new Camera(), new Clocks());
+
+        Assert.Equal(explosion, cave.GetElement(3, 2)); // Kreatur explodiert
+        Assert.Equal(explosion, cave.GetElement(2, 2)); // Rockford wird mitgerissen
+    }
+
     /// <summary>Der Butterfly dreht bei Blockade zur GEGENSEITE seiner Vorzugsrichtung, also gegen den
     /// Uhrzeigersinn. In einer nur nach oben offenen Sackgasse braucht er dadurch zwei Drehungen
     /// (unten -> rechts -> oben) und zieht erst im dritten Scan. Das DOS-Original drehte hier
