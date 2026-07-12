@@ -77,6 +77,31 @@ public class CavePhysicsTests
         Assert.Equal(Element.Boulder, cave.GetElement(3, 1));
     }
 
+    /// <summary>Butterfly startet nach BD1 nach unten blickend und sucht seine Vorzugsrichtung im
+    /// Uhrzeigersinn — im freien Feld zieht er deshalb zuerst nach LINKS (BDCFF 0009). Der Firefly
+    /// startet nach links und sucht gegen den Uhrzeigersinn, zieht also zuerst nach UNTEN (BDCFF 0008).</summary>
+    [Theory]
+    [InlineData((byte)9, 1, 2)] // Butterfly -> links
+    [InlineData((byte)8, 2, 3)] // Firefly   -> unten
+    public void Kreatur_zieht_im_freien_Feld_zuerst_in_ihre_Startvorzugsrichtung(
+        byte kreatur, int erwartetX, int erwartetY)
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 0, 0, 0, Wall,
+            Wall, 0, kreatur, 0, Wall,
+            Wall, 0, 0, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
+
+        NewPhysics().Regel(cave, state, new InputState(), new Camera(), new Clocks());
+
+        Assert.Equal(Element.Empty, cave.GetElement(2, 2));
+        Assert.Equal((Element)kreatur, cave.GetElement(erwartetX, erwartetY));
+    }
+
     [Fact]
     public void Rockford_graebt_Erde_und_bewegt_sich()
     {

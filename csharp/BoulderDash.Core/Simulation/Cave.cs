@@ -15,11 +15,28 @@ public sealed class Cave
     public int Width { get; }
     public int Height { get; }
 
+    /// <summary>Startrichtung "unten" eines frisch geladenen Butterfly (Richtungsbits 0x60).</summary>
+    private const byte ButterflyStartRaw = 0x60 | (byte)Element.Butterfly;
+
     public Cave(CaveData data)
     {
         Width = data.Width;
         Height = data.Height;
         _tiles = (byte[])data.Tiles.Clone();
+
+        // Butterflies starten nach BD1 nach UNTEN blickend, nicht nach links (BDCFF-Objektspezifikation
+        // 0009, elmerproductions.com/sp/peterb/BDCFF/objects/0009.html: "butterflies usually begin life
+        // facing down rather than left"). Weil sie ihre Vorzugsrichtung im Uhrzeigersinn suchen, ist ihr
+        // erster Zug damit der nach links. Die Kartendaten kennen nur die Element-ID, die Richtungsbits
+        // sind dort immer 0 (= links) — deshalb wird die Startrichtung hier beim Aufbau des
+        // Simulationsgitters gesetzt. Fireflies starten korrekt nach links und bleiben unverändert.
+        for (var i = 0; i < _tiles.Length; i++)
+        {
+            if (_tiles[i] == (byte)Element.Butterfly)
+            {
+                _tiles[i] = ButterflyStartRaw;
+            }
+        }
     }
 
     public int IndexOf(int x, int y) => (y * Width) + x;
