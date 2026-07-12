@@ -355,6 +355,8 @@ public sealed class CavePhysics
 
     /// <summary>Rockford: Kamera-Scroll-Auslöser plus Bewegung/Graben/Sammeln/Schieben (:890-923).
     /// Die vier Kamerabedingungen setzen nur das Scroll-Ziel und beeinflussen die Bewegung nicht.
+    /// Abweichung vom Original (:893-896): Die vier Schwellen liegen je eine Kachel weiter
+    /// innen, damit das Scrollen einen Schritt früher einsetzt als im DOS-Original.
     /// Im DOS-Original hing die Bewegungsverarbeitung durch ein Dangling-Else an der vierten
     /// Bedingung: löste Rockford den Aufwärtsscroll aus, blieb seine Bewegung den ganzen Scan über
     /// aus — er hakte sichtbar. Ein reiner Programmierfehler ohne BD1-Entsprechung, hier behoben.</summary>
@@ -370,22 +372,22 @@ public sealed class CavePhysics
 
         state.Stat = 0;
 
-        if (camera.X + 17 < col && camera.X < width - 20)
+        if (camera.X + 16 < col && camera.X < width - 20)
         {
             camera.Relx = 7;
         }
 
-        if (camera.X + 1 == col && camera.X > 0)
+        if (camera.X + 2 == col && camera.X > 0)
         {
             camera.Relx = -7;
         }
 
-        if (camera.Y + 9 < row && camera.Y < height - 12)
+        if (camera.Y + 8 < row && camera.Y < height - 12)
         {
             camera.Rely = 5;
         }
 
-        if (camera.Y + 1 == row && camera.Y > 0)
+        if (camera.Y + 2 == row && camera.Y > 0)
         {
             camera.Rely = -5;
         }
