@@ -11,7 +11,7 @@ public enum SessionPhase
     TitleScreen,
 
     /// <summary>BD1-Option-Screen: Logo plus Textzeilen mit der CAVE/LEVEL-Auswahl
-    /// ("PRESS BUTTON TO PLAY").</summary>
+    /// ("PRESS SPACE TO PLAY").</summary>
     Menu,
 
     /// <summary>Auswahl der Prüfstand-Caves (F5 im Hauptmenü) — kein Original-Zustand, sondern ein
@@ -63,10 +63,11 @@ public enum TransitionReason
 /// - Nur ein Ausgangs-Erfolg (AdvanceToNextCave) rückt zur nächsten Cave vor.
 /// - Escape während des Spiels beendet die Session und kehrt ins Menü zurück (nicht nur die Cave),
 ///   durchläuft aber noch die Übergangs-Pause wie jedes andere Cave-Ende.
-/// - Die Menü-Cave-Auswahl bietet wie BD1 nur die Caves A, E, I und M an (Handbuch: "You may
-///   choose CAVE A, E, I, or M, on Difficulty Levels 1-3. On Difficulty Levels 4 and 5, you
-///   must start with CAVE A."), siehe MenuCaveIndices. Die übrigen Caves und die Intermissions
-///   (Q-T) sind nur über die Fortschritts-Kette erreichbar, siehe PlayOrder.
+/// - Die Menü-Cave-Auswahl bietet alle 16 regulären Caves A-P auf jedem Schwierigkeitsgrad an,
+///   siehe MenuCaveIndices. Das ist eine bewusste Abweichung von BD1, das nur A, E, I und M
+///   zuließ (Handbuch: "You may choose CAVE A, E, I, or M, on Difficulty Levels 1-3. On
+///   Difficulty Levels 4 and 5, you must start with CAVE A."). Nur die Intermissions (Q-T)
+///   bleiben der Fortschritts-Kette vorbehalten, siehe PlayOrder.
 /// </summary>
 public sealed class GameSession
 {
@@ -102,9 +103,17 @@ public sealed class GameSession
         new("cave-test-10", "WAAGERECHT SCHLAEGT SENKRECHT"),
     ];
 
-    /// <summary>In BD1 anwählbare Start-Caves: A, E, I, M als PlayOrder-Indizes — jeweils der
-    /// Anfang eines 4er-Blocks (Handbuch: "You may choose CAVE A, E, I, or M").</summary>
-    private static readonly sbyte[] MenuCaveIndices = [0, 5, 10, 15];
+    /// <summary>Anwählbare Start-Caves als PlayOrder-Indizes: alle 16 regulären Caves A-P, also
+    /// die PlayOrder ohne die Intermissions Q-T (Indizes 4, 9, 14, 19). BD1 bot hier nur die vier
+    /// Blockanfänge A, E, I, M an; direkt anwählbar sind bei uns alle, damit jede Cave ohne
+    /// Durchspielen der vorherigen erreichbar ist.</summary>
+    private static readonly sbyte[] MenuCaveIndices =
+    [
+        0, 1, 2, 3,
+        5, 6, 7, 8,
+        10, 11, 12, 13,
+        15, 16, 17, 18,
+    ];
 
     private const double BonusSecondsPerPoint = 0.02; // delay(20) pro Punkt, GAME.CPP:58
     private const double PostBonusPauseSeconds = 1.0; // delay(1000) nach der Bonuszählung
@@ -139,7 +148,7 @@ public sealed class GameSession
     private bool _isDemo;
     private bool _isTestCave;
 
-    /// <summary>Die Menü-Auswahl als Index in <see cref="MenuCaveIndices"/> (0-3 = A/E/I/M).
+    /// <summary>Die Menü-Auswahl als Index in <see cref="MenuCaveIndices"/> (0-15 = A…P).
     /// Sie lebt getrennt von <see cref="CaveIndex"/> (der laufenden Spielposition) und übersteht
     /// damit Demo-Läufe und die Cave-Progression unverändert.</summary>
     private int _menuCaveSlot;
@@ -261,13 +270,6 @@ public sealed class GameSession
         if (Phase != SessionPhase.Menu) return;
         ResetIdleTimer();
         DifficultyLevel = Math.Min((sbyte)(DifficultyLevel + 1), (sbyte)5);
-
-        // "On Difficulty Levels 4 and 5, you must start with CAVE A." (Handbuch) — die Auswahl
-        // springt beim Überschreiten von Grad 3 auf Cave A zurück.
-        if (DifficultyLevel >= 4)
-        {
-            _menuCaveSlot = 0;
-        }
     }
 
     public void MenuDown()
@@ -281,8 +283,7 @@ public sealed class GameSession
     {
         if (Phase != SessionPhase.Menu) return;
         ResetIdleTimer();
-        if (DifficultyLevel >= 4) return; // Grad 4/5: Cave ist auf A festgenagelt (Handbuch).
-        // Zyklisch A→E→I→M→A — Joystick-Semantik ohne Anschlag (Annahme, im BD1 nicht vermessen).
+        // Zyklisch A→B→…→P→A — Joystick-Semantik ohne Anschlag (Annahme, im BD1 nicht vermessen).
         _menuCaveSlot = (_menuCaveSlot + 1) % MenuCaveIndices.Length;
     }
 
@@ -290,7 +291,6 @@ public sealed class GameSession
     {
         if (Phase != SessionPhase.Menu) return;
         ResetIdleTimer();
-        if (DifficultyLevel >= 4) return;
         _menuCaveSlot = (_menuCaveSlot + MenuCaveIndices.Length - 1) % MenuCaveIndices.Length;
     }
 
@@ -302,7 +302,7 @@ public sealed class GameSession
         QuitRequested = true;
     }
 
-    /// <summary>Spielstart ("PRESS BUTTON TO PLAY"): leben=3, gewählte Menü-Cave laden.</summary>
+    /// <summary>Spielstart ("PRESS SPACE TO PLAY"): leben=3, gewählte Menü-Cave laden.</summary>
     public void MenuStart()
     {
         if (Phase != SessionPhase.Menu) return;
@@ -617,9 +617,10 @@ public sealed class GameSession
         // AnyKeyPressed() übernimmt ab _phaseTimer<=0.
     }
 
-    /// <summary>Zudeck-Animation am Cave-Ende (BD1): die Simulation läuft dabei weiter (wie im
-    /// Original die ISR bis zum Ende von game_start()), nur die Stahlwand schiebt sich Runde für
-    /// Runde wieder über die Cave. Danach erst die Übergangspause (delay(500)).</summary>
+    /// <summary>Zudeck-Animation am Cave-Ende (BD1): die Stahlwand schiebt sich Runde für Runde
+    /// wieder über die Cave. Die Physik ruht dabei — genau wie beim Aufdecken (GameTick); Ticks
+    /// laufen weiter, treiben aber nur noch Zähler und Animation. Danach erst die Übergangspause
+    /// (delay(500)).</summary>
     private void UpdateScreenCovering(double deltaSeconds)
     {
         AdvanceSimulation(deltaSeconds);

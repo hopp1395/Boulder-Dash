@@ -114,57 +114,52 @@ public class GameSessionTests
         Assert.Equal(SessionPhase.TitleScreen, session.Phase);
     }
 
-    /// <summary>BD1 bietet nur die Blockanfänge A, E, I, M zur Auswahl an (Handbuch: "You may
-    /// choose CAVE A, E, I, or M") — zyklisch in beide Richtungen.</summary>
+    /// <summary>Anwählbar sind alle 16 regulären Caves A-P (Abweichung von BD1, das nur A, E, I, M
+    /// anbot) — zyklisch in beide Richtungen, die Intermissions Q-T bleiben ausgespart.</summary>
     [Fact]
-    public void Menu_Cave_Auswahl_laeuft_zyklisch_durch_A_E_I_M()
+    public void Menu_Cave_Auswahl_laeuft_zyklisch_durch_A_bis_P()
     {
         var session = NewRealSession();
 
         Assert.Equal('A', session.SelectedCaveLetter);
 
         var vorwaerts = new List<char>();
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 16; i++)
         {
             session.MenuNextCave();
             vorwaerts.Add(session.SelectedCaveLetter);
         }
 
-        Assert.Equal(['E', 'I', 'M', 'A', 'E'], vorwaerts);
+        // Nach 16 Schritten wieder auf A: alle Caves einmal durch, keine Intermission dabei.
+        Assert.Equal(
+            ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'A'],
+            vorwaerts);
 
         session.MenuPreviousCave();
-        Assert.Equal('A', session.SelectedCaveLetter);
-        session.MenuPreviousCave();
-        Assert.Equal('M', session.SelectedCaveLetter);
+        Assert.Equal('P', session.SelectedCaveLetter);
     }
 
-    /// <summary>"On Difficulty Levels 4 and 5, you must start with CAVE A." (Handbuch): das
-    /// Hochschalten auf Grad 4 zieht die Auswahl auf A zurück, und solange Grad 4/5 gewählt
-    /// ist, bleibt die Cave-Auswahl wirkungslos.</summary>
+    /// <summary>Die Cave-Auswahl gilt auf jedem Schwierigkeitsgrad — die BD1-Handbuchregel "On
+    /// Difficulty Levels 4 and 5, you must start with CAVE A" ist bewusst aufgehoben.</summary>
     [Fact]
-    public void Level_4_und_5_erzwingen_Cave_A()
+    public void Cave_Auswahl_bleibt_auf_Grad_4_und_5_frei()
     {
         var session = NewRealSession();
 
         session.MenuNextCave();
         session.MenuNextCave();
-        Assert.Equal('I', session.SelectedCaveLetter);
+        Assert.Equal('C', session.SelectedCaveLetter);
 
-        session.MenuUp(); // 2
-        session.MenuUp(); // 3
-        Assert.Equal('I', session.SelectedCaveLetter); // bis Grad 3 bleibt die Auswahl stehen
+        for (var i = 0; i < 4; i++)
+        {
+            session.MenuUp(); // hoch auf Grad 5
+        }
 
-        session.MenuUp(); // 4 -> springt auf A
-        Assert.Equal(4, session.DifficultyLevel);
-        Assert.Equal('A', session.SelectedCaveLetter);
+        Assert.Equal(5, session.DifficultyLevel);
+        Assert.Equal('C', session.SelectedCaveLetter); // Auswahl bleibt stehen
 
         session.MenuNextCave();
-        session.MenuPreviousCave();
-        Assert.Equal('A', session.SelectedCaveLetter); // Cave-Wechsel gesperrt
-
-        session.MenuDown(); // 3 -> Auswahl wieder frei
-        session.MenuNextCave();
-        Assert.Equal('E', session.SelectedCaveLetter);
+        Assert.Equal('D', session.SelectedCaveLetter); // und bleibt bedienbar
     }
 
     [Fact]
@@ -541,7 +536,7 @@ public class GameSessionTests
     {
         var session = NewRealSessionWithDemo();
         session.MenuNextCave();
-        Assert.Equal('E', session.SelectedCaveLetter);
+        Assert.Equal('B', session.SelectedCaveLetter);
 
         session.StartDemo();
         Assert.Equal(SessionPhase.DemoPlaying, session.Phase);
@@ -550,7 +545,7 @@ public class GameSessionTests
         session.Update(10.0);
 
         Assert.Equal(SessionPhase.TitleScreen, session.Phase);
-        Assert.Equal('E', session.SelectedCaveLetter);
+        Assert.Equal('B', session.SelectedCaveLetter);
     }
 
     /// <summary>Startet Cave A auf dem gegebenen Schwierigkeitsgrad.</summary>
