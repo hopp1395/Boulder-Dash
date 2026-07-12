@@ -100,6 +100,8 @@ public sealed class GameSession
         new("cave-test-8", "EXPLOSION VERSCHONT DEN AUSGANG"),
         new("cave-test-9", "HOCHLAUFEN RUCKELT NICHT MEHR"),
         new("cave-test-10", "WAAGERECHT SCHLAEGT SENKRECHT"),
+        new("cave-test-11", "AMOEBE: NUR DER LINKE ZUENDET (B)"),
+        new("cave-test-12", "AMOEBE: NUR DER LINKE ZUENDET (F)"),
     ];
 
     /// <summary>In BD1 anwählbare Start-Caves: A, E, I, M als PlayOrder-Indizes — jeweils der

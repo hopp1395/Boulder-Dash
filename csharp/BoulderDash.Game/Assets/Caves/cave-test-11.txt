@@ -1,0 +1,57 @@
+# Prüfstand 11 — Amöbe zwischen zwei Kreaturen, SCHMETTERLING links (kein BD1-Original, nur über
+# den Testmodus F5 erreichbar). Das Gegenstück ist cave-test-12 mit vertauschten Kreaturen.
+#
+# Die Cave ist leer bis auf die drei Objekte in der Mitte: links ein Schmetterling, rechts ein
+# Geist, dazwischen eine Amöbe. Beide Kreaturen berühren die Amöbe und müssten also beide zünden.
+#
+# Zu prüfen: Es zündet trotzdem nur EINE — die linke. Der Cave-Scan läuft zeilenweise von links
+# nach rechts, der Schmetterling ist damit zuerst an der Reihe. Seine 3x3-Sprengung reißt die
+# Amöbe mit; wenn der Geist drankommt, liegt links von ihm keine Amöbe mehr, sondern eine
+# Diamant-Explosion — und die zündet keine Kreatur. Der Geist überlebt und zieht seiner Wege.
+#
+# Sichtbar wird dadurch beides zugleich:
+#   - die Scan-Reihenfolge (wer links steht, ist zuerst dran und schafft Tatsachen)
+#   - der Unterschied der Explosionen: Der Schmetterling hinterlässt DIAMANTEN (9 Stück),
+#     der Geist in cave-test-12 an derselben Stelle nur Leerraum.
+#
+# Eingang und Ausgang stehen unten in den Ecken, weit weg — sie stören den Vorgang nicht.
+# Rockford kann die entstandenen Diamanten einsammeln und die Cave verlassen; Vorsicht vor dem
+# überlebenden Geist.
+
+[Cave]
+Cave        = Z
+Name        = Amoebe Butterfly links
+Description = Nur die linke Kreatur zuendet
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+Color1      = #202020
+Color2      = #FFFFFF
+Color3      = #717171
+Color4      = #BA7120
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 100
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 20
+JewelValue      = 10
+JewelValueExtra = 15
+
+[Map]
+# Legende: W Steel, w Wall, M MagicWall, . Dirt, ' ' Space, r Boulder, d Jewel,
+#          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
+WWWWWWWWWWWWWWWWWWWW
+W                  W
+W                  W
+W                  W
+W                  W
+W        BaF       W
+W                  W
+W                  W
+W                  W
+W                  W
+WP                XW
+WWWWWWWWWWWWWWWWWWWW
