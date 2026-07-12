@@ -190,8 +190,8 @@ public sealed class TitleRenderer
         DrawAnimatedPattern(batch, totalSeconds, _optionLogo.Height);
         batch.Draw(_optionLogo, Vector2.Zero, Color.White);
 
-        DrawCentered(batch, 152, ("BY PETER LIEPA", Color.White));
-        DrawCentered(batch, 160, ("WITH CHRIS GREY", Color.White));
+        DrawCentered(batch, 152, ("BY PETER LIEPA WITH CHRIS GREY 1984", Color.White));
+        DrawCentered(batch, 160, ("PC VERSION BY JAN HOPPE 1999, 2026", Color.White));
         DrawCentered(batch, 168, ("PRESS BUTTON TO PLAY", Color.White));
         DrawCentered(batch, 176,
             ("1", Highlight), (" PLAYER  ", Color.White), ("1", Highlight), (" JOYSTICK", Color.White));
