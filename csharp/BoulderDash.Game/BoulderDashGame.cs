@@ -29,6 +29,10 @@ public class BoulderDashGame : XnaGame
     private const int MenuWidth = 320;
     private const int MenuHeight = 200;
 
+    /// <summary>So lange zeigt die Statuszeile nach einem Zoomschritt die neue Stufe statt der
+    /// Spielwerte (siehe BuildZoomLine).</summary>
+    private const double ZoomMessageSeconds = 3.0;
+
     private readonly GraphicsDeviceManager _graphics;
     private readonly string _settingsPath = SettingsFile.DefaultPath;
     private SpriteBatch _spriteBatch = null!;
@@ -48,6 +52,9 @@ public class BoulderDashGame : XnaGame
     /// gewählt) — ein Wunsch, keine Tatsache: Gezeigt wird die Stufe der aktuellen Zeichenfläche, die
     /// ihm am nächsten kommt (SyncViewportSteps). Maßgeblich ist immer Camera.Viewport.</summary>
     private ViewportSize _viewport;
+
+    /// <summary>Wie lange die Zoom-Anzeige die Statuszeile noch belegt (siehe BuildZoomLine).</summary>
+    private double _zoomMessageSeconds;
 
     private Point _windowedSize;
     private bool _applyingClientSize;
@@ -128,6 +135,9 @@ public class BoulderDashGame : XnaGame
         var keyboard = Keyboard.GetState();
         _inputAdapter.Update(keyboard);
 
+        // Vor dem Zoom herunterzählen, damit ein Zoomschritt in diesem Tick die vollen Sekunden bekommt.
+        _zoomMessageSeconds = Math.Max(0, _zoomMessageSeconds - gameTime.ElapsedGameTime.TotalSeconds);
+
         SyncViewportSteps();
         HandleShellInput();
         HandlePhaseInput();
@@ -189,6 +199,7 @@ public class BoulderDashGame : XnaGame
         // Der Zoom ist gewollt: Er wird zum neuen Wunsch und damit gemerkt.
         _viewport = next;
         _session.SetViewport(next);
+        _zoomMessageSeconds = ZoomMessageSeconds;
         SaveSettings();
     }
 
@@ -416,8 +427,19 @@ public class BoulderDashGame : XnaGame
             // Statuszeile und Meldung sind 320 Pixel breit (40 BIOS-Zeichen) wie im Original und
             // bleiben deshalb auch bei größerem Sichtfenster mittig statt links zu kleben.
             var textLeft = (logicalWidth - MenuWidth) / 2;
-            var statusText = BuildStatusLine();
-            _font.DrawText(_spriteBatch, statusText, new Vector2(textLeft, 0), Color.White);
+
+            // Nach einem Zoomschritt gehört die Zeile für ein paar Sekunden ganz der neuen Stufe:
+            // Die Spielwerte weichen so lange, statt sich mit ihr zu drängeln.
+            if (_zoomMessageSeconds > 0)
+            {
+                var zoomText = BuildZoomLine(logicalWidth, logicalHeight);
+                var zoomLeft = textLeft + ((MenuWidth - (zoomText.Length * BiosFont.GlyphSize)) / 2);
+                _font.DrawText(_spriteBatch, zoomText, new Vector2(zoomLeft, 0), Color.White);
+            }
+            else
+            {
+                _font.DrawText(_spriteBatch, BuildStatusLine(), new Vector2(textLeft, 0), Color.White);
+            }
 
             if (_session.ShowGameOverMessage)
             {
@@ -447,6 +469,18 @@ public class BoulderDashGame : XnaGame
 
         return $"{state.JewelQuota:D2}  -  {state.CurrentJewelPoints:D2}     " +
                $"{state.JewelsCollected:D2}      {state.CaveTimeRemaining:D3}         {state.Score:D6}";
+    }
+
+    /// <summary>Die Zoom-Anzeige: die gezeigte Stufe als Sichtfenster und Kachelmaßstab, etwa
+    /// "ZOOM 40X22 (3X)" — genau die beiden Größen, aus denen eine Stufe besteht (siehe ViewportSteps).
+    /// Der Maßstab kommt nicht aus der Stufe selbst, sondern aus dem, was am Ende wirklich gezeichnet
+    /// wird (GetScale) — dann stimmt die Anzeige auch, wenn das Fenster für die Stufe zu klein ist.</summary>
+    private string BuildZoomLine(int logicalWidth, int logicalHeight)
+    {
+        var viewport = _session.Camera.Viewport;
+        var scale = Math.Max(1, (int)GetScale(logicalWidth, logicalHeight));
+
+        return $"ZOOM {viewport.Columns}X{viewport.Rows} ({scale}X)";
     }
 
     private void SyncPalette()
