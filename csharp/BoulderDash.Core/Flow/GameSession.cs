@@ -617,9 +617,10 @@ public sealed class GameSession
         // AnyKeyPressed() übernimmt ab _phaseTimer<=0.
     }
 
-    /// <summary>Zudeck-Animation am Cave-Ende (BD1): die Simulation läuft dabei weiter (wie im
-    /// Original die ISR bis zum Ende von game_start()), nur die Stahlwand schiebt sich Runde für
-    /// Runde wieder über die Cave. Danach erst die Übergangspause (delay(500)).</summary>
+    /// <summary>Zudeck-Animation am Cave-Ende (BD1): die Stahlwand schiebt sich Runde für Runde
+    /// wieder über die Cave. Die Physik ruht dabei — genau wie beim Aufdecken (GameTick); Ticks
+    /// laufen weiter, treiben aber nur noch Zähler und Animation. Danach erst die Übergangspause
+    /// (delay(500)).</summary>
     private void UpdateScreenCovering(double deltaSeconds)
     {
         AdvanceSimulation(deltaSeconds);

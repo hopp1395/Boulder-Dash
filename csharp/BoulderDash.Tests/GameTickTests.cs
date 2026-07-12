@@ -113,6 +113,49 @@ public class GameTickTests
         Assert.Equal(Element.Boulder, cave.GetElement(2, 2));
     }
 
+    /// <summary>Gegenstück zum Aufdecken: Auch während des ZUDECKENS am Cave-Ende ruht die Physik —
+    /// der Stein bleibt hängen, bis die Stahlwand durch ist (hier läuft die Cave danach zwar nicht
+    /// weiter, der Tick beweist aber, dass es allein an der Zudeckung liegt).</summary>
+    [Fact]
+    public void Physik_ruht_auch_waehrend_des_Zudeckens()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 6, 2, 0, Wall,
+            Wall, 0, 0, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var data = BuildCaveData(5, 4, tiles);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+        state.EntranceProgress = 101; // Eingang längst fertig, Cave lief bereits
+        var input = new InputState();
+        var camera = new Camera();
+        var clocks = new Clocks();
+        var random = new Random(1);
+        var cover = new ScreenCover(random);
+        cover.BeginUncover(data.Width, data.Height);
+        cover.BeginCover(); // Cave-Ende: die Stahlwand schiebt sich wieder darüber
+        var tick = new GameTick(new CavePhysics(random), cover, random);
+
+        for (var i = 0; i < ScreenCover.Iterations; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+            Assert.Equal(Element.Boulder, cave.GetElement(2, 1)); // kein Stein fällt
+        }
+
+        // Erst nach der letzten Zudeck-Runde (Phase wieder Idle) greift die Physik.
+        Assert.False(cover.IsActive);
+        for (var i = 0; i < 3; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+        }
+
+        Assert.Equal(Element.Boulder, cave.GetElement(2, 2));
+    }
+
     /// <summary>Baut Rockford direkt vor den offenen Ausgang (Quote 0), mit fertigem Eingang und
     /// genau einer verbleibenden Spielsekunde.</summary>
     private static (BoulderDash.Core.Simulation.Cave Cave, GameState State, GameTick Tick, Clocks Clocks) SetupLetzteSekundeVorDemAusgang()
