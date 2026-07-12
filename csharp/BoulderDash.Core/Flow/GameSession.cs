@@ -294,10 +294,11 @@ public sealed class GameSession
         _menuCaveSlot = (_menuCaveSlot + MenuCaveIndices.Length - 1) % MenuCaveIndices.Length;
     }
 
-    /// <summary>F4: Programm beenden — vom Titelbildschirm wie vom Option-Screen aus.</summary>
+    /// <summary>Escape auf dem Titelbildschirm: Programm beenden. Escape führt damit überall eine
+    /// Ebene nach oben (Spiel → Option-Screen → Titel → beenden), siehe <see cref="MenuBack"/>.</summary>
     public void MenuQuit()
     {
-        if (Phase is not (SessionPhase.Menu or SessionPhase.TitleScreen)) return;
+        if (Phase != SessionPhase.TitleScreen) return;
         QuitRequested = true;
     }
 

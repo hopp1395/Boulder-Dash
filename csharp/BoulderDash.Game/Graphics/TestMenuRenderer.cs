@@ -36,8 +36,9 @@ public sealed class TestMenuRenderer
         "00000000000000000000" +
         "00000000000000000000");
 
-    // grundfarbe[]={0,1,6,2} in menuausgabe() (BOULDER.CPP:435-438).
-    public static readonly byte[] MenuBaseColors = [0, 1, 6, 2];
+    // grundfarbe[]={0,1,6,2} in menuausgabe() (BOULDER.CPP:435-438) - die vier Farben der
+    // damaligen 16-Farben-Tabelle als RGB-Werte (dunkel, weiß, blau, rot).
+    public static readonly Rgb[] MenuColors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0x20, 0x20, 0xBA), new(0xBA, 0x20, 0x20)];
 
     private readonly SpriteAtlas _atlas;
     private readonly BiosFont _font;

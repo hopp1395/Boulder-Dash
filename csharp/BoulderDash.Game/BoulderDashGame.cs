@@ -268,8 +268,8 @@ public class BoulderDashGame : XnaGame
         switch (_session.Phase)
         {
             case SessionPhase.TitleScreen:
-                // F4 zuerst, damit das Beenden nicht als "beliebige Taste" im Menü landet.
-                if (_inputAdapter.IsJustPressed(Keys.F4)) _session.MenuQuit();
+                // Escape zuerst, damit das Beenden nicht als "beliebige Taste" im Menü landet.
+                if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.MenuQuit();
                 else if (_inputAdapter.IsAnyKeyJustPressed()) _session.TitleAnyKey();
                 break;
             case SessionPhase.Menu:
@@ -281,10 +281,10 @@ public class BoulderDashGame : XnaGame
                 if (_inputAdapter.IsJustPressed(Keys.F1)
                     || _inputAdapter.IsJustPressed(Keys.Enter)
                     || _inputAdapter.IsJustPressed(Keys.Space)) _session.MenuStart();
-                if (_inputAdapter.IsJustPressed(Keys.F4)) _session.MenuQuit();
                 // F5: kein Original-Menüpunkt, sondern der (unsichtbare) Zugang zum Testmodus
                 // (GameSession.TestCaves) — bewusst ohne Legendenzeile auf dem Option-Screen.
                 if (_inputAdapter.IsJustPressed(Keys.F5)) _session.MenuTestMode();
+                // Escape geht hier nur eine Ebene zurück; beendet wird erst auf dem Titelbildschirm.
                 if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.MenuBack();
                 break;
             case SessionPhase.TestMenu:
@@ -435,7 +435,7 @@ public class BoulderDashGame : XnaGame
         {
             if (_paletteContext != PaletteContext.Menu)
             {
-                _spriteAtlas.ApplyPalette(Palette.BuildCavePalette(TestMenuRenderer.MenuBaseColors));
+                _spriteAtlas.ApplyPalette(TestMenuRenderer.MenuColors);
                 _paletteContext = PaletteContext.Menu;
             }
 
@@ -451,7 +451,8 @@ public class BoulderDashGame : XnaGame
         var caveChanged = !ReferenceEquals(_session.CurrentCaveData, _lastPaletteCaveData);
         if (_paletteContext != PaletteContext.Cave || caveChanged || !Equals(overrideColor, _lastExitOverride))
         {
-            var palette = Palette.BuildCavePalette(_session.CurrentCaveData.BaseColors);
+            // Kopie: die Farbe 0 wird für den blinkenden Ausgang ersetzt, die Cave-Daten bleiben unberührt.
+            var palette = _session.CurrentCaveData.Colors.ToArray();
             if (overrideColor is { } color)
             {
                 palette[0] = color;

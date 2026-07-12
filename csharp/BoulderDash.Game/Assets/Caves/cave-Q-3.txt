@@ -9,6 +9,10 @@ Kind        = Intermission
 Level       = 3
 Width       = 40
 Height      = 22
+Color1      = #202020
+Color2      = #FFFFFF
+Color3      = #BA2020
+Color4      = #7171FF
 
 [Rules]
 JewelsNeeded    = 6
@@ -18,7 +22,6 @@ MagicWallTime   = 20
 AmoebaTime      = 20
 JewelValue      = 30
 JewelValueExtra = 0
-Colors          = 14, 2, 9
 
 [Map]
 # Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.
