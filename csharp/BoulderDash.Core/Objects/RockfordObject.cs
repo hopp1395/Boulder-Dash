@@ -37,6 +37,9 @@ public sealed class RockfordObject : CaveObject
 
     public override bool TriggersCreature => true;
 
+    /// <summary>Fällt ihm ein Stein auf den Kopf, ist es aus mit ihm.</summary>
+    public override void ReceiveFalling(FallingObject faller) => faller.Crush(this);
+
     /// <summary>wechsel_boulder: Laufzyklus, läuft nur während einer aktiven Bewegungsrichtung.</summary>
     public byte WalkPhase { get; set; }
 

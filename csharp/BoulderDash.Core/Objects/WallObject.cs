@@ -17,5 +17,7 @@ public sealed class WallObject : CaveObject
 
     public override int DefaultFrame => 11;
 
-    public override bool IsRounded => true;
+    /// <summary>Die Mauer ist rund (BDCFF 0000): Was auf sie fällt, rollt zur Seite ab, wenn dort
+    /// Platz ist.</summary>
+    public override void ReceiveFalling(FallingObject faller) => faller.RollOff();
 }

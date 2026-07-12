@@ -21,7 +21,11 @@ public sealed class EscapeDoorObject : CaveObject
     /// <summary>Der Stahlwand-Frame — die Tarnung, siehe Klassenkommentar.</summary>
     public override int DefaultFrame => 12;
 
-    public override bool IsExplosionProof => true;
+    /// <summary>Hält der Explosion stand: In BD1 ist der Ausgang eine Stahlwand-Variante — er sieht
+    /// bis zu seiner Freischaltung ja auch aus wie Stahl.</summary>
+    public override void Detonate(Func<ExplosionObject> create)
+    {
+    }
 
     public override TileAppearance Appearance(in RenderContext ctx) => ctx.ExitFlashOn
         ? TileAppearance.Of(ctx.Clk4 < 3 ? 49 : 48)

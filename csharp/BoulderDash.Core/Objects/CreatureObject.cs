@@ -47,6 +47,13 @@ public abstract class CreatureObject : CaveObject
 
     public override byte ToRaw() => (byte)(base.ToRaw() | (byte)Facing);
 
+    /// <summary>Ein Stein auf einer Kreatur bleibt einfach liegen — sie muss deshalb nicht landen und
+    /// klingt auch nicht. Sie zündet sich beim eigenen Zug selbst, sobald sie ihn über sich sieht
+    /// (siehe <see cref="Interact"/>).</summary>
+    public override void ReceiveFalling(FallingObject faller)
+    {
+    }
+
     public override void Interact()
     {
         if (ScannedThisFrame)

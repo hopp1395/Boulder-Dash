@@ -19,4 +19,9 @@ public sealed class EmptyObject : CaveObject
     public override int DefaultFrame => 0;
 
     public override bool IsFreeSpace => !ScannedThisFrame;
+
+    /// <summary>Durch Leerraum fällt es hindurch. Anders als beim Abrollen genügt hier auch eine
+    /// Leerzelle, die in diesem Scan schon verarbeitet wurde — das Original maskiert an dieser Stelle
+    /// bewusst nur die Element-ID heraus und übersieht das Verarbeitet-Flag.</summary>
+    public override void ReceiveFalling(FallingObject faller) => faller.FallThrough();
 }

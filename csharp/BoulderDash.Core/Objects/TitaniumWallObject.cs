@@ -16,5 +16,8 @@ public sealed class TitaniumWallObject : CaveObject
 
     public override int DefaultFrame => 12;
 
-    public override bool IsExplosionProof => true;
+    /// <summary>Stahl hält. Nur er — die Zaubermauer etwa ist sprengbar.</summary>
+    public override void Detonate(Func<ExplosionObject> create)
+    {
+    }
 }

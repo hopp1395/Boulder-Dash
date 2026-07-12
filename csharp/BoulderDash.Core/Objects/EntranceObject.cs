@@ -20,7 +20,10 @@ public sealed class EntranceObject : CaveObject
 
     public override int DefaultFrame => 48;
 
-    public override bool IsExplosionProof => true;
+    /// <summary>Hält der Explosion stand: In BD1 ist der Eingang eine Stahlwand-Variante.</summary>
+    public override void Detonate(Func<ExplosionObject> create)
+    {
+    }
 
     /// <summary>Blinkt zwischen dem Stahl- und dem Tür-Frame (48/49) im Clk4-Takt.</summary>
     public override TileAppearance Appearance(in RenderContext ctx) =>

@@ -25,4 +25,8 @@ public sealed class EnchantedWallObject : CaveObject
     public override TileAppearance Appearance(in RenderContext ctx) => ctx.EnchantedWallRunning
         ? TileAppearance.Of(60 + AnimationPhase)
         : TileAppearance.Of(DefaultFrame);
+
+    /// <summary>Wer auf die Zaubermauer fällt, geht durch sie hindurch und kommt als sein Gegenstück
+    /// wieder heraus — oder gar nicht mehr (siehe FallingObject.EnterEnchantedWall).</summary>
+    public override void ReceiveFalling(FallingObject faller) => faller.EnterEnchantedWall();
 }

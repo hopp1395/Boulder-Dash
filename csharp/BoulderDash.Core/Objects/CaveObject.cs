@@ -95,15 +95,32 @@ public abstract class CaveObject
     /// nächsten Scan wieder ziehen darf (regel(), BOULDER.CPP:930-934).</summary>
     public virtual void EndScan() => ScannedThisFrame = false;
 
-    /// <summary>Unzerstörbar: Die Explosion lässt es stehen. Das sind Stahlwand, Ein- und Ausgang —
-    /// in BD1 sind Ein- und Ausgang Stahlwand-Varianten, der Ausgang sieht bis zu seiner
-    /// Freischaltung ja auch aus wie Stahl. Die Zaubermauer gehört bewusst NICHT dazu, sie ist
-    /// sprengbar; das DOS-Original verschonte nur die Stahlwand (explosion(), BOULDER.CPP:709-721).</summary>
-    public virtual bool IsExplosionProof => false;
+    /// <summary>
+    /// Eine Explosion erfasst diese Kachel. Das Objekt entscheidet SELBST, was das für es bedeutet:
+    /// Der Normalfall ist, dass es dabei draufgeht und der Explosion Platz macht. Wer das übersteht,
+    /// überschreibt diese Methode und tut schlicht nichts — Stahlwand, Ein- und Ausgang
+    /// (explosion(), BOULDER.CPP:709-721).
+    ///
+    /// Das neue Explosionsobjekt wird erst hier erzeugt, damit jede Kachel ihre eigene Instanz
+    /// bekommt — und damit die Unzerstörbaren gar keine erst anfordern.
+    /// </summary>
+    public virtual void Detonate(Func<ExplosionObject> create)
+    {
+        var explosion = create();
+        explosion.ScannedThisFrame = true;
+        Cave.Spawn(Index, explosion);
+    }
 
-    /// <summary>Abgerundet: Ein fallendes Objekt rollt darüber zur Seite ab, statt liegen zu bleiben.
-    /// Nach BDCFF 0000 sind das die Mauer und RUHENDE Steine/Diamanten (siehe FallingObject).</summary>
-    public virtual bool IsRounded => false;
+    /// <summary>
+    /// Ein Stein oder Diamant fällt auf diese Kachel. Was dabei passiert, entscheidet der BODEN, nicht
+    /// der Fallende — er kennt sich selbst am besten: Auf Erde und Stahl kommt das Objekt zur Ruhe
+    /// (der Normalfall hier), durch Leerraum fällt es hindurch, von einer Mauer rollt es ab, in der
+    /// Zaubermauer wandelt es sich, und auf Rockford geht es tödlich aus.
+    ///
+    /// Das ist doppelte Dispatch: Der Boden sagt dem Fallenden, was er zu tun hat — WIE er fällt,
+    /// abrollt oder landet, weiß nur er selbst (siehe FallingObject).
+    /// </summary>
+    public virtual void ReceiveFalling(FallingObject faller) => faller.Land();
 
     /// <summary>Freier Leerraum: Hier darf etwas hineinfallen, -rollen oder -ziehen. Eine in diesem
     /// Scan schon verarbeitete Leerzelle zählt NICHT — im Original war das die Prüfung auf das
@@ -122,10 +139,10 @@ public abstract class CaveObject
     protected CaveObject Neighbour(int offset) => Cave.Get(Index + offset);
 
     /// <summary>
-    /// explosion(): Sprengt den 3x3-Bereich um eine Kachel frei (:709-721). Stahlwand, Ein- und
-    /// Ausgang bleiben stehen — sie sind <see cref="IsExplosionProof"/>. Jede getroffene Kachel
-    /// bekommt ihre EIGENE Explosionsinstanz; welche, entscheidet der Verursacher: Ein Schmetterling
-    /// hinterlässt Diamanten, alle anderen Leerraum.
+    /// explosion(): Sprengt den 3x3-Bereich um eine Kachel (:709-721). Jede getroffene Kachel bekommt
+    /// gesagt, dass es sie erwischt hat, und entscheidet selbst, ob sie das überlebt
+    /// (<see cref="Detonate"/>) — der Stahl bleibt stehen. Welche Art Explosion entsteht, entscheidet
+    /// dagegen der Verursacher: Ein Schmetterling hinterlässt Diamanten, alle anderen Leerraum.
     ///
     /// Anschließend fangen ALLE Explosionen der Höhle wieder bei Phase 1 an, auch die anderswo schon
     /// halb abgelaufenen. Im Original war wechsel_explo eine einzige globale Variable, die jede neue
@@ -144,15 +161,7 @@ public abstract class CaveObject
 
         foreach (var offset in offsets)
         {
-            var target = centerIndex + offset;
-            if (Cave.Get(target).IsExplosionProof)
-            {
-                continue;
-            }
-
-            var explosion = create();
-            explosion.ScannedThisFrame = true;
-            Cave.Spawn(target, explosion);
+            Cave.Get(centerIndex + offset).Detonate(create);
         }
 
         Cave.RestartExplosions();

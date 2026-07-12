@@ -19,10 +19,25 @@ public abstract class FallingObject : CaveObject
     /// erschlägt Rockford, löst den Landeklang aus und wird von der Zaubermauer umgewandelt.</summary>
     public bool Falling { get; set; }
 
-    /// <summary>Abgerundet ist nur ein RUHENDER Stein/Diamant (BDCFF 0000). Von einem, der selbst
-    /// noch fällt, rollt nichts ab — darauf wird gelandet. Das DOS-Original prüfte hier nur die
-    /// Element-ID und ließ deshalb auch von fallenden Objekten abrollen.</summary>
-    public override bool IsRounded => !Falling;
+    /// <summary>
+    /// Ein anderer Stein/Diamant fällt auf MICH. Liege ich ruhig, bin ich rund und er rollt an mir ab
+    /// (BDCFF 0000: "rounded" sind die Mauer und RUHENDE Steine/Diamanten). Falle ich selbst gerade,
+    /// bin ich kein Halt zum Abrollen — dann landet er auf mir.
+    ///
+    /// Das DOS-Original prüfte hier nur die Element-ID und ließ deshalb auch von fallenden Objekten
+    /// abrollen.
+    /// </summary>
+    public override void ReceiveFalling(FallingObject faller)
+    {
+        if (Falling)
+        {
+            faller.Land();
+        }
+        else
+        {
+            faller.RollOff();
+        }
+    }
 
     /// <summary>Der Klang, wenn dieses Objekt aufschlägt.</summary>
     public abstract SoundEvent LandingSound { get; }
@@ -33,6 +48,8 @@ public abstract class FallingObject : CaveObject
 
     public override byte ToRaw() => (byte)(base.ToRaw() | (Falling ? 0x40 : 0));
 
+    /// <summary>Der Zug eines Steins/Diamanten ist denkbar kurz: Er wendet sich an den Boden unter
+    /// sich, und der sagt ihm, was passiert (siehe CaveObject.ReceiveFalling).</summary>
     public override void Interact()
     {
         if (ScannedThisFrame)
@@ -40,45 +57,31 @@ public abstract class FallingObject : CaveObject
             return;
         }
 
-        var belowIndex = Index + Cave.Width;
+        Neighbour(Cave.Width).ReceiveFalling(this);
+    }
 
-        switch (Cave.Get(belowIndex))
+    /// <summary>Fällt eine Kachel tiefer — der Boden darunter ist Leerraum.</summary>
+    public void FallThrough()
+    {
+        Falling = true;
+        MoveTo(Index + Cave.Width);
+    }
+
+    /// <summary>Erschlägt Rockford, sofern das Objekt wirklich fällt — ein ruhendes liegt einfach auf
+    /// ihm (das Original prüft dafür "(*ptr &amp; 0x4C) == 0x40", BOULDER.CPP:884).</summary>
+    public void Crush(RockfordObject victim)
+    {
+        if (!Falling)
         {
-            // Fallen. Anders als beim Abrollen genügt hier ein Leerraum, der in diesem Scan schon
-            // verarbeitet wurde — das Original maskiert an dieser Stelle bewusst nur die Element-ID
-            // heraus und übersieht das Verarbeitet-Flag.
-            case EmptyObject:
-                Falling = true;
-                MoveTo(belowIndex);
-                break;
-
-            // Abrollen von einer Rundung — der Mauer oder einem RUHENDEN Stein/Diamanten.
-            case { IsRounded: true }:
-                RollOff();
-                break;
-
-            case EnchantedWallObject:
-                HitEnchantedWall();
-                break;
-
-            // Nur ein FALLENDES Objekt erschlägt Rockford — ein ruhendes liegt einfach auf ihm.
-            case RockfordObject when Falling:
-                Explode(belowIndex, () => new ExplosionObject(Cave));
-                break;
-
-            // Auf einer Kreatur bleibt es liegen: Sie zündet sich beim eigenen Zug selbst.
-            case CreatureObject:
-                break;
-
-            default:
-                Land();
-                break;
+            return;
         }
+
+        Explode(victim.Index, () => new ExplosionObject(Cave));
     }
 
     /// <summary>Rollt zur Seite ab, wenn dort UND darunter unberührter Leerraum ist — sonst kommt das
     /// Objekt zur Ruhe. Links hat Vorrang vor rechts.</summary>
-    private void RollOff()
+    public void RollOff()
     {
         foreach (var side in (ReadOnlySpan<int>)[-1, 1])
         {
@@ -112,7 +115,7 @@ public abstract class FallingObject : CaveObject
     /// regardless of outcome", BDCFF 0000). Das gilt in allen drei Zuständen der Mauer, auch wenn sie
     /// das Objekt verschluckt. Das DOS-Original schwieg hier ganz.
     /// </summary>
-    private void HitEnchantedWall()
+    public void EnterEnchantedWall()
     {
         // Ein ruhendes Objekt liegt einfach auf der Mauer.
         if (!Falling)
@@ -158,7 +161,7 @@ public abstract class FallingObject : CaveObject
 
     /// <summary>Kommt zur Ruhe. Der Aufschlag klingt nur, wenn das Objekt wirklich fiel — ein bereits
     /// ruhendes löst kein Sound-Ereignis aus.</summary>
-    private void Land()
+    public void Land()
     {
         if (!Falling)
         {
