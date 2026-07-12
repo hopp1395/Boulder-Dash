@@ -80,7 +80,7 @@ public sealed class TestMenuRenderer
         }
 
         _font.DrawText(batch, "HOCH/RUNTER ODER ZIFFER WAEHLEN", RowPosition(20), Color.White);
-        _font.DrawText(batch, "F1 - STARTEN        ESC - ZURUECK", RowPosition(22), Color.White);
+        _font.DrawText(batch, "ENTER - STARTEN     ESC - ZURUECK", RowPosition(22), Color.White);
     }
 
     private void DrawBackground(SpriteBatch batch)

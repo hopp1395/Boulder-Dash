@@ -277,9 +277,8 @@ public class BoulderDashGame : XnaGame
                 if (_inputAdapter.IsJustPressed(Keys.Down)) _session.MenuDown();
                 if (_inputAdapter.IsJustPressed(Keys.Right)) _session.MenuNextCave();
                 if (_inputAdapter.IsJustPressed(Keys.Left)) _session.MenuPreviousCave();
-                // Start wie am Joystick-Feuerknopf ("PRESS BUTTON TO PLAY"): F1, Enter oder Leertaste.
-                if (_inputAdapter.IsJustPressed(Keys.F1)
-                    || _inputAdapter.IsJustPressed(Keys.Enter)
+                // Start wie am Joystick-Feuerknopf ("PRESS BUTTON TO PLAY"): Enter oder Leertaste.
+                if (_inputAdapter.IsJustPressed(Keys.Enter)
                     || _inputAdapter.IsJustPressed(Keys.Space)) _session.MenuStart();
                 // F5: kein Original-Menüpunkt, sondern der (unsichtbare) Zugang zum Testmodus
                 // (GameSession.TestCaves) — bewusst ohne Legendenzeile auf dem Option-Screen.
@@ -299,7 +298,7 @@ public class BoulderDashGame : XnaGame
 
                 if (_inputAdapter.IsJustPressed(Keys.D0)) _session.TestMenuSelect(9);
 
-                if (_inputAdapter.IsJustPressed(Keys.F1) || _inputAdapter.IsJustPressed(Keys.Enter)) _session.TestMenuStart();
+                if (_inputAdapter.IsJustPressed(Keys.Enter)) _session.TestMenuStart();
                 if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.TestMenuBack();
                 break;
             case SessionPhase.Playing:
