@@ -59,24 +59,10 @@ public sealed class GameState
     /// <summary>Überschreibt Palettenfarbe 0 während des Ausgangs-Blitzes (ende(), BOULDER.CPP:683-684). Null = normale Cave-Farbe.</summary>
     public Rgb? PaletteColor0Override { get; set; }
 
-    /// <summary>wechsel_explo: Explosionsanimations-/Auflösungszähler, gemeinsam für alle Explosionen.</summary>
-    public byte WechselExplo { get; set; }
-
-    /// <summary>wechsel_vier: gemeinsamer Animationstakt für Diamant/Amoeba/Geist/Schmetterling/
-    /// Zaubermauer/Rand-Gleitfenster, Periode 8 (sprites_wechsel(), BOULDER.CPP:593-607).</summary>
-    public byte WechselVier { get; set; }
-
-    /// <summary>wechsel_boulder: Rockford-Laufzyklus, Periode 6, läuft nur während einer aktiven
-    /// Bewegungsrichtung (boulder_lauf(), BOULDER.CPP:611-646).</summary>
-    public byte WechselBoulder { get; set; }
-
-    /// <summary>Ruheanimation (BD1): Blinzelt Rockford in der laufenden 8-Frame-Sequenz? Wird zu
-    /// deren Beginn neu ausgewürfelt und gilt nur für diese eine Sequenz (siehe GameTick).</summary>
-    public bool RockfordBlinking { get; set; }
-
-    /// <summary>Ruheanimation (BD1): Tappt Rockford mit dem Fuß? Anders als das Blinzeln ist das
-    /// ein Dauerzustand, der pro Sequenz nur mit 1/16 umschlägt (siehe GameTick).</summary>
-    public bool RockfordTapping { get; set; }
+    // Die Animationszähler des Originals (wechsel_vier, wechsel_explo, wechsel_boulder) standen
+    // früher hier: EIN Zähler für alle Objekte. Sie sind in die Objekte selbst gewandert und laufen
+    // dort weiter (CaveObject.AnimationPhase, ExplosionObject.ExplosionPhase, RockfordObject) — den
+    // gemeinsamen Takt führt die Cave (Cave.AnimationPhase).
 
     /// <summary>Sound-Ereignisse dieses Ticks, von CavePhysics befüllt und von der
     /// Game-Schicht (AudioPlayer) pro Frame geleert. Core selbst bleibt audiofrei.</summary>
@@ -102,10 +88,5 @@ public sealed class GameState
         ExitFlashOn = false;
         ScreenCoverActive = false;
         PaletteColor0Override = null;
-        WechselExplo = 0;
-        WechselVier = 0;
-        WechselBoulder = 0;
-        RockfordBlinking = false;
-        RockfordTapping = false;
     }
 }

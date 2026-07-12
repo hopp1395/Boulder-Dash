@@ -1,4 +1,5 @@
 using BoulderDash.Core.Data;
+using BoulderDash.Core.Objects;
 using BoulderDash.Core.Simulation;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -54,27 +55,50 @@ public sealed class SpriteAtlas
 
     public Texture2D GetRawTexture(int rawSpriteIndex) => _textures[rawSpriteIndex];
 
-    /// <summary>Liefert Textur + 16x16-Quellrechteck (Zeile 0) für einen z_zeiger-Frame-Index.</summary>
-    public (Texture2D Texture, Rectangle Source) GetFrameSprite(int zFrameIndex)
+    /// <summary>Liefert Textur + 16x16-Quellrechteck für einen z_zeiger-Frame-Index. Der
+    /// Zeilenversatz ist das Gleitfenster im 24 Zeilen hohen Rand-Sprite (siehe BorderFillObject);
+    /// bei allen anderen Sprites ist er 0.</summary>
+    public (Texture2D Texture, Rectangle Source) GetFrameSprite(int zFrameIndex, int rowOffset = 0)
     {
         var rawIndex = SpriteTables.FrameToRawSprite[zFrameIndex];
         var texture = _textures[rawIndex];
-        var source = new Rectangle(0, 0, texture.Width, CaveRenderer.TileSize);
+        var source = new Rectangle(0, rowOffset, texture.Width, CaveRenderer.TileSize);
         return (texture, source);
     }
 
-    /// <summary>Standard-(Anfangs-)Frame eines Elements, siehe SpriteTables.GetDefaultFrame.</summary>
+    /// <summary>Standard-(Anfangs-)Frame eines Elements — das Bild, das ein frisch geladenes,
+    /// noch nicht angelaufenes Spiel zeigt (CaveObject.DefaultFrame).</summary>
     public (Texture2D Texture, Rectangle Source) GetDefaultSprite(Element element) =>
-        GetFrameSprite(SpriteTables.GetDefaultFrame(element));
+        GetFrameSprite(CaveObjects.Prototype(element).DefaultFrame);
 
-    /// <summary>Rand-Gleitfenster (MASK_SLAUF): 16-Zeilen-Fenster im 24 Zeilen hohen Sprite 48,
-    /// verschoben um wechselVier Zeilen (0-7) — buffer[MASK_SLAUF]=z_zeiger[76]+wechsel_vier*16
-    /// in BOULDER.CPP:604 ist Byte-Zeiger-Arithmetik auf den Rohsprite, kein z_zeiger-Frameindex.</summary>
-    public (Texture2D Texture, Rectangle Source) GetBorderFillSprite(byte wechselVier)
+    /// <summary>Führt den Zeichenauftrag eines Cave-Objekts aus (siehe TileAppearance): eine ganze
+    /// Kachel — oder zwei Hälften, wenn das Objekt sein Bild aus zweien zusammensetzt.</summary>
+    public void Draw(SpriteBatch batch, Rectangle destination, in TileAppearance appearance)
     {
-        var rawIndex = SpriteTables.FrameToRawSprite[SpriteTables.GetDefaultFrame(Element.BorderFill)];
-        var texture = _textures[rawIndex];
-        var source = new Rectangle(0, wechselVier, texture.Width, CaveRenderer.TileSize);
-        return (texture, source);
+        if (appearance.BottomFrame is { } bottomFrame)
+        {
+            DrawHalf(batch, destination, appearance.Frame, top: true);
+            DrawHalf(batch, destination, bottomFrame, top: false);
+            return;
+        }
+
+        var (texture, source) = GetFrameSprite(appearance.Frame, appearance.RowOffset);
+        var effects = appearance.FlipHorizontally ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+
+        batch.Draw(texture, destination, source, Color.White, 0f, Vector2.Zero, effects, 0f);
+    }
+
+    /// <summary>Zeichnet die obere oder untere Hälfte eines Frames an ihren Platz in der Kachel.</summary>
+    private void DrawHalf(SpriteBatch batch, Rectangle destination, int frame, bool top)
+    {
+        const int halfHeight = CaveRenderer.TileSize / 2;
+        var offset = top ? 0 : halfHeight;
+        var (texture, source) = GetFrameSprite(frame);
+
+        batch.Draw(
+            texture,
+            new Rectangle(destination.X, destination.Y + offset, CaveRenderer.TileSize, halfHeight),
+            new Rectangle(source.X, source.Y + offset, CaveRenderer.TileSize, halfHeight),
+            Color.White);
     }
 }

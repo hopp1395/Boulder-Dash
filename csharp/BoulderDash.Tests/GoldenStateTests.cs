@@ -13,13 +13,12 @@ namespace BoulderDash.Tests;
 /// </summary>
 public class GoldenStateTests
 {
-    // Die Demo ist jetzt die Original-BD1-Aufzeichnung (passend zur BD1-Cave-A), aber die unten
-    // eingefrorenen Werte stammen noch vom alten DEMO.BIN-Lauf auf der 1999er-Cave-A. Neu
-    // einfrieren (Hash/Steps/Score aus einem verifizierten Lauf übernehmen), sobald der Nutzer
-    // die Demo manuell abgenommen hat. Achtung: der Demo-Start ist inzwischen der BD1-Attract-
-    // Mode ohne die 7-s-DemoWait-Phase — die Schrittzahl fällt beim Neu-Einfrieren also
-    // deutlich kleiner aus als früher.
-    [Fact(Skip = "Golden-Werte stammen noch vom alten DEMO.BIN-Lauf - nach Abnahme der BD1-Demo neu einfrieren.")]
+    // Achtung: Die Demo läuft NICHT bis zum Cave-Ende — sie sammelt einen einzigen Diamanten und
+    // endet dann mit ihrer Aufzeichnung (die BD1-Demo ist eine reine Vorführung, keine Lösung).
+    // Cave A enthält außerdem weder Kreaturen noch Amoeba noch Zaubermauer. Dieser Test sichert
+    // deshalb nur Steine/Erde/Diamanten, Timing und Session-Ablauf ab; die übrigen Objekte deckt
+    // GoldenCaveScanTests ab.
+    [Fact]
     public void Demo_spielt_Cave_A_deterministisch_durch_und_kehrt_zum_Titelbildschirm_zurueck()
     {
         var caves = new CaveTextRepository(Path.Combine(TestPaths.GameAssets, "Caves"));
@@ -52,11 +51,12 @@ public class GoldenStateTests
         Assert.True(steps < maxSteps, "Demo hat nicht innerhalb des Sicherheitsnetzes zum Titelbildschirm zurückgefunden.");
         Assert.Equal(SessionPhase.TitleScreen, session.Phase);
 
-        // Eingefroren aus dem ersten erfolgreichen Lauf (siehe Klassenkommentar).
-        Assert.Equal(2791, steps);
-        Assert.Equal(2596374973u, hash);
-        Assert.Equal(430, session.State.Score);
-        Assert.Equal(19, session.State.JewelsCollected);
+        // Eingefroren aus dem Lauf mit der BD1-Demo auf der BD1-Cave-A.
+        Assert.Equal(2569, steps);
+        Assert.Equal(1788533998u, hash);
+        Assert.Equal(10, session.State.Score);
+        Assert.Equal(1, session.State.JewelsCollected);
+        Assert.Equal(0, session.State.Stat); // Rockford stirbt in der Demo nicht.
         Assert.Equal(0, session.State.Stat); // Rockford stirbt in der Demo nicht — Cave A wird erfolgreich beendet.
     }
 }

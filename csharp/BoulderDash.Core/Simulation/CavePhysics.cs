@@ -1,14 +1,20 @@
+using BoulderDash.Core.Objects;
+
 namespace BoulderDash.Core.Simulation;
 
 /// <summary>
-/// Byte-genaue Transliteration von regel() (src/BOULDER.CPP:725-959), explosion() (:709-721),
-/// anfang() (:667-677) und ende() (:681-687). Arbeitet bewusst direkt auf rohen Kachelbytes statt
-/// auf Element/Flag-Typen, weil die Original-Masken quer durch Bitgruppen schneiden (siehe
-/// Cave-Klassenkommentar). Jede Regel ist einzeln mit der Original-Zeilennummer kommentiert.
+/// Der Cave-Scan: das Äquivalent von regel() (src/BOULDER.CPP:725-959), explosion() (:709-721),
+/// anfang() (:667-677) und ende() (:681-687). Er geht das Gitter zeilenweise durch und lässt jedes
+/// Objekt sein Verhalten ausspielen.
+///
+/// Die Reihenfolge der Handler je Zelle ist verhaltensrelevant und entspricht der des Originals.
+/// Ebenso die Zeilenrichtung: Weil von oben nach unten gescannt wird, würde ein fallendes Objekt
+/// seiner eigenen Bewegung hinterherfallen — das verhindert das Verarbeitet-Flag
+/// (<see cref="CaveObject.Scanned"/>), das jeder Handler setzt und der Scan am Ende wieder löscht.
 /// </summary>
 public sealed class CavePhysics
 {
-    /// <summary>Ab dieser Zellzahl wird die ganze Amoeba zu Boulders. Feste BD1-Konstante (in BD1
+    /// <summary>Ab dieser Zellzahl wird die ganze Amoeba zu Steinen. Feste BD1-Konstante (in BD1
     /// nicht pro Cave einstellbar); das DOS-Original wandelte schon ab 96 Zellen um (BOULDER.CPP:951).</summary>
     private const int AmoebaMaxSize = 200;
 
@@ -19,15 +25,6 @@ public sealed class CavePhysics
         _random = random;
     }
 
-    /// <summary>Kachel ist Leer(0) oder Erde(1), ohne Flags — die wiederkehrende Prüfung "(x&amp;0xFE)==0".</summary>
-    private static bool IsEmptyOrEarthRaw(byte raw) => (raw & 0xFE) == 0;
-
-    /// <summary>Was eine Explosion stehen lässt: die Stahlwand sowie Ein- und Ausgang. In BD1 sind
-    /// Ein- und Ausgang Stahlwand-Varianten und damit ebenfalls unzerstörbar — der Ausgang sieht bis
-    /// zu seiner Freischaltung ja auch aus wie Stahl (siehe SpriteTables). Die Zaubermauer gehört
-    /// bewusst NICHT dazu, sie ist sprengbar. Das DOS-Original verschonte nur die Stahlwand.</summary>
-    private static bool IsExplosionProof(byte raw) => (raw & 0x0F) is 5 or 10 or 11;
-
     public void Regel(Cave cave, GameState state, InputState input, Camera camera)
     {
         var width = cave.Width;
@@ -35,14 +32,14 @@ public sealed class CavePhysics
 
         // Die Amoeba entscheidet ihr Schicksal aus den Zahlen des VORIGEN Scans — laut Spezifikation
         // wirken "zu groß" und "eingeschlossen" jeweils erst im Folge-Scan, und "zu groß" hat Vorrang.
-        byte amoebaFate = 0;
+        Element? amoebaFate = null;
         if (state.AmoebaCountLastScan >= AmoebaMaxSize)
         {
-            amoebaFate = (byte)Element.Boulder;
+            amoebaFate = Element.Boulder;
         }
         else if (state.AmoebaSuffocatedLastScan)
         {
-            amoebaFate = (byte)Element.Jewel;
+            amoebaFate = Element.Jewel;
         }
 
         var amoebaFound = 0;
@@ -61,11 +58,10 @@ public sealed class CavePhysics
             {
                 var idx = (row * width) + col;
 
-                ResolveExplosion(cave, state, idx);
+                ResolveExplosion(cave, idx);
                 ProcessAmoeba(cave, state, idx, width, amoebaFate, ref amoebaFound, ref amoebaCanGrow);
-                ProcessButterfly(cave, state, idx, width);
-                ProcessFirefly(cave, state, idx, width);
-                ProcessBoulderOrJewel(cave, state, idx, width);
+                ProcessCreature(cave, state, idx, width);
+                ProcessFallingObject(cave, state, idx, width);
                 ProcessRockford(cave, state, input, camera, idx, width, height, col, row);
             }
         }
@@ -75,11 +71,7 @@ public sealed class CavePhysics
             state.SoundEvents.Enqueue(SoundEvent.Death);
         }
 
-        // Verarbeitet-Flag für den nächsten Sweep löschen (:930-934)
-        for (var i = 0; i < width * height; i++)
-        {
-            cave.SetRaw(i, (byte)(cave.GetRaw(i) & 0x7F));
-        }
+        cave.ClearScanned();
 
         state.AmoebaCountLastScan = amoebaFound;
         state.AmoebaSuffocatedLastScan = amoebaFound > 0 && !amoebaCanGrow;
@@ -88,42 +80,39 @@ public sealed class CavePhysics
         state.AmoebaPresent = amoebaFound > 0;
     }
 
-    /// <summary>Explosion -&gt; Jewel / Explosion -&gt; Leer, wenn die Animation ausgelaufen ist (:740-743).</summary>
-    private static void ResolveExplosion(Cave cave, GameState state, int idx)
+    /// <summary>Eine ausgelaufene Explosion gibt ihre Kachel frei — der Geist hinterlässt Leerraum,
+    /// der Schmetterling einen Diamanten (:740-743).</summary>
+    private static void ResolveExplosion(Cave cave, int idx)
     {
-        var raw = cave.GetRaw(idx);
-        if ((raw & 0x1F) == 12 && state.WechselExplo == 7)
+        if (cave.Get(idx) is ExplosionObject { ExplosionPhase: ExplosionObject.FinalPhase } explosion)
         {
-            cave.SetRaw(idx, 0x80);
-        }
-
-        if ((raw & 0x1F) == 14 && state.WechselExplo == 7)
-        {
-            cave.SetRaw(idx, 0x83);
+            cave.Spawn(idx, explosion.Remnant());
         }
     }
 
-    /// <summary>Amoeba nach BD1 statt nach dem DOS-Original (BDCFF-Objektspezifikation 000A,
-    /// elmerproductions.com/sp/peterb/BDCFF/objects/000A.html): Jede Zelle würfelt pro Scan einzeln, ob sie
-    /// wächst — mit 4/128 (~3 %), nach Ablauf der Amoeba-Zeit mit 4/16 (25 %) —, und wächst dann in genau
-    /// eine zufällig gezogene der vier Richtungen, sofern dort Leerraum oder Erde liegt. Wird sie zu groß
-    /// oder erstickt sie, wandelt der Folge-Scan sie über <paramref name="fate"/> um.
-    /// Das DOS-Original ließ dagegen pro Scan nur eine einzige, per rand()%96 gewählte Zelle wachsen, und
-    /// die immer in fester Richtungspriorität (BOULDER.CPP:745-755).</summary>
+    /// <summary>
+    /// Amoeba nach BD1 (BDCFF 000A): Jede Zelle würfelt pro Scan einzeln, ob sie wächst — mit 4/128
+    /// (~3 %), nach Ablauf der Amoeba-Zeit mit 4/16 (25 %) —, und wächst dann in genau eine zufällig
+    /// gezogene der vier Richtungen, sofern dort Leerraum oder Erde liegt. Wird sie zu groß oder
+    /// erstickt sie, wandelt der Folge-Scan sie über <paramref name="fate"/> um.
+    /// Das DOS-Original ließ pro Scan nur eine einzige, per rand()%96 gewählte Zelle wachsen, und die
+    /// immer in fester Richtungspriorität (BOULDER.CPP:745-755).
+    /// </summary>
     private void ProcessAmoeba(
-        Cave cave, GameState state, int idx, int width, byte fate, ref int found, ref bool canGrow)
+        Cave cave, GameState state, int idx, int width, Element? fate, ref int found, ref bool canGrow)
     {
-        var raw = cave.GetRaw(idx);
-        if ((raw & 0x9F) != 0x07)
+        if (cave.Get(idx) is not AmoebaObject { Scanned: false })
         {
             return;
         }
 
-        if (fate != 0)
+        if (fate is { } destiny)
         {
-            // Verarbeitet-Bit setzen, damit ein so entstandener Boulder nicht schon im selben Scan
-            // weiterfällt (dasselbe Muster wie ResolveExplosion).
-            cave.SetRaw(idx, (byte)(0x80 | fate));
+            // Mit Verarbeitet-Flag, damit ein so entstandener Stein nicht schon im selben Scan
+            // weiterfällt (dasselbe Muster wie bei der auslaufenden Explosion).
+            var converted = cave.Create(destiny);
+            converted.Scanned = true;
+            cave.Spawn(idx, converted);
             return;
         }
 
@@ -132,7 +121,7 @@ public sealed class CavePhysics
         ReadOnlySpan<int> directions = [-width, width, -1, 1];
         foreach (var direction in directions)
         {
-            if (IsEmptyOrEarthRaw(cave.GetRaw(idx + direction)))
+            if (cave.Get(idx + direction).CanAmoebaGrowInto)
             {
                 canGrow = true;
                 break;
@@ -145,221 +134,209 @@ public sealed class CavePhysics
         }
 
         var target = idx + directions[_random.Next(directions.Length)];
-        if (IsEmptyOrEarthRaw(cave.GetRaw(target)))
+        if (cave.Get(target).CanAmoebaGrowInto)
         {
-            // 0x87: frische Amoeba mit Verarbeitet-Bit — sie wächst erst im nächsten Scan weiter und
-            // zählt auch erst dann mit ("newly grown amoeba cannot expand until the following frame").
-            cave.SetRaw(target, 0x87);
+            // Mit Verarbeitet-Flag: Sie wächst erst im nächsten Scan weiter und zählt auch erst dann
+            // mit ("newly grown amoeba cannot expand until the following frame").
+            cave.Spawn(target, new AmoebaObject { Scanned = true });
         }
     }
 
-    /// <summary>Schmetterling/Butterfly: dreht sich bevorzugt im Uhrzeigersinn und explodiert zu Jewels.</summary>
-    private static void ProcessButterfly(Cave cave, GameState state, int idx, int width) =>
-        ProcessCreature(cave, state, idx, width, element: 9, preferCcw: false, explosionAnim: 0xCE);
-
-    /// <summary>Geist/Firefly: dreht sich bevorzugt gegen den Uhrzeigersinn und explodiert zu Leere.</summary>
-    private static void ProcessFirefly(Cave cave, GameState state, int idx, int width) =>
-        ProcessCreature(cave, state, idx, width, element: 8, preferCcw: true, explosionAnim: 0xCC);
-
     /// <summary>
-    /// Firefly und Butterfly nach BD1 (BDCFF-Objektspezifikationen 0008/0009,
-    /// elmerproductions.com/sp/peterb/BDCFF/objects/0008.html): Die Kreatur versucht zuerst ihre
-    /// Vorzugsdrehung (Firefly nach links = gegen den Uhrzeigersinn, Butterfly nach rechts = im
-    /// Uhrzeigersinn), sonst geradeaus. Ist beides versperrt, dreht sie sich genau EINMAL zur
-    /// Gegenseite und zieht in diesem Scan nicht ("if a firefly is forced to turn against its
-    /// 'preferred direction', it does not actually move for that frame").
+    /// Geist und Schmetterling (BDCFF 0008/0009): Sie versuchen zuerst ihre Vorzugsdrehung, sonst
+    /// geradeaus. Ist beides versperrt, drehen sie sich genau EINMAL zur Gegenseite und ziehen in
+    /// diesem Scan nicht. Berührung mit Rockford oder Amoeba — oder ein fallendes Objekt direkt
+    /// darüber — sprengt sie.
     ///
-    /// Das DOS-Original (BOULDER.CPP:758-840) drehte stattdessen in einer Schleife bis zu viermal
-    /// weiter und unterdrückte die Bewegung über ein Extra-Bit 0x10. Die Bewegung stimmte damit zwar,
-    /// die resultierende BLICKRICHTUNG einer blockierten Kreatur aber nicht — und der Butterfly drehte
-    /// bei Blockade sogar auf seine Vorzugsseite statt auf die Gegenseite. Beides ist hier korrigiert;
-    /// das Bit 0x10 entfällt ersatzlos.
+    /// Original: BOULDER.CPP:758-840. Zwei Abweichungen sind dort einzeln kommentiert (die
+    /// Blickrichtung nach Blockade und die Kontaktmaske); hier kommt hinzu, dass beide Kreaturen
+    /// denselben Handler durchlaufen statt zwei getrennter — sie teilen sich ohnehin jede Regel und
+    /// unterscheiden sich nur in Drehsinn und Explosionsart.
     /// </summary>
-    private static void ProcessCreature(
-        Cave cave, GameState state, int idx, int width, byte element, bool preferCcw, byte explosionAnim)
+    private static void ProcessCreature(Cave cave, GameState state, int idx, int width)
     {
-        var raw = cave.GetRaw(idx);
-        if ((raw & 0x8F) != element)
+        if (cave.Get(idx) is not CreatureObject { Scanned: false } creature)
         {
             return;
         }
 
-        // Kontakt zu Rockford (6) oder Amoeba (7) ringsum, oder ein fallendes Objekt direkt darüber.
-        // Die Maske 0x7E lässt Bit 0x80 bewusst offen: ein Rockford bzw. eine Amoeba, die sich in
-        // DIESEM Scan schon bewegt hat, trägt das Verarbeitet-Bit und zündet trotzdem — die BDCFF-
-        // Spezifikation zählt "Rockford, scanned this frame" ausdrücklich zu den Auslösern. Das
-        // DOS-Original prüfte hier beim Butterfly (anders als beim Firefly) mit 0xFE und übersah
-        // diesen Fall.
-        if ((cave.GetRaw(idx - width) & 0x7E) == 6 ||
-            (cave.GetRaw(idx + width) & 0x7E) == 6 ||
-            (cave.GetRaw(idx - 1) & 0x7E) == 6 ||
-            (cave.GetRaw(idx + 1) & 0x7E) == 6 ||
-            (cave.GetRaw(idx - width) & 0x42) == 0x42)
+        // Rockford und Amoeba zünden ringsum; ein fallender Stein/Diamant zündet von oben.
+        // Ein Rockford bzw. eine Amoeba, die sich in DIESEM Scan schon bewegt hat, zündet ebenfalls
+        // — die Spezifikation zählt "Rockford, scanned this frame" ausdrücklich zu den Auslösern.
+        // Das DOS-Original prüfte hier beim Schmetterling (anders als beim Geist) mit 0xFE und
+        // übersah diesen Fall.
+        if (cave.Get(idx - width).TriggersCreature ||
+            cave.Get(idx + width).TriggersCreature ||
+            cave.Get(idx - 1).TriggersCreature ||
+            cave.Get(idx + 1).TriggersCreature ||
+            cave.Get(idx - width) is FallingObject { Falling: true })
         {
-            Explode(cave, state, idx, explosionAnim);
+            Explode(cave, state, idx, creature.CreateExplosion);
             return;
         }
 
-        var direction = raw & 0x60;
-        var preferred = preferCcw ? TurnCcw(direction) : TurnCw(direction);
-
-        if (cave.GetRaw(idx + DirectionOffset(preferred, width)) == 0)
+        if (cave.Get(idx + creature.PreferredFacing.Offset(width)).IsFreeSpace)
         {
-            MoveCreature(cave, idx, width, element, preferred);
+            MoveCreature(cave, idx, width, creature, creature.PreferredFacing);
         }
-        else if (cave.GetRaw(idx + DirectionOffset(direction, width)) == 0)
+        else if (cave.Get(idx + creature.Facing.Offset(width)).IsFreeSpace)
         {
-            MoveCreature(cave, idx, width, element, direction);
+            MoveCreature(cave, idx, width, creature, creature.Facing);
         }
         else
         {
             // Beides versperrt: einmal zur Gegenseite drehen, aber stehen bleiben.
-            var turned = preferCcw ? TurnCw(direction) : TurnCcw(direction);
-            cave.SetRaw(idx, (byte)(0x80 | turned | element));
+            creature.Facing = creature.BlockedFacing;
+            creature.Scanned = true;
         }
     }
 
-    /// <summary>Setzt die Kreatur mit Verarbeitet-Bit ins Nachbarfeld und räumt ihr altes.</summary>
-    private static void MoveCreature(Cave cave, int idx, int width, byte element, int direction)
+    /// <summary>Setzt die Kreatur ins Nachbarfeld und räumt ihr altes.</summary>
+    private static void MoveCreature(Cave cave, int idx, int width, CreatureObject creature, CreatureFacing facing)
     {
-        cave.SetRaw(idx + DirectionOffset(direction, width), (byte)(0x80 | direction | element));
-        cave.SetRaw(idx, 0x80);
+        creature.Facing = facing;
+        creature.Scanned = true;
+
+        cave.Set(idx + facing.Offset(width), creature);
+        cave.Spawn(idx, new EmptyObject { Scanned = true });
     }
 
-    /// <summary>Index-Offset der Kreaturen-Richtungsbits: 0x00 links, 0x20 oben, 0x40 rechts, 0x60 unten
-    /// (dieselbe Reihenfolge wie die BDCFF-Attributbits 00/01/10/11).</summary>
-    private static int DirectionOffset(int direction, int width) => direction switch
+    /// <summary>Stein/Diamant: fällt, rollt ab, wandelt sich an der Zaubermauer, erschlägt Rockford
+    /// beim Landen (:842-887).</summary>
+    private static void ProcessFallingObject(Cave cave, GameState state, int idx, int width)
     {
-        0x00 => -1,
-        0x20 => -width,
-        0x40 => 1,
-        _ => width,
-    };
-
-    private static int TurnCw(int direction) => (direction + 0x20) & 0x60;
-
-    private static int TurnCcw(int direction) => (direction - 0x20) & 0x60;
-
-    /// <summary>Boulder/Jewel: fällt, rollt ab, wandelt sich am EnchantedWall, tötet Rockford beim Landen (:842-887).</summary>
-    private static void ProcessBoulderOrJewel(Cave cave, GameState state, int idx, int width)
-    {
-        var raw = cave.GetRaw(idx);
-        if ((raw & 0x9F) != 3 && (raw & 0x9F) != 2)
+        if (cave.Get(idx) is not FallingObject { Scanned: false } falling)
         {
             return;
         }
 
-        var belowRaw = cave.GetRaw(idx + width);
-        var below = belowRaw & 0x0F;
+        var belowIdx = idx + width;
+        var below = cave.Get(belowIdx);
+
         switch (below)
         {
-            case 0:
-                cave.SetRaw(idx + width, (byte)(cave.GetRaw(idx) | 0xC0));
-                cave.SetRaw(idx, 0x80);
+            // Fallen. Anders als beim Abrollen (unten) genügt hier ein Leerraum, der in diesem Scan
+            // schon verarbeitet wurde — das Original maskiert an dieser Stelle bewusst nur die
+            // Element-ID heraus und übersieht das Verarbeitet-Flag.
+            case EmptyObject:
+                falling.Falling = true;
+                falling.Scanned = true;
+                cave.Set(belowIdx, falling);
+                cave.Spawn(idx, new EmptyObject { Scanned = true });
                 break;
-            case 2:
-            case 3:
-                // "Rounded" sind nach BDCFF 0000 nur die Brick Wall und RUHENDE Boulder/Jewels. Trägt das
-                // Objekt darunter noch das Fall-Bit, ist es keine Rundung — dann wird nicht abgerollt,
-                // sondern gelandet. Das DOS-Original prüfte hier nur die Element-ID.
-                if ((belowRaw & 0x40) == 0x40)
-                {
-                    goto default;
-                }
 
-                goto case 4;
-            case 4:
-                if (cave.GetRaw(idx - 1) == 0 && cave.GetRaw((idx - 1) + width) == 0)
-                {
-                    cave.SetRaw(idx - 1, (byte)(cave.GetRaw(idx) | 0x80));
-                    cave.SetRaw(idx, 0x80);
-                    cave.SetRaw((idx - 1) + width, 0x80);
-                }
-                else if (cave.GetRaw(idx + 1) == 0 && cave.GetRaw((idx + 1) + width) == 0)
-                {
-                    cave.SetRaw(idx + 1, (byte)(cave.GetRaw(idx) | 0x80));
-                    cave.SetRaw(idx, 0x80);
-                    cave.SetRaw((idx + 1) + width, 0x80);
-                }
-                else
-                {
-                    EnqueueLandingSoundIfFalling(state, cave.GetRaw(idx), raw);
-                    cave.SetRaw(idx, (byte)(cave.GetRaw(idx) & 0x1F));
-                }
-
+            // Abrollen von einer Rundung — der Mauer oder einem RUHENDEN Stein/Diamanten.
+            case { IsRounded: true }:
+                RollOff(cave, state, idx, width, falling);
                 break;
-            case 13:
-                // Nur ein FALLENDES Objekt trifft auf die Mauer — ein ruhendes liegt einfach darauf.
-                if ((cave.GetRaw(idx) & 0x40) != 0x40)
-                {
-                    break;
-                }
 
-                EnqueueEnchantedWallSound(state, raw);
-
-                if (state.EnchantedWallTimeRemaining > 0)
-                {
-                    state.EnchantedWallRunning = true;
-                    if (cave.GetRaw(idx + (2 * width)) == 0)
-                    {
-                        var minusOne = (byte)(cave.GetRaw(idx) - 1);
-                        cave.SetRaw(idx + (2 * width), (byte)(minusOne | 0xC2));
-                    }
-
-                    // Steht unter der Mauer etwas im Weg, wird das Objekt trotzdem gelöscht:
-                    // "the boulder or diamond is lost" (BDCFF 0002).
-                    cave.SetRaw(idx, 0x80);
-                }
-                else
-                {
-                    // Abgelaufene (oder nie aktivierte) Mauer: das Objekt verschwindet ersatzlos.
-                    cave.SetRaw(idx, 0);
-                }
-
+            case EnchantedWallObject:
+                HitEnchantedWall(cave, state, idx, width, falling);
                 break;
-            case 6:
-                if ((cave.GetRaw(idx + width) & 0x06) == 0x06 && (cave.GetRaw(idx) & 0x4C) == 0x40)
-                {
-                    Explode(cave, state, idx + width, 0x8C);
-                }
 
+            // Nur ein FALLENDES Objekt erschlägt Rockford — ein ruhendes liegt einfach auf ihm.
+            case RockfordObject when falling.Falling:
+                Explode(cave, state, belowIdx, static () => new ExplosionObject());
                 break;
-            case 8:
-            case 9:
+
+            // Auf einer Kreatur bleibt es liegen: Sie zündet sich beim eigenen Zug selbst.
+            case CreatureObject:
                 break;
+
             default:
-                EnqueueLandingSoundIfFalling(state, cave.GetRaw(idx), raw);
-                cave.SetRaw(idx, (byte)(cave.GetRaw(idx) & 0x1F));
+                Land(state, falling);
                 break;
         }
     }
 
-    /// <summary>Auftreffen auf der Zaubermauer. Gemeldet wird der Klang des Objekts, das unten wieder
-    /// HERAUSKOMMT — ein Boulder klingt hier also nach Jewel und umgekehrt (BDCFF 0000: "When falling
-    /// boulders hit magic walls, a diamond sound plays regardless of outcome"). Das gilt in allen drei
-    /// Zuständen der Mauer, auch wenn sie das Objekt verschluckt. Das DOS-Original schwieg hier ganz.</summary>
-    private static void EnqueueEnchantedWallSound(GameState state, byte raw) =>
-        state.SoundEvents.Enqueue((raw & 0x0F) == 3 ? SoundEvent.BoulderLand : SoundEvent.JewelLand);
-
-    /// <summary>Meldet BoulderLand/JewelLand nur, wenn das Objekt gerade wirklich aktiv fiel
-    /// (Momentum-Bit 0x40 gesetzt) — ein bereits ruhendes Objekt löst kein Sound-Ereignis aus.</summary>
-    private static void EnqueueLandingSoundIfFalling(GameState state, byte currentRaw, byte originalRaw)
+    /// <summary>Rollt zur Seite ab, wenn dort UND darunter unberührter Leerraum ist — sonst landet
+    /// das Objekt. Links hat Vorrang vor rechts.</summary>
+    private static void RollOff(Cave cave, GameState state, int idx, int width, FallingObject falling)
     {
-        if ((currentRaw & 0x40) != 0x40)
+        foreach (var side in (ReadOnlySpan<int>)[-1, 1])
+        {
+            if (!cave.Get(idx + side).IsFreeSpace || !cave.Get(idx + side + width).IsFreeSpace)
+            {
+                continue;
+            }
+
+            // Das Fall-Momentum bleibt dabei, wie es ist: Ein ruhender Stein rollt ab, ohne schon zu
+            // fallen — erst im Folge-Scan hat er Leerraum unter sich und fängt an.
+            falling.Scanned = true;
+            cave.Set(idx + side, falling);
+            cave.Spawn(idx, new EmptyObject { Scanned = true });
+
+            // Die Zelle unter dem Ziel wird gesperrt, damit in diesem Scan nichts hineinfällt.
+            cave.Get(idx + side + width).Scanned = true;
+            return;
+        }
+
+        Land(state, falling);
+    }
+
+    /// <summary>
+    /// Auftreffen auf der Zaubermauer (BDCFF 0002): Läuft sie noch, kommt das Objekt zwei Zeilen
+    /// tiefer als sein Gegenstück wieder heraus — ist dort kein Platz, ist es verloren. Ist ihre Zeit
+    /// abgelaufen (oder war sie nie aktiv), verschluckt sie es ersatzlos.
+    ///
+    /// Gemeldet wird stets der Klang des Objekts, das unten HERAUSKOMMT — ein Stein klingt hier also
+    /// nach Diamant und umgekehrt ("When falling boulders hit magic walls, a diamond sound plays
+    /// regardless of outcome", BDCFF 0000). Das gilt in allen drei Zuständen der Mauer, auch wenn sie
+    /// das Objekt verschluckt. Das DOS-Original schwieg hier ganz.
+    /// </summary>
+    private static void HitEnchantedWall(Cave cave, GameState state, int idx, int width, FallingObject falling)
+    {
+        // Ein ruhendes Objekt liegt einfach auf der Mauer.
+        if (!falling.Falling)
         {
             return;
         }
 
-        state.SoundEvents.Enqueue((originalRaw & 0x0F) == 3 ? SoundEvent.JewelLand : SoundEvent.BoulderLand);
+        var product = falling.EnchantedWallProduct();
+        state.SoundEvents.Enqueue(product.LandingSound);
+
+        if (state.EnchantedWallTimeRemaining == 0)
+        {
+            // Abgelaufene (oder nie aktivierte) Mauer: das Objekt verschwindet ersatzlos. Die
+            // geräumte Zelle bleibt dabei UNverarbeitet — anders als in allen übrigen Zweigen.
+            cave.Spawn(idx, new EmptyObject());
+            return;
+        }
+
+        state.EnchantedWallRunning = true;
+
+        var exitIdx = idx + (2 * width);
+        if (cave.Get(exitIdx).IsFreeSpace)
+        {
+            product.Scanned = true;
+            cave.Spawn(exitIdx, product);
+        }
+
+        // Steht unter der Mauer etwas im Weg, wird das Objekt trotzdem gelöscht:
+        // "the boulder or diamond is lost" (BDCFF 0002).
+        cave.Spawn(idx, new EmptyObject { Scanned = true });
+    }
+
+    /// <summary>Kommt zur Ruhe. Der Aufschlag klingt nur, wenn das Objekt wirklich fiel — ein bereits
+    /// ruhendes löst kein Sound-Ereignis aus.</summary>
+    private static void Land(GameState state, FallingObject falling)
+    {
+        if (!falling.Falling)
+        {
+            return;
+        }
+
+        state.SoundEvents.Enqueue(falling.LandingSound);
+        falling.Falling = false;
     }
 
     /// <summary>Rockford: Kamera-Scroll-Auslöser plus Bewegung/Graben/Sammeln/Schieben (:890-923).
     /// Die vier Kamerabedingungen setzen nur das Scroll-Ziel und beeinflussen die Bewegung nicht.
-    /// Abweichung vom Original (:893-896): Die vier Schwellen liegen je eine Kachel weiter
-    /// innen, damit das Scrollen einen Schritt früher einsetzt als im DOS-Original.
-    /// Schwellen und Scrollweiten leiten sich aus der Sichtfenstergröße ab (siehe ViewportSize) und
-    /// sind beim Original-Sichtfenster 20x12 identisch mit den dortigen Konstanten (16/8/7/5); zeigt
-    /// das Sichtfenster die ganze Cave, greifen die Wächter unten und es wird gar nicht gescrollt.
+    /// Abweichung vom Original (:893-896): Die vier Schwellen liegen je eine Kachel weiter innen,
+    /// damit das Scrollen einen Schritt früher einsetzt. Schwellen und Scrollweiten leiten sich aus
+    /// der Sichtfenstergröße ab (siehe ViewportSize) und sind beim Original-Sichtfenster 20x12
+    /// identisch mit den dortigen Konstanten (16/8/7/5); zeigt das Sichtfenster die ganze Cave,
+    /// greifen die Wächter und es wird gar nicht gescrollt.
     /// Im DOS-Original hing die Bewegungsverarbeitung durch ein Dangling-Else an der vierten
     /// Bedingung: löste Rockford den Aufwärtsscroll aus, blieb seine Bewegung den ganzen Scan über
     /// aus — er hakte sichtbar. Ein reiner Programmierfehler ohne BD1-Entsprechung, hier behoben.</summary>
@@ -367,8 +344,7 @@ public sealed class CavePhysics
         Cave cave, GameState state, InputState input, Camera camera,
         int idx, int width, int height, int col, int row)
     {
-        var raw = cave.GetRaw(idx);
-        if ((raw & 0x9F) != 6)
+        if (cave.Get(idx) is not RockfordObject { Scanned: false } rockford)
         {
             return;
         }
@@ -397,24 +373,32 @@ public sealed class CavePhysics
             camera.Rely = (sbyte)-viewport.ScrollAmountY;
         }
 
-        var target = cave.GetRaw(idx + input.Direction) & 0x9F;
+        var targetIdx = idx + input.Direction;
+        var target = cave.Get(targetIdx);
+
+        // Eine in diesem Scan schon verarbeitete Zelle ist unpassierbar. Im Original leistet das das
+        // Verarbeitet-Bit, das die Zielmaske (anders als alle anderen) NICHT ausblendet — ein Detail,
+        // das leicht zu übersehen ist, aber Rockford daran hindert, einer gerade geräumten Zelle
+        // hinterherzuziehen.
+        if (target.Scanned)
+        {
+            return;
+        }
+
         switch (target)
         {
-            case 11:
-                if (state.JewelsCollected < state.JewelQuota)
-                {
-                    break;
-                }
-
+            case EscapeDoorObject when state.JewelsCollected >= state.JewelQuota:
                 state.IsCaveEnded = true;
                 state.AdvanceToNextCave = true;
                 state.EntranceProgress = 0;
 
                 // Rockford zieht nur in die Tür — der Ausgang ist KEIN Diamant. Das DOS-Original
-                // sprang hier auf "case 3" durch und wertete das Betreten des Ausgangs als
+                // sprang hier auf den Diamant-Zweig durch und wertete das Betreten des Ausgangs als
                 // eingesammelten Diamanten (Zähler, Punkte und Sammel-Sound inklusive).
-                goto case 0;
-            case 3:
+                MoveRockford(cave, input, idx, targetIdx, rockford);
+                break;
+
+            case JewelObject:
                 state.JewelsCollected++;
                 if (state.JewelsCollected >= state.JewelQuota)
                 {
@@ -423,45 +407,73 @@ public sealed class CavePhysics
 
                 state.Score += state.CurrentJewelPoints;
                 state.SoundEvents.Enqueue(SoundEvent.CollectJewel);
-                goto case 0;
-            case 0:
-            case 1:
-                if (target == 1)
-                {
-                    state.SoundEvents.Enqueue(SoundEvent.WalkEarth);
-                }
-                else if (target == 0)
-                {
-                    state.SoundEvents.Enqueue(SoundEvent.WalkEmpty);
-                }
-
-                cave.SetRaw(idx + input.Direction, (byte)(0x86 ^ input.GrabModifier));
-                cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
+                MoveRockford(cave, input, idx, targetIdx, rockford);
                 break;
-            case 2:
-                // Schieben nach BD1 (BDCFF-Objektspezifikation 0006): nur waagerecht, nur RUHENDE
-                // Boulder ("he cannot push falling boulders"), und dann mit einer Chance von 1:8 pro
-                // Versuch. Der Wurf steht bewusst hinter den geometrischen Prüfungen — gewürfelt wird
-                // nur, wenn Rockford es tatsächlich versucht ("each frame that he tries").
-                // Das DOS-Original nutzte stattdessen ein festes Clk4-Fenster (jeder 2. Scan) und ließ
-                // auch fallende Boulder schieben.
-                if ((input.Direction == 1 || input.Direction == -1) &&
-                    (cave.GetRaw(idx + input.Direction) & 0x40) == 0 &&
-                    cave.GetRaw(idx + (input.Direction * 2)) == 0 &&
-                    _random.Next(8) == 0)
-                {
-                    cave.SetRaw(idx + input.Direction, (byte)(0x86 ^ input.GrabModifier));
-                    cave.SetRaw(idx + (input.Direction * 2), 0x82);
-                    cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
-                    state.SoundEvents.Enqueue(SoundEvent.PushBoulder);
-                }
 
+            case EarthObject:
+                state.SoundEvents.Enqueue(SoundEvent.WalkEarth);
+                MoveRockford(cave, input, idx, targetIdx, rockford);
+                break;
+
+            case EmptyObject:
+                state.SoundEvents.Enqueue(SoundEvent.WalkEmpty);
+                MoveRockford(cave, input, idx, targetIdx, rockford);
+                break;
+
+            case BoulderObject boulder:
+                PushBoulder(cave, state, input, idx, targetIdx, rockford, boulder);
                 break;
         }
     }
 
-    /// <summary>explosion(): 3x3-Bereich, Stahl bleibt verschont (:709-721).</summary>
-    private static void Explode(Cave cave, GameState state, int centerIdx, byte anim)
+    /// <summary>
+    /// Rockford zieht um — oder greift nur hinein. Beim Greifen räumt er die Zielzelle leer und
+    /// bleibt selbst stehen; das Original erledigt beides mit demselben Code, indem es die
+    /// Kachelbytes mit dem Greif-Modifikator XOR-verknüpft (0x86 ^ 6 == 0x80).
+    /// </summary>
+    private static void MoveRockford(Cave cave, InputState input, int idx, int targetIdx, RockfordObject rockford)
+    {
+        rockford.Scanned = true;
+
+        if (input.IsGrabbing)
+        {
+            cave.Spawn(targetIdx, new EmptyObject { Scanned = true });
+            return;
+        }
+
+        cave.Set(targetIdx, rockford);
+        cave.Spawn(idx, new EmptyObject { Scanned = true });
+    }
+
+    /// <summary>
+    /// Schieben nach BD1 (BDCFF 0006): nur waagerecht, nur RUHENDE Steine ("he cannot push falling
+    /// boulders"), und dann mit einer Chance von 1:8 pro Versuch. Der Wurf steht bewusst hinter den
+    /// geometrischen Prüfungen — gewürfelt wird nur, wenn Rockford es tatsächlich versucht ("each
+    /// frame that he tries").
+    /// Das DOS-Original nutzte stattdessen ein festes Clk4-Fenster (jeder 2. Scan) und ließ auch
+    /// fallende Steine schieben.
+    /// </summary>
+    private void PushBoulder(
+        Cave cave, GameState state, InputState input,
+        int idx, int targetIdx, RockfordObject rockford, BoulderObject boulder)
+    {
+        var horizontal = input.Direction is 1 or -1;
+        var behindIdx = idx + (input.Direction * 2);
+
+        if (!horizontal || boulder.Falling || !cave.Get(behindIdx).IsFreeSpace || _random.Next(8) != 0)
+        {
+            return;
+        }
+
+        boulder.Scanned = true;
+        cave.Set(behindIdx, boulder);
+        MoveRockford(cave, input, idx, targetIdx, rockford);
+        state.SoundEvents.Enqueue(SoundEvent.PushBoulder);
+    }
+
+    /// <summary>explosion(): sprengt den 3x3-Bereich frei; Stahlwand, Ein- und Ausgang bleiben stehen
+    /// (:709-721). Jede getroffene Kachel bekommt ihre eigene Explosionsinstanz.</summary>
+    private static void Explode(Cave cave, GameState state, int centerIdx, Func<ExplosionObject> create)
     {
         var width = cave.Width;
         ReadOnlySpan<int> offsets =
@@ -474,30 +486,49 @@ public sealed class CavePhysics
         foreach (var offset in offsets)
         {
             var target = centerIdx + offset;
-            if (!IsExplosionProof(cave.GetRaw(target)))
+            if (cave.Get(target).IsExplosionProof)
             {
-                cave.SetRaw(target, anim);
+                continue;
             }
+
+            var explosion = create();
+            explosion.Scanned = true;
+            cave.Spawn(target, explosion);
         }
 
-        state.WechselExplo = 1;
+        RestartExplosions(cave);
         state.SoundEvents.Enqueue(SoundEvent.Explosion);
     }
 
-    /// <summary>anfang(): Eingangsaufbau — Explosion bei 92, Rockford-Spawn bei 99 (:667-677).
-    /// Die Türblinken-Animation selbst ist rein optisch und liegt in der Rendering-Schicht.</summary>
+    /// <summary>Setzt ALLE Explosionen der Cave auf die erste Phase zurück — auch die, die anderswo
+    /// schon halb abgelaufen sind. Im Original war wechsel_explo eine einzige globale Variable, und
+    /// jede neue Explosion setzte sie auf 1; alle Explosionen verschwanden dadurch gemeinsam. Diese
+    /// Kopplung ist bewusst erhalten (siehe ExplosionObject).</summary>
+    private static void RestartExplosions(Cave cave)
+    {
+        for (var i = 0; i < cave.Width * cave.Height; i++)
+        {
+            if (cave.Get(i) is ExplosionObject explosion)
+            {
+                explosion.ExplosionPhase = 1;
+            }
+        }
+    }
+
+    /// <summary>anfang(): Eingangsaufbau — Explosion bei 92, Rockford bei 99 (:667-677).
+    /// Die Türblinken-Animation selbst ist rein optisch und liegt beim EntranceObject.</summary>
     public static void Entrance(Cave cave, GameState state, int entranceIndex)
     {
         if (state.EntranceProgress == 92)
         {
-            cave.SetRaw(entranceIndex, 12);
-            state.WechselExplo = 1;
+            cave.Spawn(entranceIndex, new ExplosionObject());
+            RestartExplosions(cave);
             state.SoundEvents.Enqueue(SoundEvent.EntranceExplosion);
         }
 
         if (state.EntranceProgress == 99)
         {
-            cave.SetRaw(entranceIndex, 6);
+            cave.Spawn(entranceIndex, new RockfordObject());
         }
 
         state.EntranceProgress++;

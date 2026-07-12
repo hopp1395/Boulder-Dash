@@ -28,7 +28,10 @@ public sealed class InputState
     /// <summary>Bewegungsrichtung als Index-Offset ins Cave-Gitter (0 = steht).</summary>
     public int Direction { get; private set; }
 
-    public byte GrabModifier { get; private set; }
+    /// <summary>Greifen: Rockford räumt die Zielzelle, ohne selbst umzuziehen. Das Original mischte
+    /// dafür einen Modifikator (6) per XOR in die Kachelbytes — 0x86 ^ 6 == 0x80 machte aus "Rockford
+    /// zieht um" ohne weiteren Code "Zelle wird leer" (GAME.CPP, Mov_Rockford).</summary>
+    public bool IsGrabbing { get; private set; }
 
     /// <summary>status im Original: 0=zuletzt rechts, 1=zuletzt links (steuert die Sprite-Spiegelung).</summary>
     public byte FacingLeft { get; private set; }
@@ -65,9 +68,9 @@ public sealed class InputState
         UpdateDirection();
     }
 
-    public void PressGrab() => GrabModifier = 6;
+    public void PressGrab() => IsGrabbing = true;
 
-    public void ReleaseGrab() => GrabModifier = 0;
+    public void ReleaseGrab() => IsGrabbing = false;
 
     public void ReleaseRight()
     {
@@ -103,7 +106,7 @@ public sealed class InputState
         _left = false;
         _down = false;
         _up = false;
-        GrabModifier = 0;
+        IsGrabbing = false;
         Direction = 0;
     }
 

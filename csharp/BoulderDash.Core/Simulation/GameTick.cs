@@ -28,51 +28,12 @@ public sealed class GameTick
         clocks.Tick();
         camera.Step(cave.Width, cave.Height);
 
-        // boulder_lauf() (:611-646): Laufzyklus-Zähler, nur während aktiver Richtung.
-        // Original nutzt hier (anders als die clk_*-Zähler!) zwei getrennte Anweisungen —
-        // erst unbedingtes Inkrement, dann Prüfung des NEUEN Werts — macht Periode 6 (0..5),
-        // nicht das Postfix-in-Bedingung-Muster der Clocks (das Periode 7 ergäbe).
-        if (input.Direction != 0)
-        {
-            state.WechselBoulder++;
-            if (state.WechselBoulder > 5)
-            {
-                state.WechselBoulder = 0;
-            }
-        }
+        // sprites_wechsel()/boulder_lauf() (:593-646): Früher waren das drei globale Zähler
+        // (wechsel_vier, wechsel_boulder, wechsel_explo). Jetzt schaltet jedes Objekt seinen eigenen
+        // weiter — im selben Takt, also weiterhin synchron.
+        cave.Animate(input);
 
-        // sprites_wechsel() (:593-607): gemeinsamer Animationstakt Periode 8.
-        if (state.WechselVier++ > 6)
-        {
-            state.WechselVier = 0;
-        }
-
-        // Rockfords Ruheanimation nach BD1 (BDCFF-Objektspezifikation 0006 auf
-        // elmerproductions.com/sp/peterb/BDCFF/objects/0006.html): Zu Beginn jeder
-        // 8-Frame-Sequenz — also genau beim Umlauf von wechsel_vier — wird für einen stehenden
-        // Rockford neu ausgewürfelt, ob er in dieser Sequenz blinzelt (1/4) und ob das Fußtappen
-        // umschaltet (1/16). Beides läuft unabhängig voneinander (auf dem C64 steuern es die obere
-        // und die untere Körperhälfte getrennt, siehe CaveRenderer); in Bewegung tut er weder das
-        // eine noch das andere. Das DOS-Original hatte die Animation nie fertiggestellt —
-        // boulder_wait() (BOULDER.CPP:648-663) ist auskommentiert, seine Frames lagen brach.
-        if (state.WechselVier == 0 && input.Direction == 0)
-        {
-            state.RockfordBlinking = _random.Next(4) == 0;
-            if (_random.Next(16) == 0)
-            {
-                state.RockfordTapping = !state.RockfordTapping;
-            }
-        }
-
-        if (state.WechselExplo > 0)
-        {
-            state.WechselExplo++;
-        }
-
-        if (state.WechselExplo == 8)
-        {
-            state.WechselExplo = 7;
-        }
+        RollIdleAnimation(cave, input);
 
         // "pause" existiert im Original nur als nie gesetzter toter Code — hier weggelassen.
         if (clocks.Clk18 == 0 && !state.IsCaveEnded)
@@ -151,5 +112,40 @@ public sealed class GameTick
         }
 
         state.ScreenCoverActive = _cover.IsActive;
+    }
+
+    /// <summary>
+    /// Rockfords Ruheanimation nach BD1 (BDCFF 0006): Zu Beginn jeder 8-Frame-Sequenz — also genau
+    /// beim Umlauf des Animationstakts — wird für einen stehenden Rockford neu ausgewürfelt, ob er in
+    /// dieser Sequenz blinzelt (1/4) und ob das Fußtappen umschaltet (1/16). Beides läuft unabhängig
+    /// voneinander (auf dem C64 steuern es obere und untere Körperhälfte getrennt); in Bewegung tut
+    /// er weder das eine noch das andere. Das DOS-Original hatte die Animation nie fertiggestellt —
+    /// boulder_wait() (BOULDER.CPP:648-663) ist auskommentiert, seine Frames lagen brach.
+    ///
+    /// Gewürfelt wird hier und nicht im RockfordObject, und zwar auch dann, wenn Rockford noch gar
+    /// nicht auf dem Feld steht: Der Zufallsstrom ist derselbe, aus dem die Amoeba ihr Wachstum
+    /// zieht. Hinge die Zahl der Ziehungen daran, ob Rockford schon erschienen ist, verschöbe sich
+    /// die gesamte Folge — und mit ihr das Verhalten der ganzen Cave.
+    /// </summary>
+    private void RollIdleAnimation(Cave cave, InputState input)
+    {
+        if (cave.AnimationPhase != 0 || input.Direction != 0)
+        {
+            return;
+        }
+
+        var blinking = _random.Next(4) == 0;
+        var togglesTapping = _random.Next(16) == 0;
+
+        if (cave.FindRockford() is not { } rockford)
+        {
+            return;
+        }
+
+        rockford.Blinking = blinking;
+        if (togglesTapping)
+        {
+            rockford.Tapping = !rockford.Tapping;
+        }
     }
 }
