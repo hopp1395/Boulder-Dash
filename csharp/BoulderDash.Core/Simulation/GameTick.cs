@@ -14,11 +14,13 @@ public sealed class GameTick
 {
     private readonly CavePhysics _physics;
     private readonly ScreenCover _cover;
+    private readonly Random _random;
 
-    public GameTick(CavePhysics physics, ScreenCover cover)
+    public GameTick(CavePhysics physics, ScreenCover cover, Random random)
     {
         _physics = physics;
         _cover = cover;
+        _random = random;
     }
 
     public void Tick(Cave cave, GameState state, InputState input, Camera camera, Clocks clocks, int entranceIndex)
@@ -43,6 +45,23 @@ public sealed class GameTick
         if (state.WechselVier++ > 6)
         {
             state.WechselVier = 0;
+        }
+
+        // Rockfords Ruheanimation nach BD1 (BDCFF-Objektspezifikation 0006 auf
+        // elmerproductions.com/sp/peterb/BDCFF/objects/0006.html): Zu Beginn jeder
+        // 8-Frame-Sequenz — also genau beim Umlauf von wechsel_vier — wird für einen stehenden
+        // Rockford neu ausgewürfelt, ob er in dieser Sequenz blinzelt (1/4) und ob das Fußtappen
+        // umschaltet (1/16). Beides läuft unabhängig voneinander (auf dem C64 steuern es die obere
+        // und die untere Körperhälfte getrennt, siehe CaveRenderer); in Bewegung tut er weder das
+        // eine noch das andere. Das DOS-Original hatte die Animation nie fertiggestellt —
+        // boulder_wait() (BOULDER.CPP:648-663) ist auskommentiert, seine Frames lagen brach.
+        if (state.WechselVier == 0 && input.Direction == 0)
+        {
+            state.RockfordBlinking = _random.Next(4) == 0;
+            if (_random.Next(16) == 0)
+            {
+                state.RockfordTapping = !state.RockfordTapping;
+            }
         }
 
         if (state.WechselExplo > 0)

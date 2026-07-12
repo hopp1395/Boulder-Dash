@@ -77,17 +77,78 @@ public sealed class CaveRenderer
                 }
 
                 var element = cave.GetElement(x, y);
-                var (texture, source) = GetSpriteForElement(element, state, clocks, input);
-                var effects = element == Element.Rockford && input.FacingLeft == 1
-                    ? SpriteEffects.FlipHorizontally
-                    : SpriteEffects.None;
-                batch.Draw(texture, destination, source, Color.White, 0f, Vector2.Zero, effects, 0f);
+                if (element == Element.Rockford)
+                {
+                    DrawRockford(batch, destination, state, input);
+                    continue;
+                }
+
+                var (texture, source) = GetSpriteForElement(element, state, clocks);
+                batch.Draw(texture, destination, source, Color.White);
             }
         }
     }
 
-    /// <summary>Frameauswahl wie sprites_wechsel()/boulder_lauf() (BOULDER.CPP:593-646).</summary>
-    private (Texture2D Texture, Rectangle Source) GetSpriteForElement(Element element, GameState state, Clocks clocks, InputState input)
+    /// <summary>
+    /// Rockford: in Bewegung der Laufzyklus (boulder_lauf(), BOULDER.CPP:639-645), im Stand die
+    /// Ruheanimation aus BD1 (BDCFF-Objektspezifikation 0006). Blinzeln und Fußtappen sind dort
+    /// unabhängig voneinander, weil der C64 obere und untere Körperhälfte getrennt steuert — das
+    /// Bild wird deshalb auch hier aus zwei Hälften zusammengesetzt. Die Sprite-Frames sind genau
+    /// dafür gemacht: 14/15 ändern ausschließlich die Augenpartie, 16/17 ausschließlich Arme und
+    /// Füße, sonst sind alle vier deckungsgleich mit dem Ruheframe 13. Ob überhaupt geblinzelt
+    /// bzw. getappt wird, würfelt der GameTick pro Sequenz aus.
+    /// </summary>
+    private void DrawRockford(SpriteBatch batch, Rectangle destination, GameState state, InputState input)
+    {
+        if (input.Direction != 0)
+        {
+            // Gespiegelt wird nur der Laufzyklus — auch das Original vertauscht die Sprite-Pixel
+            // ausschließlich für die Frames 18-23 (boulder_lauf(), BOULDER.CPP:620-635), die
+            // nach vorn gerichteten Ruheframes bleiben ungespiegelt.
+            var (texture, source) = _atlas.GetFrameSprite(18 + state.WechselBoulder);
+            var effects = input.FacingLeft == 1 ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+            batch.Draw(texture, destination, source, Color.White, 0f, Vector2.Zero, effects, 0f);
+            return;
+        }
+
+        DrawHalf(batch, destination, EyeFrame(state), top: true);
+        DrawHalf(batch, destination, FootFrame(state), top: false);
+    }
+
+    /// <summary>Augenpartie der Ruheanimation: Frame 13 offen, 14 halb, 15 geschlossen. Ein
+    /// Blinzeln schließt die Augen einmal in der Mitte der 8-Frame-Sequenz und öffnet sie wieder.</summary>
+    private static int EyeFrame(GameState state) => state.RockfordBlinking
+        ? state.WechselVier switch
+        {
+            2 or 5 => 14,
+            3 or 4 => 15,
+            _ => 13,
+        }
+        : 13;
+
+    /// <summary>Fußpartie der Ruheanimation: Frame 13 im Stillstand, sonst der Tappzyklus aus
+    /// Frame 16 (Fuß unten) und 17 (Fuß angehoben) — zwei Schläge je Sequenz.</summary>
+    private static int FootFrame(GameState state) => state.RockfordTapping
+        ? (state.WechselVier / 2) % 2 == 0 ? 16 : 17
+        : 13;
+
+    /// <summary>Zeichnet die obere oder untere Hälfte eines 16x16-Frames an ihren Platz in der Kachel.</summary>
+    private void DrawHalf(SpriteBatch batch, Rectangle destination, int frame, bool top)
+    {
+        const int halfHeight = TileSize / 2;
+        var offset = top ? 0 : halfHeight;
+        var (texture, source) = _atlas.GetFrameSprite(frame);
+
+        batch.Draw(
+            texture,
+            new Rectangle(destination.X, destination.Y + offset, TileSize, halfHeight),
+            new Rectangle(source.X, source.Y + offset, TileSize, halfHeight),
+            Color.White);
+    }
+
+    /// <summary>Frameauswahl wie sprites_wechsel()/boulder_lauf() (BOULDER.CPP:593-646).
+    /// Rockford fehlt hier bewusst — er wird in DrawRockford gezeichnet.</summary>
+    private (Texture2D Texture, Rectangle Source) GetSpriteForElement(Element element, GameState state, Clocks clocks)
     {
         switch (element)
         {
@@ -115,10 +176,6 @@ public sealed class CaveRenderer
                 return state.EnchantedWallRunning
                     ? _atlas.GetFrameSprite(60 + state.WechselVier)
                     : _atlas.GetFrameSprite(11);
-            case Element.Rockford:
-                return input.Direction != 0
-                    ? _atlas.GetFrameSprite(18 + state.WechselBoulder)
-                    : _atlas.GetFrameSprite(13);
             case Element.BorderFill:
                 return _atlas.GetBorderFillSprite(state.WechselVier);
             default:

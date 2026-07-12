@@ -47,7 +47,7 @@ public class GameTickTests
         var random = new Random(1);
         var physics = new CavePhysics(random);
         var cover = new ScreenCover(random);
-        var tick = new GameTick(physics, cover);
+        var tick = new GameTick(physics, cover, random);
 
         // Eintretend mit EntranceProgress==92 löst die Explosion aus -> 93 Ticks nötig
         // (Tick 1 bringt EntranceProgress von 0 auf 1, ..., Tick 93 sieht beim Eintritt 92).
@@ -93,7 +93,7 @@ public class GameTickTests
         var random = new Random(1);
         var cover = new ScreenCover(random);
         cover.BeginUncover(data.Width, data.Height);
-        var tick = new GameTick(new CavePhysics(random), cover);
+        var tick = new GameTick(new CavePhysics(random), cover, random);
 
         // Während des Aufdeckens (69 Runden) und bis zum Startsignal (Tick 93 sieht beim Eintritt
         // EntranceProgress==92) rührt sich der Stein nicht.
@@ -130,7 +130,7 @@ public class GameTickTests
         state.EntranceProgress = 101; // Eingang fertig, Rockford lebt
         state.CaveTimeRemaining = 1;
         var random = new Random(1);
-        return (cave, state, new GameTick(new CavePhysics(random), new ScreenCover(random)), new Clocks());
+        return (cave, state, new GameTick(new CavePhysics(random), new ScreenCover(random), random), new Clocks());
     }
 
     /// <summary>BD1-Quirk (Vorbedingung für den Bonusüberlauf in GameSession.BeginLevelEndBonus): Die

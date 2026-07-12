@@ -220,7 +220,7 @@ public class AmoebaTests
         var data = BuildCaveData(5, 3, tiles, amoebaSlowGrowthSeconds: 50);
         var (cave, state) = Setup(data);
         var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
         var input = new InputState();
         var camera = new Camera();

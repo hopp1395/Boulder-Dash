@@ -411,6 +411,84 @@ public class CavePhysicsTests
         Assert.Equal(Element.Boulder, cave.GetElement(2, 2)); // der Stein fällt stattdessen weiter
     }
 
+    /// <summary>Geschoben wird nur waagerecht (BDCFF 0006: der Schub steht dort ausschließlich in den
+    /// Zweigen für links und rechts) — gegen einen Stein über oder unter sich drückt Rockford
+    /// vergeblich, auch wenn dahinter Platz ist und der Wurf gelänge.</summary>
+    [Fact]
+    public void Senkrecht_laesst_sich_kein_Stein_schieben()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 0, 0, 0, Wall, // Platz über dem Stein — waagerecht wäre hier geschoben worden
+            Wall, 0, 2, 0, Wall, // ruhender Stein
+            Wall, 0, 6, 0, Wall, // Rockford darunter
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
+        var input = new InputState();
+        input.PressUp(caveWidth: 5);
+
+        new CavePhysics(new AlwaysHits()).Regel(cave, state, input, new Camera());
+
+        Assert.Equal(Element.Rockford, cave.GetElement(2, 3)); // bleibt stehen
+        Assert.Equal(Element.Boulder, cave.GetElement(2, 2)); // Stein unverschoben
+        Assert.Equal(Element.Empty, cave.GetElement(2, 1)); // nichts nach oben geschoben
+        Assert.DoesNotContain(SoundEvent.PushBoulder, state.SoundEvents);
+    }
+
+    /// <summary>"Rockford is able to collect diamonds while they are falling" (BDCFF 0006) — anders als
+    /// beim Stein, den er im Fall nicht schieben kann, spielt das Fall-Momentum beim Einsammeln keine
+    /// Rolle. Deshalb prüft ProcessRockford das Zielobjekt ohne das Fall-Bit.</summary>
+    [Fact]
+    public void Fallender_Diamant_laesst_sich_einsammeln()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall, Wall,
+            Wall, 6, 0x43, 0, 0, Wall, // Diamant mit Fall-Momentum neben Rockford
+            Wall, Wall, 0, 0, 0, Wall, // darunter frei -> er fiele wirklich weiter
+            Wall, Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(6, 4, tiles, jewelQuota: 5, pointsBefore: 10, pointsAfter: 20));
+        var input = new InputState();
+        input.PressRight();
+
+        NewPhysics().Regel(cave, state, input, new Camera());
+
+        Assert.Equal(Element.Rockford, cave.GetElement(2, 1)); // Rockford steht auf dem Diamantenfeld
+        Assert.Equal(Element.Empty, cave.GetElement(2, 2)); // der Diamant ist nicht weitergefallen
+        Assert.Equal(1, state.JewelsCollected);
+        Assert.Equal(10, state.Score);
+        Assert.Contains(SoundEvent.CollectJewel, state.SoundEvents);
+    }
+
+    /// <summary>Der Ausgang lässt sich auch GREIFEN: Stage 3 setzt die Ausgangsflagge, bevor Stage 2 die
+    /// Bewegung wegen der Fire-Taste zurücknimmt (BDCFF 0006) — die Cave endet also, obwohl Rockford
+    /// stehen bleibt, und die Tür wird dabei durch Leerraum ersetzt.</summary>
+    [Fact]
+    public void Greifen_in_den_Ausgang_beendet_die_Cave_trotzdem()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 6, 11, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 3, tiles, jewelQuota: 1));
+        state.JewelsCollected = 1; // Quote erfüllt, der Ausgang ist offen
+        var input = new InputState();
+        input.PressRight();
+        input.PressGrab();
+
+        NewPhysics().Regel(cave, state, input, new Camera());
+
+        Assert.True(state.IsCaveEnded);
+        Assert.True(state.AdvanceToNextCave);
+        Assert.Equal(Element.Rockford, cave.GetElement(1, 1)); // bleibt stehen
+        Assert.Equal(Element.Empty, cave.GetElement(2, 1)); // die Tür wird zu Leerraum
+    }
+
     [Fact]
     public void Fallender_Stein_toetet_Rockford_per_Explosion()
     {

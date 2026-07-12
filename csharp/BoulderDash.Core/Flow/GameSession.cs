@@ -175,7 +175,7 @@ public sealed class GameSession
         _random = new Random(1);
         _physics = new CavePhysics(_random);
         _cover = new ScreenCover(_random);
-        _gameTick = new GameTick(_physics, _cover);
+        _gameTick = new GameTick(_physics, _cover, _random);
 
         State = new GameState();
         Input = new InputState();

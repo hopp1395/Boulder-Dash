@@ -47,7 +47,7 @@ public class GameTickAnimationTests
         var camera = new Camera();
         var clocks = new Clocks();
         var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
         var entranceIndex = 0;
 
         byte[] beobachtet = new byte[8];
@@ -71,7 +71,7 @@ public class GameTickAnimationTests
         var camera = new Camera();
         var clocks = new Clocks();
         var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
 
         byte[] beobachtet = new byte[9];
         for (var i = 0; i < 9; i++)
@@ -81,5 +81,91 @@ public class GameTickAnimationTests
         }
 
         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 0, 1 }, beobachtet);
+    }
+
+    /// <summary>Ruheanimation (BD1, BDCFF 0006): Blinzeln und Tappen werden ausschließlich zu Beginn
+    /// einer 8-Frame-Sequenz neu entschieden — innerhalb einer Sequenz stehen beide fest.</summary>
+    [Fact]
+    public void Ruheanimation_entscheidet_sich_nur_zum_Sequenzbeginn_neu()
+    {
+        var (cave, state, input, camera, clocks, tick) = Setup();
+
+        var vorherBlinzeln = state.RockfordBlinking;
+        var vorherTappen = state.RockfordTapping;
+        for (var i = 0; i < 400; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, 0);
+
+            if (state.RockfordBlinking != vorherBlinzeln || state.RockfordTapping != vorherTappen)
+            {
+                Assert.Equal(0, state.WechselVier);
+            }
+
+            vorherBlinzeln = state.RockfordBlinking;
+            vorherTappen = state.RockfordTapping;
+        }
+    }
+
+    /// <summary>"Can't tap or blink while moving": Bei aktiver Richtung wird gar nicht erst gewürfelt.</summary>
+    [Fact]
+    public void In_Bewegung_wird_weder_geblinzelt_noch_getappt()
+    {
+        var (cave, state, input, camera, clocks, tick) = Setup();
+        input.PressRight();
+
+        for (var i = 0; i < 400; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, 0);
+            Assert.False(state.RockfordBlinking);
+            Assert.False(state.RockfordTapping);
+        }
+    }
+
+    /// <summary>Die Wahrscheinlichkeiten der Spec: pro Sequenz blinzelt Rockford mit 1/4, und mit
+    /// 1/16 schlägt das Fußtappen um. Der Zufall hat einen festen Seed, das Ergebnis ist also
+    /// reproduzierbar; die Toleranzen fangen nur die Streuung der Stichprobe ab.</summary>
+    [Fact]
+    public void Ruheanimation_trifft_die_Wahrscheinlichkeiten_ein_Viertel_und_ein_Sechzehntel()
+    {
+        var (cave, state, input, camera, clocks, tick) = Setup();
+
+        const int sequenzen = 4000;
+        var blinzelSequenzen = 0;
+        var tappWechsel = 0;
+        var vorherTappen = state.RockfordTapping;
+
+        for (var i = 0; i < sequenzen * 8; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, 0);
+            if (state.WechselVier != 0)
+            {
+                continue;
+            }
+
+            if (state.RockfordBlinking)
+            {
+                blinzelSequenzen++;
+            }
+
+            if (state.RockfordTapping != vorherTappen)
+            {
+                tappWechsel++;
+            }
+
+            vorherTappen = state.RockfordTapping;
+        }
+
+        Assert.InRange(blinzelSequenzen / (double)sequenzen, 0.23, 0.27);
+        Assert.InRange(tappWechsel / (double)sequenzen, 0.05, 0.075);
+    }
+
+    private static (BoulderDash.Core.Simulation.Cave Cave, GameState State, InputState Input, Camera Camera, Clocks Clocks, GameTick Tick) Setup()
+    {
+        var data = BuildCaveData();
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+        var random = new Random(1);
+        return (cave, state, new InputState(), new Camera(), new Clocks(), new GameTick(new CavePhysics(random), new ScreenCover(random), random));
     }
 }
