@@ -10,6 +10,11 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class EnchantedWallObject : CaveObject
 {
+    public EnchantedWallObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.EnchantedWall;
 
     public override char MapGlyph => 'M';

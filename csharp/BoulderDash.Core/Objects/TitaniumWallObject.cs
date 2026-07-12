@@ -5,6 +5,11 @@ namespace BoulderDash.Core.Objects;
 /// <summary>Stahlwand — unzerstörbar und nicht abgerundet. Sie umschließt jede Cave.</summary>
 public sealed class TitaniumWallObject : CaveObject
 {
+    public TitaniumWallObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.TitaniumWall;
 
     public override char MapGlyph => 'W';

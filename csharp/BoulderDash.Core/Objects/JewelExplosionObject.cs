@@ -6,7 +6,8 @@ namespace BoulderDash.Core.Objects;
 /// Deshalb sind Schmetterlinge in vielen Caves die einzige Quelle der Diamantenquote.</summary>
 public sealed class JewelExplosionObject : ExplosionObject
 {
-    public JewelExplosionObject()
+    public JewelExplosionObject(Cave? cave = null)
+        : base(cave)
     {
         // Der Schmetterling sprengt im Original mit 0xCE - Bit 0x40 gesetzt (siehe CausedByCreature).
         CausedByCreature = true;
@@ -16,5 +17,5 @@ public sealed class JewelExplosionObject : ExplosionObject
 
     public override int DefaultFrame => 68;
 
-    public override CaveObject Remnant() => new JewelObject { Scanned = true };
+    public override CaveObject Remnant() => new JewelObject(Cave) { Scanned = true };
 }

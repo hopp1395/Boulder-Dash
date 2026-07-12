@@ -13,7 +13,8 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class ButterflyObject : CreatureObject
 {
-    public ButterflyObject()
+    public ButterflyObject(Cave? cave = null)
+        : base(cave)
     {
         Facing = CreatureFacing.Down;
     }
@@ -26,7 +27,7 @@ public sealed class ButterflyObject : CreatureObject
 
     public override bool PrefersCounterClockwise => false;
 
-    public override ExplosionObject CreateExplosion() => new JewelExplosionObject();
+    public override ExplosionObject CreateExplosion() => new JewelExplosionObject(Cave);
 
     public override TileAppearance Appearance(in RenderContext ctx) =>
         TileAppearance.Of(DefaultFrame + AnimationPhase);

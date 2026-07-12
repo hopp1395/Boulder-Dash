@@ -1,39 +1,36 @@
 namespace BoulderDash.Core.Simulation;
 
 /// <summary>
-/// Ein Tick entspricht einem Durchlauf der Original-Timer-ISR
-/// (timer_interrupt_service_routine, src/BOULDER.CPP:222-265) — enthält nur die
-/// spielrelevanten Teile (Zähler, Kamera-Scroll, Countdowns, Physik, Eingang/Ausgang,
-/// Dissolve). Die eigentliche Sprite-Auswahl (welches Frame gezeichnet wird) liegt in der
-/// Rendering-Schicht (CaveRenderer), aber die zugrundeliegenden Zähler (wechsel_vier,
-/// wechsel_boulder, wechsel_explo) laufen hier im Tick mit — im Original takten
-/// boulder_lauf()/sprites_wechsel() im selben ISR-Aufruf wie die Physik, ihre Geschwindigkeit
-/// ist daher an die Tickrate gekoppelt, nicht an die Bildwiederholrate.
+/// Ein Tick entspricht einem Durchlauf der Original-Timer-ISR (timer_interrupt_service_routine,
+/// src/BOULDER.CPP:222-265) — er enthält nur die spielrelevanten Teile: Zähler, Kamera-Scroll,
+/// Countdowns, Eingangsaufbau und Auf-/Zudecken.
+///
+/// Was die OBJEKTE tun, steht nicht hier: Der Tick gibt ihnen nur den Takt. Cave.NextFrame() schaltet
+/// die Animation aller Objekte weiter (im Original die globalen Zähler wechsel_vier/_boulder/_explo),
+/// Cave.NextState() lässt sie ihr Verhalten ausspielen (regel()). Beides taktet im Original derselbe
+/// ISR-Aufruf, die Animationsgeschwindigkeit hängt also an der Tickrate, nicht an der
+/// Bildwiederholrate.
 /// </summary>
 public sealed class GameTick
 {
-    private readonly CavePhysics _physics;
     private readonly ScreenCover _cover;
     private readonly Random _random;
 
-    public GameTick(CavePhysics physics, ScreenCover cover, Random random)
+    public GameTick(ScreenCover cover, Random random)
     {
-        _physics = physics;
         _cover = cover;
         _random = random;
     }
 
-    public void Tick(Cave cave, GameState state, InputState input, Camera camera, Clocks clocks, int entranceIndex)
+    public void Tick(Cave cave, Clocks clocks, int entranceIndex)
     {
+        var state = cave.State;
+
         clocks.Tick();
-        camera.Step(cave.Width, cave.Height);
+        cave.Camera.Step(cave.Width, cave.Height);
 
-        // sprites_wechsel()/boulder_lauf() (:593-646): Früher waren das drei globale Zähler
-        // (wechsel_vier, wechsel_boulder, wechsel_explo). Jetzt schaltet jedes Objekt seinen eigenen
-        // weiter — im selben Takt, also weiterhin synchron.
-        cave.Animate(input);
-
-        RollIdleAnimation(cave, input);
+        cave.NextFrame();
+        RollIdleAnimation(cave);
 
         // "pause" existiert im Original nur als nie gesetzter toter Code — hier weggelassen.
         if (clocks.Clk18 == 0 && !state.IsCaveEnded)
@@ -66,7 +63,7 @@ public sealed class GameTick
             }
 
             // Die Amoeba-Zeit läuft wie die Zaubermauer-Zeit in Spielsekunden, also tempo-unabhängig
-            // (siehe CaveSpeed) — nach ihrem Ablauf wächst die Amoeba schnell (CavePhysics.ProcessAmoeba).
+            // (siehe CaveSpeed) — nach ihrem Ablauf wächst die Amoeba schnell (AmoebaObject).
             if (state.EntranceProgress > 99 && state.AmoebaSlowGrowthRemaining > 0)
             {
                 state.AmoebaSlowGrowthRemaining--;
@@ -81,7 +78,7 @@ public sealed class GameTick
         if (!state.IsCaveEnded)
         {
             // Die Physik startet erst nach dem Levelaufbau: Höhle komplett aufgedeckt UND das
-            // Startsignal (die Eingangs-Explosion bei EntranceProgress==92, siehe Entrance())
+            // Startsignal (die Eingangs-Explosion bei EntranceProgress==92, siehe BuildEntrance())
             // ertönt — vorher fällt kein Stein und bewegt sich kein Gegner. Das DOS-Original
             // wartete ähnlich, nur mit anderer Schwelle ("anfang_var>65", BOULDER.CPP:255).
             // Beim ZUDECKEN am Cave-Ende (Covering) läuft die Physik dagegen weiter — wie im
@@ -89,17 +86,17 @@ public sealed class GameTick
             var buildUpDone = _cover.Phase != ScreenCoverPhase.Uncovering && state.EntranceProgress > 92;
             if (clocks.Clk1 == 0 && buildUpDone)
             {
-                _physics.Regel(cave, state, input, camera);
+                cave.NextState();
             }
 
             if (state.EntranceProgress < 101)
             {
-                CavePhysics.Entrance(cave, state, entranceIndex);
+                cave.BuildEntrance(entranceIndex);
             }
 
             if (state.JewelsCollected >= state.JewelQuota)
             {
-                CavePhysics.Exit(state);
+                cave.OpenEscapeDoor();
             }
         }
 
@@ -127,9 +124,9 @@ public sealed class GameTick
     /// zieht. Hinge die Zahl der Ziehungen daran, ob Rockford schon erschienen ist, verschöbe sich
     /// die gesamte Folge — und mit ihr das Verhalten der ganzen Cave.
     /// </summary>
-    private void RollIdleAnimation(Cave cave, InputState input)
+    private void RollIdleAnimation(Cave cave)
     {
-        if (cave.AnimationPhase != 0 || input.Direction != 0)
+        if (cave.AnimationPhase != 0 || cave.Input.Direction != 0)
         {
             return;
         }

@@ -6,6 +6,11 @@ namespace BoulderDash.Core.Objects;
 /// daneben Platz ist. Sprengbar.</summary>
 public sealed class WallObject : CaveObject
 {
+    public WallObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.Wall;
 
     public override char MapGlyph => 'w';

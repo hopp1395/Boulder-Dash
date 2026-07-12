@@ -8,6 +8,11 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class JewelObject : FallingObject
 {
+    public JewelObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.Jewel;
 
     public override char MapGlyph => 'd';
@@ -16,7 +21,7 @@ public sealed class JewelObject : FallingObject
 
     public override SoundEvent LandingSound => SoundEvent.JewelLand;
 
-    public override FallingObject EnchantedWallProduct() => new BoulderObject { Falling = true };
+    public override FallingObject EnchantedWallProduct() => new BoulderObject(Cave) { Falling = true };
 
     public override TileAppearance Appearance(in RenderContext ctx) =>
         TileAppearance.Of(DefaultFrame + AnimationPhase);

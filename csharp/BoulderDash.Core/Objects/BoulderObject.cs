@@ -8,6 +8,11 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class BoulderObject : FallingObject
 {
+    public BoulderObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.Boulder;
 
     public override char MapGlyph => 'r';
@@ -16,5 +21,5 @@ public sealed class BoulderObject : FallingObject
 
     public override SoundEvent LandingSound => SoundEvent.BoulderLand;
 
-    public override FallingObject EnchantedWallProduct() => new JewelObject { Falling = true };
+    public override FallingObject EnchantedWallProduct() => new JewelObject(Cave) { Falling = true };
 }

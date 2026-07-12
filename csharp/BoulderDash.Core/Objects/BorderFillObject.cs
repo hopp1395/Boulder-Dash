@@ -13,6 +13,11 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class BorderFillObject : CaveObject
 {
+    public BorderFillObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.BorderFill;
 
     public override int DefaultFrame => 76;

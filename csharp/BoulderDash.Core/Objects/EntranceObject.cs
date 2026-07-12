@@ -9,6 +9,11 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class EntranceObject : CaveObject
 {
+    public EntranceObject(Cave? cave = null)
+        : base(cave)
+    {
+    }
+
     public override Element Element => Element.Entrance;
 
     public override char MapGlyph => 'P';
