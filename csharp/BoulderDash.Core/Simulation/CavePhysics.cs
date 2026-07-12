@@ -396,7 +396,11 @@ public sealed class CavePhysics
                 state.IsCaveEnded = true;
                 state.AdvanceToNextCave = true;
                 state.EntranceProgress = 0;
-                goto case 3;
+
+                // Rockford zieht nur in die Tür — der Ausgang ist KEIN Diamant. Das DOS-Original
+                // sprang hier auf "case 3" durch und wertete das Betreten des Ausgangs als
+                // eingesammelten Diamanten (Zähler, Punkte und Sammel-Sound inklusive).
+                goto case 0;
             case 3:
                 state.JewelsCollected++;
                 if (state.JewelsCollected >= state.JewelQuota)

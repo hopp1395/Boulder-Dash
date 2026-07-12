@@ -271,6 +271,33 @@ public class CavePhysicsTests
         Assert.Equal(20, state.Score); // Quote mit diesem Diamanten erreicht -> sofort neuer Punktwert
     }
 
+    /// <summary>Das Betreten des Ausgangs beendet die Cave, zählt aber NICHT als eingesammelter Diamant.
+    /// Das DOS-Original sprang hier auf den Diamant-Fall durch und gutschrieb Zähler, Punkte und Sound.</summary>
+    [Fact]
+    public void Ausgang_beendet_die_Cave_ohne_als_Diamant_zu_zaehlen()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 6, 11, 0, Wall, // Rockford direkt vor dem Ausgang
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 3, tiles, jewelQuota: 1, pointsBefore: 10, pointsAfter: 20));
+        state.JewelsCollected = 1; // Quote bereits erfüllt, der Ausgang ist offen
+        state.Score = 20;
+        var input = new InputState();
+        input.PressRight();
+
+        NewPhysics().Regel(cave, state, input, new Camera());
+
+        Assert.True(state.IsCaveEnded);
+        Assert.True(state.AdvanceToNextCave);
+        Assert.Equal(Element.Rockford, cave.GetElement(2, 1)); // steht in der Tür
+        Assert.Equal(1, state.JewelsCollected); // kein zusätzlicher Diamant
+        Assert.Equal(20, state.Score); // keine zusätzlichen Punkte
+        Assert.DoesNotContain(SoundEvent.CollectJewel, state.SoundEvents);
+    }
+
     [Fact]
     public void Greifen_ohne_Bewegen_laesst_Rockford_an_Ort_und_Stelle()
     {
