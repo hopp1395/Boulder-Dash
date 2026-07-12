@@ -462,19 +462,20 @@ public class CavePhysicsTests
         [
             Wall, Wall, Wall, Wall, Wall,
             Wall, 0, 0, 0, Wall,
-            Wall, 6, 1, 0, Wall, // Rockford in Zeile 2
+            Wall, 0, 0, 0, Wall,
+            Wall, 6, 1, 0, Wall, // Rockford in Zeile 3
             Wall, Wall, Wall, Wall, Wall,
         ];
-        var (cave, state) = Setup(BuildCaveData(5, 4, tiles));
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
         var input = new InputState();
         input.PressRight();
         var camera = new Camera();
-        camera.ResetTo(0, 1); // camera.Y=1>0, Rockford-Zeile=2 -> camera.Y+1==row trifft zu
+        camera.ResetTo(0, 1); // camera.Y=1>0, Rockford-Zeile=3 -> camera.Y+2==row trifft zu
 
         NewPhysics().Regel(cave, state, input, camera);
 
-        Assert.Equal(Element.Empty, cave.GetElement(1, 2)); // Rockford ist weitergegangen
-        Assert.Equal(Element.Rockford, cave.GetElement(2, 2)); // Erde weggegraben
+        Assert.Equal(Element.Empty, cave.GetElement(1, 3)); // Rockford ist weitergegangen
+        Assert.Equal(Element.Rockford, cave.GetElement(2, 3)); // Erde weggegraben
         Assert.Equal((sbyte)-5, camera.Rely); // und das Scroll-Ziel steht trotzdem
     }
 
