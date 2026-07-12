@@ -689,6 +689,73 @@ public class GameSessionTests
         Assert.Equal(score, session.State.Score);
     }
 
+    /// <summary>Herauszoomen rückt Rockford in die Mitte des neuen Sichtfensters, statt das Fenster nur
+    /// nach rechts und unten wachsen zu lassen — sonst driftete er an den Rand. Gewählt ist die große
+    /// Prüfstand-Cave, weil in ihr überhaupt Platz ist, mittig zu stehen: Bei einer 40x22-Cave klemmt
+    /// die Kamera in jedem Sichtfenster ab 40 Spalten ohnehin auf 0.</summary>
+    [Fact]
+    public void SetViewport_rueckt_Rockford_in_die_Mitte()
+    {
+        var session = StartBigTestCave();
+
+        // Bis Rockford aus dem Eingang gestiegen ist (der Aufbau läuft schon während des Aufdeckens).
+        for (var frame = 0; frame < 900 && session.Cave!.FindRockford() is null; frame++)
+        {
+            session.Update(1.0 / 60.0);
+        }
+
+        var rockford = session.Cave!.FindRockford();
+        Assert.NotNull(rockford);
+
+        var viewport = new ViewportSize(80, 44);
+        session.SetViewport(viewport);
+
+        AssertCentred(session, rockford.Index, viewport);
+    }
+
+    /// <summary>Steht Rockford noch nicht auf dem Feld (Eingangsaufbau) oder nicht mehr (nach seinem
+    /// Tod), zentriert der Zoom den Eingang — dieselbe Stelle wie beim Cave-Start.</summary>
+    [Fact]
+    public void SetViewport_zentriert_den_Eingang_solange_Rockford_fehlt()
+    {
+        var session = StartBigTestCave();
+        Assert.Null(session.Cave!.FindRockford()); // der Eingang platzt erst später auf
+
+        var viewport = new ViewportSize(80, 44);
+        session.SetViewport(viewport);
+
+        AssertCentred(session, session.Cave.FindFirstIndexOf(Element.Entrance), viewport);
+    }
+
+    /// <summary>Die große Prüfstand-Cave (400x400) im Spiel. Sie ist für die Zoom-Tests die richtige,
+    /// weil in ihr überhaupt Platz ist, mittig zu stehen: Bei einer 40x22-Cave klemmt die Kamera in
+    /// jedem Sichtfenster ab 40 Spalten ohnehin auf 0.</summary>
+    private static GameSession StartBigTestCave()
+    {
+        var session = NewRealSession();
+        session.MenuTestMode();
+        session.TestMenuSelect(GameSession.TestCaves.Count - 1); // cave-test-14, 400x400
+        session.TestMenuStart();
+
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+        return session;
+    }
+
+    /// <summary>Die Kachel steht mittig im Sichtfenster — geklemmt am Cave-Rand (Camera.CenterOn); der
+    /// Eingang der großen Prüfstand-Cave liegt links, waagerecht klemmt es dort also.</summary>
+    private static void AssertCentred(GameSession session, int index, ViewportSize viewport)
+    {
+        var cave = session.Cave!;
+
+        Assert.Equal(
+            Math.Clamp((index % cave.Width) - (viewport.Columns / 2), 0, cave.Width - viewport.Columns),
+            session.Camera.X);
+        Assert.Equal(
+            Math.Clamp((index / cave.Width) - (viewport.Rows / 2), 0, cave.Height - viewport.Rows),
+            session.Camera.Y);
+        Assert.Equal(178, session.Camera.Y); // senkrecht ist Platz: hier zentriert es wirklich
+    }
+
     /// <summary>Der Eingang liegt beim Cave-Start mittig im Sichtfenster — auch in einem größeren.</summary>
     [Fact]
     public void Cave_Start_zentriert_den_Eingang_im_gewaehlten_Sichtfenster()

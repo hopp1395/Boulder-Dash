@@ -758,17 +758,28 @@ public sealed class GameSession
         return true;
     }
 
-    /// <summary>Spielflächen-Zoom: stellt die Sichtfenstergröße ein (siehe ViewportSize). Läuft
-    /// gerade eine Cave, wird die Kamera neu geklemmt; steht Rockford danach außerhalb des
-    /// Sichtfensters, holen ihn die Scroll-Auslöser im nächsten Cave-Scan kachelweise ein. Der
-    /// Simulationszustand bleibt unberührt — das Sichtfenster ist reine Darstellung.</summary>
+    /// <summary>
+    /// Spielflächen-Zoom: stellt die Sichtfenstergröße ein (siehe ViewportSize). Läuft gerade eine
+    /// Cave, rückt die Kamera Rockford dabei in die Mitte des neuen Sichtfensters — sonst driftete er
+    /// beim Herauszoomen an den Rand, weil das Fenster nur nach rechts und unten wüchse. „Nach
+    /// Möglichkeit" mittig: Am Cave-Rand klemmt die Kamera wie immer (Camera.CenterOn), und ist das
+    /// Sichtfenster größer als die Cave, steht sie ganz auf 0.
+    ///
+    /// Steht Rockford gerade nicht auf dem Feld (Eingangsaufbau, nach seinem Tod), zentriert der Zoom
+    /// den Eingang — dieselbe Stelle, auf die auch der Cave-Start die Kamera setzt.
+    ///
+    /// Der Simulationszustand bleibt unberührt: Das Sichtfenster ist reine Darstellung.
+    /// </summary>
     public void SetViewport(ViewportSize viewport)
     {
         Camera.Viewport = viewport;
-        if (Cave is not null)
+        if (Cave is null)
         {
-            Camera.Clamp(Cave.Width, Cave.Height);
+            return;
         }
+
+        var centre = Cave.FindRockford()?.Index ?? _entranceIndex;
+        Camera.CenterOn(centre % Cave.Width, centre / Cave.Width, Cave.Width, Cave.Height);
     }
 
     /// <summary>Cave-Explore umschalten (E-Taste während des Spiels, siehe ExploreMap). Die Karte
