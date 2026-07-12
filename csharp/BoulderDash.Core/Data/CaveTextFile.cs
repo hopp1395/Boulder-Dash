@@ -15,6 +15,9 @@ public static class CaveTextFile
     private const int ViewportWidth = 20;
     private const int ViewportHeight = 12;
 
+    /// <summary>Farben je Cave — ein Sprite-Pixel trägt einen Palettenindex 0-3 (siehe SpriteTextFile).</summary>
+    private const int PaletteSize = 4;
+
     public static CaveData Parse(string text, string sourceName)
     {
         var caveFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -84,11 +87,7 @@ public static class CaveTextFile
             _ => throw new FormatException($"{sourceName}: Kind muss 'Normal' oder 'Intermission' sein, gefunden: '{kind}'."),
         };
 
-        var colorsText = RequireField(rulesFields, "Colors", sourceName).Split(',', StringSplitOptions.TrimEntries);
-        if (colorsText.Length != 3)
-        {
-            throw new FormatException($"{sourceName}: Colors muss genau 3 kommagetrennte Werte haben.");
-        }
+        var colors = ParseColors(sourceName, RequireField(rulesFields, "Colors", sourceName));
 
         var letter = char.ToUpperInvariant(RequireField(caveFields, "Cave", sourceName)[0]);
 
@@ -125,9 +124,7 @@ public static class CaveTextFile
             Height = height,
             JewelQuota = RequireByte(rulesFields, "JewelsNeeded", sourceName),
             TimeSeconds = RequireByte(rulesFields, "CaveTime", sourceName),
-            // Konvention des ursprünglichen 1999er-Ports (empirisch aus LEVEL.BIN übernommen):
-            // BaseColors=[0,1,Farbe2,Farbe1] - die dritte BD1-Rohfarbe bleibt ungenutzt.
-            BaseColors = [0, 1, ParseByte(colorsText[1], sourceName, "Colors"), ParseByte(colorsText[0], sourceName, "Colors")],
+            Colors = colors,
             CameraStartX = (byte)cameraStartX,
             CameraStartY = (byte)cameraStartY,
             EnchantedWallSeconds = RequireByte(rulesFields, "MagicWallTime", sourceName),
@@ -139,6 +136,30 @@ public static class CaveTextFile
             GameSpeed = CaveSpeed.FromScanMilliseconds(RequireInt(rulesFields, "GameSpeed", sourceName, 20, 1000)),
             Tiles = tiles,
         };
+    }
+
+    /// <summary>
+    /// Liest das Colors-Feld: 4 RGB-Werte (#RRGGBB) in Palettenreihenfolge, also die Farben der
+    /// Palettenindizes 0-3, mit denen die Sprites der Cave eingefärbt werden (siehe Palette).
+    /// </summary>
+    private static Rgb[] ParseColors(string sourceName, string field)
+    {
+        var tokens = field.Split(',', StringSplitOptions.TrimEntries);
+        if (tokens.Length != PaletteSize)
+        {
+            throw new FormatException($"{sourceName}: Colors muss genau {PaletteSize} kommagetrennte RGB-Werte haben.");
+        }
+
+        var colors = new Rgb[PaletteSize];
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            if (!Rgb.TryParse(tokens[i], out colors[i]))
+            {
+                throw new FormatException($"{sourceName}: 'Colors' erwartet RGB-Werte im Format #RRGGBB, gefunden: '{tokens[i]}'.");
+            }
+        }
+
+        return colors;
     }
 
     private static byte[] ParseMap(string sourceName, List<(string Line, int LineNumber)> mapLines, byte width, byte height)

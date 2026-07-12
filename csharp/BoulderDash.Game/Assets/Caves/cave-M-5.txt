@@ -18,7 +18,7 @@ MagicWallTime   = 140
 AmoebaTime      = 140
 JewelValue      = 5
 JewelValueExtra = 8
-Colors          = 6, 8, 13
+Colors          = #202020, #FFFFFF, #BA7120, #2020BA
 
 [Map]
 # Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.

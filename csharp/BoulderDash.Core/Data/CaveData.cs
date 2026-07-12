@@ -18,7 +18,8 @@ public sealed class CaveData
     public required byte Height { get; init; }
     public required byte JewelQuota { get; init; }
     public required byte TimeSeconds { get; init; }
-    public required byte[] BaseColors { get; init; }
+    /// <summary>Die 4 Farben der Cave-Palette (Palettenindex 0-3), als RGB-Werte aus der Cave-Datei.</summary>
+    public required Rgb[] Colors { get; init; }
     public required byte CameraStartX { get; init; }
     public required byte CameraStartY { get; init; }
     public required byte EnchantedWallSeconds { get; init; }

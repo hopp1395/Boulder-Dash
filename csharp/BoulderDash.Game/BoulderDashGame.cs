@@ -248,7 +248,7 @@ public class BoulderDashGame : XnaGame
         {
             if (_paletteContext != PaletteContext.Menu)
             {
-                _spriteAtlas.ApplyPalette(Palette.BuildCavePalette(TestMenuRenderer.MenuBaseColors));
+                _spriteAtlas.ApplyPalette(TestMenuRenderer.MenuColors);
                 _paletteContext = PaletteContext.Menu;
             }
 
@@ -264,7 +264,8 @@ public class BoulderDashGame : XnaGame
         var caveChanged = !ReferenceEquals(_session.CurrentCaveData, _lastPaletteCaveData);
         if (_paletteContext != PaletteContext.Cave || caveChanged || !Equals(overrideColor, _lastExitOverride))
         {
-            var palette = Palette.BuildCavePalette(_session.CurrentCaveData.BaseColors);
+            // Kopie: die Farbe 0 wird für den blinkenden Ausgang ersetzt, die Cave-Daten bleiben unberührt.
+            var palette = _session.CurrentCaveData.Colors.ToArray();
             if (overrideColor is { } color)
             {
                 palette[0] = color;

@@ -36,7 +36,7 @@ MagicWallTime   = 0
 AmoebaTime      = 0
 JewelValue      = 10
 JewelValueExtra = 15
-Colors          = 8, 11, 9
+Colors          = #202020, #FFFFFF, #717171, #BA7120
 
 [Map]
 WWWWWWWWWWWWWWWWWWWW

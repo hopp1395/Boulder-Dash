@@ -28,7 +28,7 @@ public class AmoebaTests
         Height = (byte)height,
         JewelQuota = 0,
         TimeSeconds = 99,
-        BaseColors = [0, 1, 2, 3],
+        Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)],
         CameraStartX = 0,
         CameraStartY = 0,
         EnchantedWallSeconds = 0,
