@@ -47,5 +47,5 @@ W.wwwwwwwwwww.w...w.r.w .d....r..r.r...W
 W r.......w.r.w.d.w..rw....r...r.......W
 W rP......w. rw.r.w...w..r......r.rr...W
 W. ..r....w...w...w.r.w ........r.rr...W
-W....rd..rw...w...w...w..r.rd......r...W
+W....rd..rw...w...w...w..r.rd......r...X
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW

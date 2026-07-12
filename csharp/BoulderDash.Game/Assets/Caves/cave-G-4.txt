@@ -32,7 +32,7 @@ W......  .r.  ... .rPr. ...   .. .r....W
 W.r. ... .  ...... .. r..r.... ...d. . W
 W....... .  ..r. ...  r.. ..wwwwwwwwwwwW
 W . d...... ..r. ... r..r. ..r.  r.....W
-Wwwwwwwwwwwww. r..r.... ...r......r.rr.W
+Wwwwwwwwwwwww. r..r.... ...r......r.rr.X
 W... ..r. ... ..r.  ..r.  ... ....r.rr.W
 W... ..r...r.... ...r......r.r..  r..r.W
 W  ..  ..r. ..r. .... .. ..r.rF...... .W

@@ -31,7 +31,7 @@ public class CaveColorsTests
 
         [Map]
         WWW
-        WPW
+        WPX
         WWW
         """;
 
