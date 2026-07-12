@@ -9,7 +9,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class EscapeDoorObject : CaveObject
 {
-    public EscapeDoorObject(Cave? cave = null)
+    public EscapeDoorObject(Cave cave)
         : base(cave)
     {
     }

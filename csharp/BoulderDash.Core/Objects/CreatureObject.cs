@@ -21,7 +21,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public abstract class CreatureObject : CaveObject
 {
-    protected CreatureObject(Cave? cave)
+    protected CreatureObject(Cave cave)
         : base(cave)
     {
     }

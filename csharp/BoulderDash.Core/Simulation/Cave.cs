@@ -69,6 +69,28 @@ public sealed class Cave
         }
     }
 
+    /// <summary>Die leere Höhle: ein Gitter ohne Kacheln.</summary>
+    private Cave()
+    {
+        _tiles = [];
+        State = new GameState();
+        Input = new InputState();
+        Camera = new Camera();
+        Random = new Random(0);
+    }
+
+    /// <summary>
+    /// Die Höhle der Heimatlosen. Ein Cave-Objekt hat IMMER eine Cave — sonst wüsste es nicht, wo es
+    /// steht und wen es neben sich hat. Zwei Objekte gehören aber zu keinem Spielgitter: die
+    /// Prototypen (CaveObjects.Prototype), die nur nach ihrer Kartenglyphe und ihrem Standardframe
+    /// gefragt werden, und der Rand-Füllstein der Bildschirm-Verdeckung, der über dem Gitter liegt
+    /// statt darin. Sie leben hier.
+    ///
+    /// Diese Höhle hat kein Gitter: Wer hier nach einem Nachbarn fragt, greift ins Leere und fliegt
+    /// auf die Nase. Genau so soll es sein — ein Prototyp gehört nie in ein echtes Gitter.
+    /// </summary>
+    public static Cave Nowhere { get; } = new();
+
     public int IndexOf(int x, int y) => (y * Width) + x;
 
     public CaveObject Get(int index) => _tiles[index];

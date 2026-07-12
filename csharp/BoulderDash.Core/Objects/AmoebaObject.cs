@@ -23,7 +23,7 @@ public sealed class AmoebaObject : CaveObject
     /// nicht pro Cave einstellbar); das DOS-Original wandelte schon ab 96 Zellen um (BOULDER.CPP:951).</summary>
     public const int MaxSize = 200;
 
-    public AmoebaObject(Cave? cave = null)
+    public AmoebaObject(Cave cave)
         : base(cave)
     {
     }

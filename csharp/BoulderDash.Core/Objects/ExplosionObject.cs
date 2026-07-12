@@ -19,7 +19,7 @@ public class ExplosionObject : CaveObject
     /// <summary>Phase, in der die Explosion vergeht und die Kachel freigibt.</summary>
     public const byte FinalPhase = 7;
 
-    public ExplosionObject(Cave? cave = null)
+    public ExplosionObject(Cave cave)
         : base(cave)
     {
     }

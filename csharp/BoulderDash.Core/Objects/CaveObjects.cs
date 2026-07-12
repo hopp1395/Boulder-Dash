@@ -13,9 +13,10 @@ public static class CaveObjects
 
     /// <summary>
     /// Der Prototyp eines Elements — NUR für die unveränderlichen Angaben (MapGlyph, DefaultFrame).
-    /// Er gehört zu keiner Cave und darf niemals in ein Gitter gelegt werden: Cave-Objekte tragen
-    /// Zustand und brauchen ihre Welt; ein geteilter Prototyp würde beides vermischen. Er wehrt sich
-    /// dagegen — jeder Zugriff auf seine Cave wirft. Fürs Gitter ist <see cref="Create"/> zuständig.
+    /// Er darf niemals in ein Gitter gelegt werden: Cave-Objekte tragen Zustand, ein geteilter
+    /// Prototyp würde ihn über alle Kacheln hinweg vermischen. Er lebt deshalb in
+    /// <see cref="Cave.Nowhere"/> — einer Höhle ohne Gitter, in der jeder Griff nach einem Nachbarn
+    /// ins Leere geht. Fürs Spielgitter ist <see cref="Create"/> zuständig.
     /// </summary>
     public static CaveObject Prototype(Element element) => Prototypes[(byte)element];
 
@@ -47,7 +48,7 @@ public static class CaveObjects
         return created;
     }
 
-    private static CaveObject New(Cave? cave, Element element) => element switch
+    private static CaveObject New(Cave cave, Element element) => element switch
     {
         Element.Empty => new EmptyObject(cave),
         Element.Earth => new EarthObject(cave),
@@ -73,7 +74,7 @@ public static class CaveObjects
         var prototypes = new CaveObject[16];
         for (var i = 0; i < prototypes.Length; i++)
         {
-            prototypes[i] = New(null, (Element)i);
+            prototypes[i] = New(Cave.Nowhere, (Element)i);
         }
 
         return prototypes;

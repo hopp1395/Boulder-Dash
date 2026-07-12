@@ -6,7 +6,7 @@ namespace BoulderDash.Core.Objects;
 /// nichts als Leerraum. Startet nach links blickend — der Vorgabewert von CreatureFacing.</summary>
 public sealed class FireflyObject : CreatureObject
 {
-    public FireflyObject(Cave? cave = null)
+    public FireflyObject(Cave cave)
         : base(cave)
     {
     }

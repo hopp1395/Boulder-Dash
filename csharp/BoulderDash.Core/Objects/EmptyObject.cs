@@ -7,7 +7,7 @@ namespace BoulderDash.Core.Objects;
 /// ein Objekt der eigenen Bewegung im selben Scan hinterherfallen.</summary>
 public sealed class EmptyObject : CaveObject
 {
-    public EmptyObject(Cave? cave = null)
+    public EmptyObject(Cave cave)
         : base(cave)
     {
     }

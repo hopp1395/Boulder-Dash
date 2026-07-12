@@ -13,7 +13,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class BorderFillObject : CaveObject
 {
-    public BorderFillObject(Cave? cave = null)
+    public BorderFillObject(Cave cave)
         : base(cave)
     {
     }

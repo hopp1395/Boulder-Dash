@@ -10,7 +10,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class EnchantedWallObject : CaveObject
 {
-    public EnchantedWallObject(Cave? cave = null)
+    public EnchantedWallObject(Cave cave)
         : base(cave)
     {
     }

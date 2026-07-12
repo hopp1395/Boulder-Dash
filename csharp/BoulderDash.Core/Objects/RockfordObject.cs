@@ -22,7 +22,7 @@ public sealed class RockfordObject : CaveObject
     /// <summary>Periode des Laufzyklus (wechsel_boulder): sechs Frames, 18-23.</summary>
     public const int WalkPeriod = 6;
 
-    public RockfordObject(Cave? cave = null)
+    public RockfordObject(Cave cave)
         : base(cave)
     {
     }

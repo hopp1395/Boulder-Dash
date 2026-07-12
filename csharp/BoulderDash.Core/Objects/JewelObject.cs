@@ -8,7 +8,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class JewelObject : FallingObject
 {
-    public JewelObject(Cave? cave = null)
+    public JewelObject(Cave cave)
         : base(cave)
     {
     }

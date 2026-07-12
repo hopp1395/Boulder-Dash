@@ -30,21 +30,17 @@ public abstract class CaveObject
     /// BOULDER.CPP:593-607).</summary>
     public const int AnimationPeriod = 8;
 
-    private readonly Cave? _cave;
-
-    /// <param name="cave">Die Höhle, in der dieses Objekt lebt. Ohne Angabe entsteht ein PROTOTYP:
-    /// eine Instanz, die nur nach ihren unveränderlichen Angaben gefragt wird (Kartenglyphe,
-    /// Standardframe) und nie in ein Gitter kommt — siehe CaveObjects.Prototype.</param>
-    protected CaveObject(Cave? cave = null)
+    /// <param name="cave">Die Höhle, in der dieses Objekt lebt — Pflicht. Ein Objekt ohne Welt könnte
+    /// weder seine Nachbarn ansehen noch sich bewegen. Was zu keinem Spielgitter gehört (Prototypen,
+    /// der Rand-Füllstein der Verdeckung), bekommt <see cref="Simulation.Cave.Nowhere"/>.</param>
+    protected CaveObject(Cave cave)
     {
-        _cave = cave;
+        Cave = cave;
     }
 
     /// <summary>Die Höhle, in der dieses Objekt lebt — sein Zugang zu den Nachbarkacheln und zu dem,
     /// was der ganzen Cave gehört (Punkte, Sound-Ereignisse, Rockfords Steuerung, die Kamera).</summary>
-    protected Cave Cave => _cave ?? throw new InvalidOperationException(
-        $"{GetType().Name} ist ein Prototyp und gehört zu keiner Cave (siehe CaveObjects.Prototype). " +
-        "Prototypen dürfen nie in ein Gitter gelegt werden — dafür ist CaveObjects.Create da.");
+    protected Cave Cave { get; }
 
     /// <summary>Wo dieses Objekt im Gitter steht. Die Cave pflegt den Wert bei jedem Setzen; ein
     /// Objekt, das sich bewegt, behält seine Instanz und bekommt nur einen neuen Index.</summary>

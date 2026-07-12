@@ -13,7 +13,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public sealed class ButterflyObject : CreatureObject
 {
-    public ButterflyObject(Cave? cave = null)
+    public ButterflyObject(Cave cave)
         : base(cave)
     {
         Facing = CreatureFacing.Down;

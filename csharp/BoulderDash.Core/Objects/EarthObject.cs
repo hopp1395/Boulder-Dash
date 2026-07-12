@@ -5,7 +5,7 @@ namespace BoulderDash.Core.Objects;
 /// <summary>Erde. Rockford gräbt sich hindurch, die Amoeba wächst hinein — sonst passiert nichts.</summary>
 public sealed class EarthObject : CaveObject
 {
-    public EarthObject(Cave? cave = null)
+    public EarthObject(Cave cave)
         : base(cave)
     {
     }

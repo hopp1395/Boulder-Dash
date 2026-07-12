@@ -22,8 +22,9 @@ public sealed class CaveRenderer
     public const int StatusLineHeight = 8;
 
     /// <summary>Womit eine verdeckte Kachel überzeichnet wird — der durchlaufende Rand-Füllstein.
-    /// Er gehört nicht zum Cave-Gitter, deshalb hält der Renderer ihn selbst.</summary>
-    private readonly BorderFillObject _cover = new();
+    /// Er liegt ÜBER dem Gitter statt darin und gehört deshalb zu keiner Höhle (Cave.Nowhere);
+    /// der Renderer hält ihn selbst und taktet ihn mit der Cave mit.</summary>
+    private readonly BorderFillObject _cover = new(Cave.Nowhere);
 
     private readonly SpriteAtlas _atlas;
 

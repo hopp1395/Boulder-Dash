@@ -10,7 +10,7 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public abstract class FallingObject : CaveObject
 {
-    protected FallingObject(Cave? cave)
+    protected FallingObject(Cave cave)
         : base(cave)
     {
     }
