@@ -202,13 +202,18 @@ public class BoulderDashGame : XnaGame
     }
 
     /// <summary>Send_Message (src/GAME.CPP:34-48): vor dem Erscheinen "PLAYER 1, ..." Kopfzeile,
-    /// danach die laufende Statusanzeige (Quote/Punkte/Diamanten/Zeit/Score).</summary>
+    /// danach die laufende Statusanzeige (Quote/Punkte/Diamanten/Zeit/Score).
+    ///
+    /// Der Ausgang setzt EntranceProgress zurück auf 0 (BOULDER.CPP:904) — die Kopfzeile darf danach
+    /// trotzdem nicht wiederkommen, denn während der Bonuszählung muss man Zeit und Score laufen
+    /// sehen. Im Original gibt Level_End() die Statuszeile dafür selbst aus (GAME.CPP:50-62) statt
+    /// über Send_Message; hier deckt IsCaveEnded diesen Fall mit ab.</summary>
     private string BuildStatusLine()
     {
         var state = _session.State;
         var cave = _session.CurrentCaveData!;
 
-        if (state.EntranceProgress < 99)
+        if (state.EntranceProgress < 99 && !state.IsCaveEnded)
         {
             return $"  P L A Y E R   1 ,   {state.Chances}  M E N   {cave.Letter} / {_session.DifficultyLevel}";
         }

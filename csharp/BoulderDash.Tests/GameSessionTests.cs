@@ -181,6 +181,52 @@ public class GameSessionTests
         Assert.Equal('B', session.CurrentCaveData!.Letter);
     }
 
+    /// <summary>BD1-Quirk: Erreicht Rockford den Ausgang in der Nullsekunde (GameTick lässt ihn dort
+    /// noch ziehen), startet die Bonuszählung bei 0 und der Byte-Zähler läuft über — die Zeitanzeige
+    /// läuft von 255 herunter und der Spieler kassiert 255 Gratispunkte.</summary>
+    [Fact]
+    public void Ausgang_in_der_Nullsekunde_laesst_den_Bonuszaehler_ueberlaufen()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+
+        session.State.IsCaveEnded = true;
+        session.State.Stat = 0;
+        session.State.AdvanceToNextCave = true;
+        session.State.CaveTimeRemaining = 0;
+        session.State.Score = 0;
+
+        session.Update(0.001); // erkennt IsCaveEnded -> LevelEndBonus, Zähler läuft über
+        Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
+        Assert.Equal(255, session.State.CaveTimeRemaining);
+
+        session.Update(10.0); // Bonuszählung abschließen (255 x 20 ms = 5,1 s)
+        Assert.Equal(0, session.State.CaveTimeRemaining);
+        Assert.Equal(255, session.State.Score);
+    }
+
+    /// <summary>Gegenprobe: Bloßer Zeitablauf (kein Ausgang, AdvanceToNextCave==false) löst den
+    /// Überlauf NICHT aus — es bleibt bei 0 Bonuspunkten.</summary>
+    [Fact]
+    public void Zeitablauf_ohne_Ausgang_loest_keinen_Bonusueberlauf_aus()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+
+        session.State.IsCaveEnded = true;
+        session.State.Stat = 0;
+        session.State.AdvanceToNextCave = false;
+        session.State.CaveTimeRemaining = 0;
+        session.State.Score = 0;
+
+        session.Update(0.001);
+        Assert.Equal(SessionPhase.LevelEndBonus, session.Phase);
+        Assert.Equal(0, session.State.CaveTimeRemaining);
+
+        session.Update(10.0);
+        Assert.Equal(0, session.State.Score);
+    }
+
     [Fact]
     public void Bewegungsrichtung_wird_beim_Cave_Wechsel_zurueckgesetzt()
     {

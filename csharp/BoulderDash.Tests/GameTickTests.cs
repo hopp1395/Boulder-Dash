@@ -70,4 +70,78 @@ public class GameTickTests
         Assert.Equal(100, state.EntranceProgress);
         Assert.Equal(Element.Rockford, cave.GetElement(entranceIndex % 5, entranceIndex / 5));
     }
+
+    /// <summary>Baut Rockford direkt vor den offenen Ausgang (Quote 0), mit fertigem Eingang und
+    /// genau einer verbleibenden Spielsekunde.</summary>
+    private static (BoulderDash.Core.Simulation.Cave Cave, GameState State, GameTick Tick, Clocks Clocks) SetupLetzteSekundeVorDemAusgang()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 6, 11, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var data = BuildCaveData(5, 3, tiles);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+        state.EntranceProgress = 101; // Eingang fertig, Rockford lebt
+        state.CaveTimeRemaining = 1;
+        var random = new Random(1);
+        return (cave, state, new GameTick(new CavePhysics(random), new ScreenCover(random)), new Clocks());
+    }
+
+    /// <summary>BD1-Quirk (Vorbedingung für den Bonusüberlauf in GameSession.BeginLevelEndBonus): Die
+    /// Nullsekunde wird noch ausgespielt — die Anzeige steht auf 000, die Cave läuft aber weiter, und
+    /// Rockford kann in dieser Sekunde noch in den Ausgang ziehen. Das DOS-Original beendete die Cave
+    /// sofort bei 0 (BOULDER.CPP:251) und kannte den Quirk deshalb nicht.</summary>
+    [Fact]
+    public void Ausgang_ist_in_der_Nullsekunde_noch_erreichbar()
+    {
+        var (cave, state, tick, clocks) = SetupLetzteSekundeVorDemAusgang();
+        var input = new InputState();
+        var camera = new Camera();
+
+        // Bis die Zeit auf 000 fällt — ohne Eingabe, Rockford bleibt vor dem Ausgang stehen.
+        for (var i = 0; i < 200 && state.CaveTimeRemaining > 0; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+        }
+
+        Assert.Equal(0, state.CaveTimeRemaining);
+        Assert.False(state.IsCaveEnded); // Gnadensekunde: die Cave läuft noch
+
+        // Jetzt erst in den Ausgang ziehen (Physik läuft jeden 3. Tick).
+        input.PressRight();
+        for (var i = 0; i < 3; i++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+        }
+
+        Assert.True(state.IsCaveEnded);
+        Assert.True(state.AdvanceToNextCave); // Ausgang erreicht, kein bloßer Zeitablauf
+    }
+
+    /// <summary>Gegenprobe: Wer die Nullsekunde verstreichen lässt, verliert die Cave am folgenden
+    /// Sekundentakt — der Zeitablauf beendet sie ohne Fortschritt zur nächsten Cave.</summary>
+    [Fact]
+    public void Nullsekunde_beendet_die_Cave_am_folgenden_Sekundentakt()
+    {
+        var (cave, state, tick, clocks) = SetupLetzteSekundeVorDemAusgang();
+        var input = new InputState(); // keine Eingabe: Rockford bleibt stehen
+        var camera = new Camera();
+
+        var ticks = 0;
+        for (; ticks < 200 && !state.IsCaveEnded; ticks++)
+        {
+            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+        }
+
+        Assert.True(state.IsCaveEnded);
+        Assert.False(state.AdvanceToNextCave);
+        Assert.Equal(0, state.CaveTimeRemaining);
+
+        // Zwei volle Sekundenperioden (letzte Sekunde + Nullsekunde), nicht nur eine.
+        Assert.InRange(ticks, Clocks.DefaultGameSecondTicks + 1, 2 * Clocks.DefaultGameSecondTicks);
+    }
 }
