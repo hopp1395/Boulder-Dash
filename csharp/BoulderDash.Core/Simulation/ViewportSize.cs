@@ -6,7 +6,7 @@ namespace BoulderDash.Core.Simulation;
 /// hinaus, die Spielfläche stufenweise bis auf die volle Cave-Größe (40x22) aufzuziehen, sodass
 /// gar nicht mehr gescrollt werden muss.
 ///
-/// Die Scroll-Geometrie (Auslöser und Scrollweiten, siehe CavePhysics.ProcessRockford) leitet sich
+/// Die Scroll-Geometrie (Auslöser und Scrollweiten, siehe RockfordObject.ScrollCamera) leitet sich
 /// aus der Sichtfenstergröße ab und ergibt bei <see cref="Original"/> exakt die Originalwerte.
 /// </summary>
 public readonly record struct ViewportSize(int Columns, int Rows)

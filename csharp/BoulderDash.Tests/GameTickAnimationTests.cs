@@ -1,8 +1,15 @@
 using BoulderDash.Core.Data;
+using BoulderDash.Core.Objects;
 using BoulderDash.Core.Simulation;
 
 namespace BoulderDash.Tests;
 
+/// <summary>
+/// Die Animationszähler. Sie standen früher als wechsel_vier/wechsel_boulder in GameState — EIN Zähler
+/// für alle Objekte. Inzwischen führt sie, wer sie braucht: den gemeinsamen Achtertakt die Cave
+/// (Cave.AnimationPhase), den Laufzyklus und die Ruheanimation Rockford selbst (RockfordObject).
+/// Getaktet werden sie nach wie vor vom GameTick.
+/// </summary>
 public class GameTickAnimationTests
 {
     private const byte Wall = 5;
@@ -32,52 +39,49 @@ public class GameTickAnimationTests
         ],
     };
 
+    /// <summary>Cave mit Rockford im Gitter und fertigem Eingang: EntranceProgress=101 hält den
+    /// Eingangsaufbau still (GameTick baut nur unterhalb von 101), sonst spränge nach 99 Ticks ein
+    /// ZWEITER Rockford aus der Eingangskachel und FindRockford() lieferte über die Testdauer hinweg
+    /// verschiedene Objekte.</summary>
+    private static (Cave Cave, Clocks Clocks, GameTick Tick) Setup()
+    {
+        var random = new Random(1);
+        var cave = TestWorld.NewCave(BuildCaveData(), random);
+        cave.State.EntranceProgress = 101;
+        return (cave, new Clocks(), TestWorld.NewTick(random));
+    }
+
+    private static RockfordObject Rockford(Cave cave) => cave.FindRockford()!;
+
     [Fact]
-    public void WechselBoulder_durchlaeuft_genau_die_Werte_0_bis_5()
+    public void WalkPhase_durchlaeuft_genau_die_Werte_0_bis_5()
     {
         // Regressionstest: wechsel_boulder nutzt im Original ZWEI getrennte Anweisungen
         // (unbedingtes Inkrement, dann Prüfung des neuen Werts) statt des
         // Postfix-in-Bedingung-Musters der clk_*-Zähler — das ergibt Periode 6, nicht 7.
-        var data = BuildCaveData();
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var input = new InputState();
-        input.PressRight(); // richtung!=0, damit wechsel_boulder überhaupt läuft
-        var camera = new Camera();
-        var clocks = new Clocks();
-        var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
-        var entranceIndex = 0;
+        var (cave, clocks, tick) = Setup();
+        cave.Input.PressRight(); // richtung!=0, damit der Laufzyklus überhaupt läuft
 
-        byte[] beobachtet = new byte[8];
+        var beobachtet = new byte[8];
         for (var i = 0; i < 8; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
-            beobachtet[i] = state.WechselBoulder;
+            tick.Tick(cave, clocks, entranceIndex: 0);
+            beobachtet[i] = Rockford(cave).WalkPhase;
         }
 
         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 0, 1, 2 }, beobachtet);
     }
 
     [Fact]
-    public void WechselVier_durchlaeuft_genau_die_Werte_0_bis_7()
+    public void AnimationPhase_durchlaeuft_genau_die_Werte_0_bis_7()
     {
-        var data = BuildCaveData();
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var input = new InputState();
-        var camera = new Camera();
-        var clocks = new Clocks();
-        var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
+        var (cave, clocks, tick) = Setup();
 
-        byte[] beobachtet = new byte[9];
+        var beobachtet = new byte[9];
         for (var i = 0; i < 9; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, 0);
-            beobachtet[i] = state.WechselVier;
+            tick.Tick(cave, clocks, entranceIndex: 0);
+            beobachtet[i] = cave.AnimationPhase;
         }
 
         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 0, 1 }, beobachtet);
@@ -88,21 +92,22 @@ public class GameTickAnimationTests
     [Fact]
     public void Ruheanimation_entscheidet_sich_nur_zum_Sequenzbeginn_neu()
     {
-        var (cave, state, input, camera, clocks, tick) = Setup();
+        var (cave, clocks, tick) = Setup();
 
-        var vorherBlinzeln = state.RockfordBlinking;
-        var vorherTappen = state.RockfordTapping;
+        var vorherBlinzeln = Rockford(cave).Blinking;
+        var vorherTappen = Rockford(cave).Tapping;
         for (var i = 0; i < 400; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, 0);
+            tick.Tick(cave, clocks, entranceIndex: 0);
+            var rockford = Rockford(cave);
 
-            if (state.RockfordBlinking != vorherBlinzeln || state.RockfordTapping != vorherTappen)
+            if (rockford.Blinking != vorherBlinzeln || rockford.Tapping != vorherTappen)
             {
-                Assert.Equal(0, state.WechselVier);
+                Assert.Equal(0, cave.AnimationPhase);
             }
 
-            vorherBlinzeln = state.RockfordBlinking;
-            vorherTappen = state.RockfordTapping;
+            vorherBlinzeln = rockford.Blinking;
+            vorherTappen = rockford.Tapping;
         }
     }
 
@@ -110,14 +115,16 @@ public class GameTickAnimationTests
     [Fact]
     public void In_Bewegung_wird_weder_geblinzelt_noch_getappt()
     {
-        var (cave, state, input, camera, clocks, tick) = Setup();
-        input.PressRight();
+        var (cave, clocks, tick) = Setup();
+        cave.Input.PressRight();
 
         for (var i = 0; i < 400; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, 0);
-            Assert.False(state.RockfordBlinking);
-            Assert.False(state.RockfordTapping);
+            tick.Tick(cave, clocks, entranceIndex: 0);
+            var rockford = Rockford(cave);
+
+            Assert.False(rockford.Blinking);
+            Assert.False(rockford.Tapping);
         }
     }
 
@@ -127,45 +134,36 @@ public class GameTickAnimationTests
     [Fact]
     public void Ruheanimation_trifft_die_Wahrscheinlichkeiten_ein_Viertel_und_ein_Sechzehntel()
     {
-        var (cave, state, input, camera, clocks, tick) = Setup();
+        var (cave, clocks, tick) = Setup();
 
         const int sequenzen = 4000;
         var blinzelSequenzen = 0;
         var tappWechsel = 0;
-        var vorherTappen = state.RockfordTapping;
+        var vorherTappen = Rockford(cave).Tapping;
 
         for (var i = 0; i < sequenzen * 8; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, 0);
-            if (state.WechselVier != 0)
+            tick.Tick(cave, clocks, entranceIndex: 0);
+            if (cave.AnimationPhase != 0)
             {
                 continue;
             }
 
-            if (state.RockfordBlinking)
+            var rockford = Rockford(cave);
+            if (rockford.Blinking)
             {
                 blinzelSequenzen++;
             }
 
-            if (state.RockfordTapping != vorherTappen)
+            if (rockford.Tapping != vorherTappen)
             {
                 tappWechsel++;
             }
 
-            vorherTappen = state.RockfordTapping;
+            vorherTappen = rockford.Tapping;
         }
 
         Assert.InRange(blinzelSequenzen / (double)sequenzen, 0.23, 0.27);
         Assert.InRange(tappWechsel / (double)sequenzen, 0.05, 0.075);
-    }
-
-    private static (BoulderDash.Core.Simulation.Cave Cave, GameState State, InputState Input, Camera Camera, Clocks Clocks, GameTick Tick) Setup()
-    {
-        var data = BuildCaveData();
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var random = new Random(1);
-        return (cave, state, new InputState(), new Camera(), new Clocks(), new GameTick(new CavePhysics(random), new ScreenCover(random), random));
     }
 }

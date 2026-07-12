@@ -1,3 +1,5 @@
+using BoulderDash.Core.Objects;
+
 namespace BoulderDash.Core.Simulation;
 
 /// <summary>
@@ -14,11 +16,13 @@ namespace BoulderDash.Core.Simulation;
 public sealed class GameTick
 {
     private readonly ScreenCover _cover;
+    private readonly ExploreMap _explore;
     private readonly Random _random;
 
-    public GameTick(ScreenCover cover, Random random)
+    public GameTick(ScreenCover cover, ExploreMap explore, Random random)
     {
         _cover = cover;
+        _explore = explore;
         _random = random;
     }
 
@@ -30,7 +34,13 @@ public sealed class GameTick
         cave.Camera.Step(cave.Width, cave.Height);
 
         cave.NextFrame();
-        RollIdleAnimation(cave);
+
+        var rockford = cave.FindRockford();
+        RollIdleAnimation(cave, rockford);
+
+        // Cave-Explore: Der Blick folgt Rockford. Steht er nicht auf dem Feld (Eingangsaufbau, Tod),
+        // bleibt er stehen, wo er war. Reine Darstellung — hier wird nichts gewürfelt (siehe ExploreMap).
+        _explore.Reveal(rockford?.Index);
 
         // "pause" existiert im Original nur als nie gesetzter toter Code — hier weggelassen.
         if (clocks.Clk18 == 0 && !state.IsCaveEnded)
@@ -124,7 +134,7 @@ public sealed class GameTick
     /// zieht. Hinge die Zahl der Ziehungen daran, ob Rockford schon erschienen ist, verschöbe sich
     /// die gesamte Folge — und mit ihr das Verhalten der ganzen Cave.
     /// </summary>
-    private void RollIdleAnimation(Cave cave)
+    private void RollIdleAnimation(Cave cave, RockfordObject? rockford)
     {
         if (cave.AnimationPhase != 0 || cave.Input.Direction != 0)
         {
@@ -134,7 +144,7 @@ public sealed class GameTick
         var blinking = _random.Next(4) == 0;
         var togglesTapping = _random.Next(16) == 0;
 
-        if (cave.FindRockford() is not { } rockford)
+        if (rockford is null)
         {
             return;
         }

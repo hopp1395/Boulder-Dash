@@ -131,6 +131,7 @@ public sealed class GameSession
     private readonly ICaveRepository _caves;
     private readonly Random _random;
     private readonly ScreenCover _cover;
+    private readonly ExploreMap _explore;
     private readonly GameTick _gameTick;
 
     private double _phaseTimer;
@@ -176,6 +177,11 @@ public sealed class GameSession
     /// regel()).</summary>
     public ScreenCover ScreenCover => _cover;
 
+    /// <summary>Die Erkundungskarte für die Rendering-Schicht (Cave-Explore, E-Taste) — wie
+    /// <see cref="ScreenCover"/> eine Instanz für die gesamte Session. Sie zieht keinen Zufall und
+    /// greift nicht ins Spiel ein, siehe ExploreMap.</summary>
+    public ExploreMap ExploreMap => _explore;
+
     public GameSession(ICaveRepository caves, IReadOnlyList<DemoStep>? demoSteps = null)
     {
         _caves = caves;
@@ -184,7 +190,8 @@ public sealed class GameSession
         // rand()-Sequenz. Amoeba-Ausbreitung und ScreenCover sind damit reproduzierbar.
         _random = new Random(1);
         _cover = new ScreenCover(_random);
-        _gameTick = new GameTick(_cover, _random);
+        _explore = new ExploreMap();
+        _gameTick = new GameTick(_cover, _explore, _random);
 
         State = new GameState();
         Input = new InputState();
@@ -733,6 +740,7 @@ public sealed class GameSession
         Input.ResetForNewCave();
         Camera.CenterOn(entranceIndex % cave.Width, entranceIndex / cave.Width, cave.Width, cave.Height);
         _cover.BeginUncover(cave.Width, cave.Height);
+        _explore.BeginCave(cave.Width, cave.Height, entranceIndex);
 
         // Tempo der geladenen Cave (BD1: ergibt sich aus Schwierigkeitsgrad und Cave-Art, siehe
         // CaveSpeed). Die Clk18-Periode wird mitgesetzt, damit die Spielsekunde tempo-unabhängig
@@ -758,6 +766,13 @@ public sealed class GameSession
             Camera.Clamp(Cave.Width, Cave.Height);
         }
     }
+
+    /// <summary>Cave-Explore umschalten (E-Taste während des Spiels, siehe ExploreMap). Die Karte
+    /// selbst läuft ohnehin mit — das hier blendet nur ihre Darstellung ein und aus.</summary>
+    public void ToggleExplore() => _explore.Enabled = !_explore.Enabled;
+
+    /// <summary>Cave-Explore setzen — beim Start aus der Einstellungsdatei (siehe GameSettings).</summary>
+    public void SetExplore(bool enabled) => _explore.Enabled = enabled;
 
     /// <summary>Verlässt die laufende Cave. <paramref name="phase"/> ist für die Prüfstand-Caves
     /// SessionPhase.TestMenu (damit man dort direkt die nächste auswählen kann) und für das

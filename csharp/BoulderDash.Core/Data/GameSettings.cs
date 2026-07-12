@@ -24,16 +24,21 @@ public sealed record GameSettings
     public int WindowHeight { get; init; } = DefaultWindowHeight;
     public bool Fullscreen { get; init; } = true;
 
+    /// <summary>Cave-Explore (E-Taste im Spiel): Die Cave muss erkundet werden, siehe ExploreMap.
+    /// Ohne Einstellungsdatei — und in jeder älteren ohne dieses Feld — ist das Feature aus.</summary>
+    public bool Explore { get; init; }
+
     /// <summary>Sichtfenstergröße als Stufe — fängt krumme Werte aus einer von Hand bearbeiteten
     /// Einstellungsdatei ab (siehe ViewportSize.Snap).</summary>
     public ViewportSize Viewport => ViewportSize.Snap(ViewportColumns, ViewportRows);
 
-    public static GameSettings From(ViewportSize viewport, int windowWidth, int windowHeight, bool fullscreen) => new()
+    public static GameSettings From(ViewportSize viewport, int windowWidth, int windowHeight, bool fullscreen, bool explore) => new()
     {
         ViewportColumns = viewport.Columns,
         ViewportRows = viewport.Rows,
         WindowWidth = Math.Max(1, windowWidth),
         WindowHeight = Math.Max(1, windowHeight),
         Fullscreen = fullscreen,
+        Explore = explore,
     };
 }

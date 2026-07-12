@@ -5,8 +5,8 @@ namespace BoulderDash.Core.Simulation;
 /// <summary>
 /// Veränderlicher Fortschritt einer laufenden Cave: Analog zu den in src/BOULDER.CPP:74-141
 /// deklarierten globalen Spielvariablen, die level_laden bei jedem Cave-Start zurücksetzt
-/// (BOULDER.CPP:976-998). Feldnamen bleiben nah am Original, damit CavePhysics direkt
-/// nachvollziehbar bleibt.
+/// (BOULDER.CPP:976-998). Feldnamen bleiben nah am Original, damit die Spielregeln in den Objekten
+/// direkt nachvollziehbar bleiben.
 /// </summary>
 public sealed class GameState
 {
@@ -30,7 +30,7 @@ public sealed class GameState
     public bool AmoebaPresent { get; set; }
 
     /// <summary>Restliche Spielsekunden, in denen die Amoeba noch langsam wächst; bei 0 schaltet sie
-    /// auf schnelles Wachstum um (BD1 "amoeba slow growth time", siehe CavePhysics.ProcessAmoeba).</summary>
+    /// auf schnelles Wachstum um (BD1 "amoeba slow growth time", siehe AmoebaObject).</summary>
     public byte AmoebaSlowGrowthRemaining { get; set; }
 
     /// <summary>Amoeba-Zellen, die der vorige Cave-Scan gezählt hat. Die Umwandlung greift laut Spec
@@ -64,7 +64,7 @@ public sealed class GameState
     // dort weiter (CaveObject.AnimationPhase, ExplosionObject.ExplosionPhase, RockfordObject) — den
     // gemeinsamen Takt führt die Cave (Cave.AnimationPhase).
 
-    /// <summary>Sound-Ereignisse dieses Ticks, von CavePhysics befüllt und von der
+    /// <summary>Sound-Ereignisse dieses Ticks, von den Objekten befüllt und von der
     /// Game-Schicht (AudioPlayer) pro Frame geleert. Core selbst bleibt audiofrei.</summary>
     public Queue<SoundEvent> SoundEvents { get; } = new();
 

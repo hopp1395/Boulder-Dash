@@ -24,7 +24,7 @@ public sealed class CaveData
 
     /// <summary>Spielsekunden, die die Amoeba langsam wächst (3 %), bevor sie auf 25 % umschaltet.
     /// In BD1 steht dieser Wert im selben Cave-Kopf-Byte $01 wie die Zaubermauer-Zeit — beide sollten
-    /// laut Original-Datenformat nie in derselben Cave vorkommen. Siehe CavePhysics.ProcessAmoeba.</summary>
+    /// laut Original-Datenformat nie in derselben Cave vorkommen. Siehe AmoebaObject.</summary>
     public required byte AmoebaSlowGrowthSeconds { get; init; }
 
     public required byte PointsPerJewelBeforeQuota { get; init; }

@@ -38,11 +38,10 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 4, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
+        var cave = TestWorld.NewCave(data);
+        var state = cave.State;
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+        cave.NextState();
 
         Assert.Contains(SoundEvent.Explosion, state.SoundEvents);
     }
@@ -64,11 +63,10 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 5, tiles, enchantedWallSeconds: 5);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
+        var cave = TestWorld.NewCave(data);
+        var state = cave.State;
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+        cave.NextState();
 
         Assert.True(state.EnchantedWallRunning);
         Assert.Equal(ergebnis, cave.GetElement(2, 3));
@@ -92,11 +90,10 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 5, tiles, enchantedWallSeconds);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
+        var cave = TestWorld.NewCave(data);
+        var state = cave.State;
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+        cave.NextState();
 
         Assert.Equal(Element.Empty, cave.GetElement(2, 1)); // Objekt ist weg
         Assert.Contains(SoundEvent.JewelLand, state.SoundEvents);
@@ -112,11 +109,10 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
+        var cave = TestWorld.NewCave(data);
+        var state = cave.State;
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+        cave.NextState();
 
         Assert.True(state.AmoebaPresent);
     }
@@ -131,11 +127,10 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
+        var cave = TestWorld.NewCave(data);
+        var state = cave.State;
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+        cave.NextState();
 
         Assert.False(state.AmoebaPresent);
     }
@@ -149,23 +144,19 @@ public class SoundEventTests
             Wall, 10, 0, 0, Wall,
             Wall, Wall, Wall, Wall, Wall,
         ];
-        var data = BuildCaveData(5, 3, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
+        var random = new Random(1);
+        var cave = TestWorld.NewCave(BuildCaveData(5, 3, tiles), random);
+        var state = cave.State;
         state.CaveTimeRemaining = 11; // -> nach zwei Sekunden-Countdowns bei 9 (Warnung), dann bei 10 (keine)
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
-        var input = new InputState();
-        var camera = new Camera();
+        var tick = TestWorld.NewTick(random);
         var clocks = new Clocks();
 
         // EntranceProgress überschreitet 99 um Tick~100; Clk18 (Periode 22) erreicht danach bei
         // Tick 110 den ersten Countdown (11->10) und bei Tick 132 den zweiten (10->9, Warnung).
         for (var i = 0; i < 140; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
         }
 
         Assert.Contains(SoundEvent.TimeWarning, state.SoundEvents);
@@ -182,26 +173,23 @@ public class SoundEventTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
         var random = new Random(1);
+        var cave = TestWorld.NewCave(data, random);
+        var state = cave.State;
+        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
         var cover = new ScreenCover(random);
         cover.BeginUncover(data.Width, data.Height);
-        var tick = new GameTick(new CavePhysics(random), cover, random);
-        var input = new InputState();
-        var camera = new Camera();
+        var tick = TestWorld.NewTick(random, cover);
         var clocks = new Clocks();
 
-        tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+        tick.Tick(cave, clocks, entranceIndex);
         Assert.Contains(SoundEvent.Uncover, state.SoundEvents);
         Assert.True(state.ScreenCoverActive);
 
         // Restliche Aufdeck-Runden abarbeiten (eine pro Tick)...
         for (var i = 1; i < ScreenCover.Iterations; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
         }
 
         Assert.False(cover.IsActive);
@@ -209,7 +197,7 @@ public class SoundEventTests
         state.SoundEvents.Clear();
 
         // ...dann darf kein neues Uncover-Ereignis mehr eingereiht werden.
-        tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+        tick.Tick(cave, clocks, entranceIndex);
 
         Assert.DoesNotContain(SoundEvent.Uncover, state.SoundEvents);
     }

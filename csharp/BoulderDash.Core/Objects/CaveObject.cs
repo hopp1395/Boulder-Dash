@@ -74,6 +74,17 @@ public abstract class CaveObject
     /// Animierte überschreibt das (Frameauswahl wie sprites_wechsel(), BOULDER.CPP:593-646).</summary>
     public virtual TileAppearance Appearance(in RenderContext ctx) => TileAppearance.Of(DefaultFrame);
 
+    /// <summary>
+    /// Ob dieses Objekt im Nebel des Cave-Explore-Features noch zu sehen ist (siehe ExploreMap).
+    /// Der Nebel zeigt, woran Rockford sich ERINNERT — und erinnern kann er sich nur an die Umgebung:
+    /// Erde, Wände, Steine, Diamanten, die Amoeba. Was aus eigenem Antrieb umherzieht, weiß er nach
+    /// dem Wegsehen nicht mehr; die Kreaturen (CreatureObject) sind deshalb außerhalb seines
+    /// Blickradius unsichtbar und geben die Kachel frei.
+    ///
+    /// Keine Original-Entsprechung — das Feature gibt es weder im DOS-Original noch in BD1.
+    /// </summary>
+    public virtual bool VisibleInFog => true;
+
     /// <summary>Ein Animationsschritt — einmal pro Tick, für jede Kachel.</summary>
     public virtual void NextFrame() =>
         AnimationPhase = (byte)((AnimationPhase + 1) % AnimationPeriod);

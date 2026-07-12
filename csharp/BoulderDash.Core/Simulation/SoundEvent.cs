@@ -1,7 +1,7 @@
 namespace BoulderDash.Core.Simulation;
 
 /// <summary>
-/// Sound-Ereignisse, die CavePhysics/GameTick auslösen können. Core bleibt audiofrei — die
+/// Sound-Ereignisse, die die Cave-Objekte und der GameTick auslösen können. Core bleibt audiofrei — die
 /// Game-Schicht (AudioPlayer) konsumiert diese über GameState.SoundEvents und synthetisiert die
 /// passenden Klänge (siehe Audio/SoundRecipes.cs, nach der Original-C64-Sound-Dokumentation).
 /// PushBoulder hat keinen eigenen Klang, sondern den des aufschlagenden Steins ("A boulder sound

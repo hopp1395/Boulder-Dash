@@ -46,6 +46,10 @@ public class BoulderDashGame : XnaGame
     private Point _windowedSize;
     private bool _applyingClientSize;
 
+    /// <summary>Cave-Explore (E-Taste im Spiel, siehe ExploreMap). Die Session hält den maßgeblichen
+    /// Schalter; hier steht er nur mit, damit SaveSettings ihn in die Einstellungsdatei schreiben kann.</summary>
+    private bool _explore;
+
     private enum PaletteContext { None, Menu, Cave }
 
     private PaletteContext _paletteContext = PaletteContext.None;
@@ -57,6 +61,7 @@ public class BoulderDashGame : XnaGame
     {
         var settings = SettingsFile.Load(_settingsPath);
         _viewport = settings.Viewport;
+        _explore = settings.Explore;
         _windowedSize = new Point(
             Math.Max(MenuWidth, settings.WindowWidth),
             Math.Max(MenuHeight, settings.WindowHeight));
@@ -100,6 +105,7 @@ public class BoulderDashGame : XnaGame
         var demoSteps = DemoTextFile.Load(Path.Combine(assets, "demo.txt"));
         _session = new GameSession(caves, demoSteps);
         _session.SetViewport(_viewport);
+        _session.SetExplore(_explore);
 
         SyncPalette();
     }
@@ -254,8 +260,15 @@ public class BoulderDashGame : XnaGame
         }
     }
 
+    private void ToggleExplore()
+    {
+        _explore = !_explore;
+        _session.SetExplore(_explore);
+        SaveSettings();
+    }
+
     private void SaveSettings() =>
-        SettingsFile.Save(_settingsPath, GameSettings.From(_viewport, _windowedSize.X, _windowedSize.Y, _graphics.IsFullScreen));
+        SettingsFile.Save(_settingsPath, GameSettings.From(_viewport, _windowedSize.X, _windowedSize.Y, _graphics.IsFullScreen, _explore));
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
@@ -303,6 +316,10 @@ public class BoulderDashGame : XnaGame
                 break;
             case SessionPhase.Playing:
                 _inputAdapter.ApplyGameplay(_session.Input, _session.Cave?.Width ?? 1);
+                // E: Cave-Explore umschalten (siehe ExploreMap). Bewusst KEINE Schalen-Taste
+                // (InputAdapter.ShellKeys) wie F11/+/-, sondern eine Spielregel — sie gilt deshalb
+                // nur während des Spiels.
+                if (_inputAdapter.IsJustPressed(Keys.E)) ToggleExplore();
                 if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.EscapePressed();
                 break;
             case SessionPhase.DeathPause:
@@ -387,7 +404,7 @@ public class BoulderDashGame : XnaGame
         }
         else if (_session.Cave is not null)
         {
-            _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.ScreenCover);
+            _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.ScreenCover, _session.ExploreMap);
 
             // Statuszeile und Meldung sind 320 Pixel breit (40 BIOS-Zeichen) wie im Original und
             // bleiben deshalb auch bei größerem Sichtfenster mittig statt links zu kleben.

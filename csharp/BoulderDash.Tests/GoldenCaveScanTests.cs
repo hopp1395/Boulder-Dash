@@ -20,6 +20,12 @@ namespace BoulderDash.Tests;
 /// Testausgabe nennt den tatsächlich berechneten Hash). Schlägt er nach einem reinen Refactoring
 /// fehl, ist das Refactoring nicht verhaltensgleich — dann den Fehler suchen, nicht den Hash
 /// anpassen.
+///
+/// Herkunft der Werte: Sie sind gegen die Implementierung VOR dem Architektur-Refactoring
+/// nachgerechnet (Stand b78dd67, noch mit CavePhysics) und stimmen mit dem heutigen Objektmodell
+/// Bit für Bit überein — sie belegen also genau das, wozu dieser Test da ist. Die ursprünglich hier
+/// eingetragenen Werte für die Caves G, H und N taten das nicht: Sie entstanden im selben Commit,
+/// der das Testprojekt unkompilierbar zurückließ, und konnten deshalb nie geprüft werden.
 /// </summary>
 public class GoldenCaveScanTests
 {
@@ -30,10 +36,10 @@ public class GoldenCaveScanTests
     [Theory]
     // Die Kommentare nennen, was im eingefrorenen Lauf tatsächlich passiert — daran hängt der Wert
     // des jeweiligen Hashes. Fällt eine dieser Wirkungen künftig weg, sichert der Hash sie nicht mehr.
-    [InlineData("cave-G-1", 1704599531u)] // 5 Fireflies: zwei explodieren; Amoeba erstickt und wandelt um
-    [InlineData("cave-H-1", 2749169391u)] // 4 Fireflies: einer explodiert; viele fallende Steine
+    [InlineData("cave-G-1", 534957559u)]  // 5 Fireflies: zwei explodieren; Amoeba wächst auf 204 Zellen und wird zu Boulders
+    [InlineData("cave-H-1", 4180988487u)] // 4 Fireflies: einer explodiert; viele fallende Steine
     [InlineData("cave-M-1", 970702359u)]  // 30 Butterflies; Amoeba wächst von 1 auf 55 Zellen
-    [InlineData("cave-N-1", 3841041147u)] // 6 Fireflies + 6 Butterflies nebeneinander
+    [InlineData("cave-N-1", 2480803819u)] // 6 Fireflies + 6 Butterflies, keiner explodiert
     [InlineData("cave-test-5", 2040212403u)] // Zaubermauer: wandelt um, verschluckt, klingt
     [InlineData("cave-test-8", 2037096967u)] // Explosion neben dem Ausgang (der verschont bleibt)
     public void Cave_laeuft_ohne_Eingabe_deterministisch_durch(string caveName, uint expectedHash)
@@ -41,22 +47,17 @@ public class GoldenCaveScanTests
         var caves = new CaveTextRepository(Path.Combine(TestPaths.GameAssets, "Caves"));
         var data = caves.Get(caveName);
 
-        var cave = new Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-
         // Derselbe feste Seed wie in GameSession — Amoeba-Wachstum und Steinschub würfeln daraus.
         var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
-        var input = new InputState();
-        var camera = new Camera();
+        var cave = TestWorld.NewCave(data, random);
+        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
+        var tick = TestWorld.NewTick(random);
         var clocks = new Clocks();
 
         var hash = 2166136261u; // FNV-1a Offset-Basis
         for (var i = 0; i < Ticks; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
 
             for (var t = 0; t < cave.Width * cave.Height; t++)
             {

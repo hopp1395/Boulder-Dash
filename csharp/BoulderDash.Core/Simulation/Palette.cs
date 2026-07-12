@@ -45,4 +45,36 @@ public static class Palette
     /// Sie ersetzen die Farbe 0 der Cave-Palette, entsprechen den DAC-Tripeln 63,63,63 bzw. 8,8,8.</summary>
     public static readonly Rgb ExitFlashBright = new(0xFF, 0xFF, 0xFF);
     public static readonly Rgb ExitFlashDark = new(0x20, 0x20, 0x20);
+
+    /// <summary>Die beiden Geschmacks-Regler von <see cref="Fog"/>: Der Sockel hebt den Nebel als
+    /// Ganzes vom Schwarz des Unerkundeten ab, die Dämpfung hält ihn hinter dem farbigen
+    /// Blickradius zurück.</summary>
+    private const double FogFloor = 22;
+    private const double FogContrast = 0.5;
+
+    /// <summary>
+    /// Wie eine Cave-Farbe im Nebel aussieht (Cave-Explore, siehe ExploreMap): entsättigt und
+    /// gedämpft. Erkundetes, aber gerade nicht sichtbares Gelände tritt damit blass grau hinter den
+    /// farbigen Blickradius zurück.
+    ///
+    /// Entsättigt wird über die HSL-Helligkeit (max+min)/2, NICHT über die naheliegende
+    /// Rec.-601-Luminanz: Deren Gewichtung (Blau nur 0,114) drückt gesättigte Farben fast auf
+    /// Schwarz — das Blau #2020BA der Cave-Paletten landete bei #1B1B1B und wäre damit vom
+    /// Hintergrund #202020 nicht mehr zu unterscheiden gewesen. Die Cave muss im Nebel aber lesbar
+    /// bleiben; die HSL-Helligkeit hält alle vier Palettenfarben auseinander.
+    ///
+    /// Der Sockel (<see cref="FogFloor"/>) hebt auch die dunkelste Farbe — den Cave-Hintergrund
+    /// #202020 — über Schwarz. Ohne ihn sähe ein erkundeter, aber leerer Gang genauso aus wie nie
+    /// betretenes Gebiet, und von den drei Zuständen (schwarz / blass grau / farbig) blieben zwei
+    /// übrig.
+    ///
+    /// Keine Original-Entsprechung.
+    /// </summary>
+    public static Rgb Fog(Rgb color)
+    {
+        var lightness = (Math.Max(color.R, Math.Max(color.G, color.B))
+                         + Math.Min(color.R, Math.Min(color.G, color.B))) / 2.0;
+        var grey = (byte)Math.Clamp(FogFloor + (lightness * FogContrast), 0, 255);
+        return new Rgb(grey, grey, grey);
+    }
 }
