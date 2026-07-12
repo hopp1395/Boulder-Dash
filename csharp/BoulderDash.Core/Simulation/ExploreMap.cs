@@ -15,8 +15,8 @@ public enum TileVisibility
 
 /// <summary>
 /// Cave-Explore (E-Taste): Die Cave liegt nicht mehr offen da, sondern muss erkundet werden. Nur was
-/// in Rockfords Blickradius liegt, ist normal zu sehen; was er schon einmal gesehen hat, steht blass
-/// grau da; alles übrige bleibt schwarz.
+/// in Rockfords Blickradius (<see cref="SightRadius"/>) liegt, ist normal zu sehen; was er schon
+/// einmal gesehen hat, steht blass grau da; alles übrige bleibt schwarz.
 ///
 /// KEINE ORIGINAL-ENTSPRECHUNG — weder das DOS-Original noch BD1 kennen so etwas. Wie die Skalierung
 /// ist das eine bewusste Zutat des Ports.
@@ -34,9 +34,9 @@ public enum TileVisibility
 /// </summary>
 public sealed class ExploreMap
 {
-    /// <summary>Rockfords Blickradius in Kacheln. Kreisförmig (dx² + dy² ≤ Radius²), also 49 Kacheln —
-    /// die Ecken des 9x9-Quadrats bleiben dunkel.</summary>
-    public const int SightRadius = 4;
+    /// <summary>Rockfords Blickradius in Kacheln. Kreisförmig (dx² + dy² ≤ Radius²), also 81 Kacheln —
+    /// die Ecken des 11x11-Quadrats bleiben dunkel.</summary>
+    public const int SightRadius = 5;
 
     private bool[] _explored = [];
     private int _width;
