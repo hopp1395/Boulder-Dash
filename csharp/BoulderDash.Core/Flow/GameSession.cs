@@ -6,6 +6,10 @@ namespace BoulderDash.Core.Flow;
 public enum SessionPhase
 {
     Menu,
+
+    /// <summary>Auswahl der Prüfstand-Caves (F5 im Hauptmenü) — kein Original-Zustand, sondern ein
+    /// Entwicklerzugang zum Testgelände für das Objektverhalten (siehe GameSession.TestCaves).</summary>
+    TestMenu,
     Playing,
     LevelEndBonus,
     DeathPause,
@@ -67,6 +71,23 @@ public sealed class GameSession
         'M', 'N', 'O', 'P', 'T',
     ];
 
+    /// <summary>Eine Prüfstand-Cave: Dateiname im Repository plus die Zeile, die im Testmodus-Menü
+    /// erscheint. Der Titel darf höchstens 35 Zeichen haben — der MenuRenderer stellt Auswahlmarke und
+    /// Nummer voran, und die Textzeile ist 40 Zeichen breit.</summary>
+    public readonly record struct TestCave(string Name, string Title);
+
+    /// <summary>Die Prüfstand-Caves (Assets/Caves/cave-test-N.txt) — je eine pro Korrektur am
+    /// Objektverhalten, jede mit einer Anleitung im Kopf der Datei. Kein BD1-Inhalt: sie stehen
+    /// außerhalb der PlayOrder und sind nur über den Testmodus (F5) erreichbar.</summary>
+    public static readonly IReadOnlyList<TestCave> TestCaves =
+    [
+        new("cave-test-1", "BUTTERFLY ZIEHT ZUERST LINKS"),
+        new("cave-test-2", "FIREFLY LINKS-, BUTTERFLY RECHTSRUM"),
+        new("cave-test-3", "KREATUR ZUENDET BEI KONTAKT"),
+        new("cave-test-4", "SCHIEBEN GELINGT NUR MIT 1 ZU 8"),
+        new("cave-test-5", "ZAUBERMAUER WANDELT UM UND KLINGT"),
+    ];
+
     private const int MaxCaveIndex = 18; // Menü-Auswahl A..P (letzte reguläre Cave in PlayOrder, Index 18=P)
     private const double BonusSecondsPerPoint = 0.02; // delay(20) pro Punkt, GAME.CPP:58
     private const double PostBonusPauseSeconds = 1.0; // delay(1000) nach der Bonuszählung
@@ -106,10 +127,15 @@ public sealed class GameSession
     private readonly IReadOnlyList<DemoStep>? _demoSteps;
     private DemoPlayer? _demoPlayer;
     private bool _isDemo;
+    private bool _isTestCave;
     private sbyte _menuCaveIndexBeforeDemo;
 
     public SessionPhase Phase { get; private set; } = SessionPhase.Menu;
     public sbyte CaveIndex { get; private set; }
+
+    /// <summary>Im Testmodus gewählte Prüfstand-Cave (Index in <see cref="TestCaves"/>).</summary>
+    public int TestCaveIndex { get; private set; }
+
     public sbyte DifficultyLevel { get; private set; } = 1;
     public bool QuitRequested { get; private set; }
     public bool ShowGameOverMessage { get; private set; }
@@ -248,7 +274,55 @@ public sealed class GameSession
     {
         if (Phase != SessionPhase.Menu) return;
         State.Chances = 3;
+        _isTestCave = false;
         LoadCaveWithSkip(CaveIndex);
+    }
+
+    /// <summary>F5: in den Testmodus wechseln (siehe <see cref="TestCaves"/>). Kein Original-Menüpunkt,
+    /// sondern ein Entwicklerzugang zum Prüfstand für das Objektverhalten.</summary>
+    public void MenuTestMode()
+    {
+        if (Phase != SessionPhase.Menu) return;
+        Phase = SessionPhase.TestMenu;
+    }
+
+    public void TestMenuNext()
+    {
+        if (Phase != SessionPhase.TestMenu) return;
+        TestCaveIndex = Math.Min(TestCaveIndex + 1, TestCaves.Count - 1);
+    }
+
+    public void TestMenuPrevious()
+    {
+        if (Phase != SessionPhase.TestMenu) return;
+        TestCaveIndex = Math.Max(TestCaveIndex - 1, 0);
+    }
+
+    /// <summary>Direktwahl über die Zifferntasten 1-5.</summary>
+    public void TestMenuSelect(int index)
+    {
+        if (Phase != SessionPhase.TestMenu || index < 0 || index >= TestCaves.Count) return;
+        TestCaveIndex = index;
+    }
+
+    public void TestMenuBack()
+    {
+        if (Phase != SessionPhase.TestMenu) return;
+        Phase = SessionPhase.Menu;
+    }
+
+    /// <summary>Startet die gewählte Prüfstand-Cave. Sie steht außerhalb der PlayOrder — jedes
+    /// Cave-Ende führt daher zurück in den Testmodus (bzw. lädt sie bei Tod/Zeitablauf erneut).</summary>
+    public void TestMenuStart()
+    {
+        if (Phase != SessionPhase.TestMenu) return;
+
+        State.Chances = 3;
+        _isTestCave = TryLoadCave(_caves.Get(TestCaves[TestCaveIndex].Name));
+        if (!_isTestCave)
+        {
+            Phase = SessionPhase.TestMenu; // Cave ohne Eingang — Sicherheitsnetz wie in LoadCaveWithSkip.
+        }
     }
 
     /// <summary>F2: Demo starten — lädt IMMER Cave A (level_laden(0) in Start_menu, BOULDER.CPP:322),
@@ -264,6 +338,7 @@ public sealed class GameSession
         }
 
         _isDemo = true;
+        _isTestCave = false;
         _menuCaveIndexBeforeDemo = CaveIndex;
         LoadCaveWithSkip(0, 1);
 
@@ -513,6 +588,23 @@ public sealed class GameSession
             return;
         }
 
+        // Die Prüfstand-Caves stehen außerhalb der PlayOrder: Tod und Zeitablauf laden dieselbe Cave
+        // erneut, jedes andere Ende führt zurück in den Testmodus (statt in die nächste Cave der Kette).
+        if (_isTestCave)
+        {
+            if (_transitionReason is TransitionReason.TimeoutAlive or TransitionReason.DeathRetry)
+            {
+                TryLoadCave(_caves.Get(TestCaves[TestCaveIndex].Name));
+            }
+            else
+            {
+                _isTestCave = false;
+                ReturnToMenu(SessionPhase.TestMenu);
+            }
+
+            return;
+        }
+
         switch (_transitionReason)
         {
             case TransitionReason.Success:
@@ -526,16 +618,10 @@ public sealed class GameSession
                 break;
             case TransitionReason.GameOver:
             case TransitionReason.EscQuit:
-                Phase = SessionPhase.Menu;
-                Cave = null;
-                CurrentCaveData = null;
-                ShowGameOverMessage = false;
+                ReturnToMenu();
                 break;
             case TransitionReason.DemoEnd:
-                Phase = SessionPhase.Menu;
-                Cave = null;
-                CurrentCaveData = null;
-                ShowGameOverMessage = false;
+                ReturnToMenu();
                 _isDemo = false;
                 _demoPlayer = null;
                 CaveIndex = _menuCaveIndexBeforeDemo;
@@ -561,36 +647,57 @@ public sealed class GameSession
         for (var attempt = 0; attempt < PlayOrder.Length; attempt++)
         {
             var index = (caveIndex + attempt) % PlayOrder.Length;
-            var data = _caves.Get(NameFor(index, level));
-            var cave = new Simulation.Cave(data);
-            var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-            if (entranceIndex < 0)
+            if (!TryLoadCave(_caves.Get(NameFor(index, level))))
             {
                 continue;
             }
 
             CaveIndex = (sbyte)index;
-            CurrentCaveData = data;
-            Cave = cave;
-            _entranceIndex = entranceIndex;
-            State.ResetForCave(data);
-            Input.ResetForNewCave();
-            Camera.ResetTo(data.CameraStartX, data.CameraStartY);
-            _cover.BeginUncover(cave.Width, cave.Height);
-
-            // Tempo der geladenen Cave (BD1: ergibt sich aus Schwierigkeitsgrad und Cave-Art, siehe
-            // CaveSpeed). Die Clk18-Periode wird mitgesetzt, damit die Spielsekunde tempo-unabhängig
-            // gleich lang bleibt.
-            _secondsPerTick = data.GameSpeed.SecondsPerTick;
-            Clocks.Reset(data.GameSpeed.GameSecondTicks);
-            _tickAccumulator = 0;
-            _bonusSubTimer = 0;
-
-            Phase = SessionPhase.Playing;
             return;
         }
 
         // Sicherheitsnetz: keine spielbare Cave gefunden -> zurück ins Menü statt hängen zu bleiben.
         Phase = SessionPhase.Menu;
+    }
+
+    /// <summary>Baut das Simulationsgitter auf und versetzt die Session ins Spiel. Scheitert (false),
+    /// wenn die Cave keinen Eingang hat und damit unspielbar wäre.</summary>
+    private bool TryLoadCave(CaveData data)
+    {
+        var cave = new Simulation.Cave(data);
+        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
+        if (entranceIndex < 0)
+        {
+            return false;
+        }
+
+        CurrentCaveData = data;
+        Cave = cave;
+        _entranceIndex = entranceIndex;
+        State.ResetForCave(data);
+        Input.ResetForNewCave();
+        Camera.ResetTo(data.CameraStartX, data.CameraStartY);
+        _cover.BeginUncover(cave.Width, cave.Height);
+
+        // Tempo der geladenen Cave (BD1: ergibt sich aus Schwierigkeitsgrad und Cave-Art, siehe
+        // CaveSpeed). Die Clk18-Periode wird mitgesetzt, damit die Spielsekunde tempo-unabhängig
+        // gleich lang bleibt.
+        _secondsPerTick = data.GameSpeed.SecondsPerTick;
+        Clocks.Reset(data.GameSpeed.GameSecondTicks);
+        _tickAccumulator = 0;
+        _bonusSubTimer = 0;
+
+        Phase = SessionPhase.Playing;
+        return true;
+    }
+
+    /// <summary>Verlässt die laufende Cave. <paramref name="phase"/> ist für die Prüfstand-Caves
+    /// SessionPhase.TestMenu, damit man dort direkt die nächste auswählen kann.</summary>
+    private void ReturnToMenu(SessionPhase phase = SessionPhase.Menu)
+    {
+        Phase = phase;
+        Cave = null;
+        CurrentCaveData = null;
+        ShowGameOverMessage = false;
     }
 }

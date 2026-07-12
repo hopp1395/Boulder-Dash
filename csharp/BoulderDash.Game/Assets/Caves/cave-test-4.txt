@@ -1,0 +1,45 @@
+# Prüfstand 4 — Boulder schieben (kein BD1-Original, nur über den Testmodus F5 erreichbar).
+#
+# Zu prüfen: Jeder Schubversuch gelingt nur mit 1:8 pro Cave-Scan (BDCFF 0006). Drücke die
+# Richtungstaste gegen einen der drei Steine und halte sie — der Stein setzt sich erst nach
+# mehreren Anläufen in Bewegung, und die Wartezeit schwankt spürbar von Versuch zu Versuch.
+# Vorher (DOS): festes Clk4-Fenster, also gleichmäßig jeder 2. Scan — nie ein Zögern.
+#
+# Hinter jedem Stein liegt Leerraum, sonst ließe er sich gar nicht schieben. Ganz rechts führt eine
+# Lücke im Stahlboden nach unten zum Diamanten und zum Ausgang.
+#
+# Nicht von Hand prüfbar: "Ein FALLENDER Stein lässt sich nicht schieben" — dafür müsste man im
+# richtigen Scan drücken. Das deckt der Unit-Test ab (Fallender_Stein_laesst_sich_nicht_schieben).
+
+[Cave]
+Cave        = Z
+Name        = Schieben
+Description = Schub gelingt nur mit 1 zu 8
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W..................W
+W P  r    r    r   W
+WWWWWWWWWWWWWWWWWW W
+W..................W
+W..................W
+W........d.........W
+W..................W
+W.................XW
+W..................W
+WWWWWWWWWWWWWWWWWWWW

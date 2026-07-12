@@ -1,0 +1,46 @@
+# Prüfstand 5 — Zaubermauer (kein BD1-Original, nur über den Testmodus F5 erreichbar).
+#
+# Zu prüfen: Die Zaubermauer KLINGT beim Auftreffen — und zwar nach dem Objekt, das unten wieder
+# HERAUSKOMMT (BDCFF 0000/0002): ein Stein erzeugt den Diamant-Klang, ein Diamant den Stein-Klang.
+# Vorher (DOS): die Mauer war in allen drei Zuständen völlig stumm.
+#
+# Gleich zu Beginn fallen drei Gruppen auf Zaubermauern — hörbar sind drei Aufschläge:
+#   links  (2 Steine)   -> darunter ist Platz -> werden zu DIAMANTEN   (Diamant-Klang)
+#   Mitte  (2 Steine)   -> darunter ist Stahl -> gehen VERLOREN        (Klang trotzdem!)
+#   rechts (1 Diamant)  -> darunter ist Platz -> wird zu einem STEIN   (Stein-Klang)
+#
+# Die zwei gewandelten Diamanten sind die einzige Quote-Quelle: durch die Lücke im Stahlboden
+# (rechts) nach oben klettern, den gewandelten Stein aus dem Weg schieben und einsammeln.
+
+[Cave]
+Cave        = Z
+Name        = Zaubermauer
+Description = Wandelt um und klingt nach dem Ergebnis
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 2
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 20
+AmoebaTime      = 20
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W  rr   rr     d   W
+W                  W
+W  MM   MM     M   W
+W       WW         W
+W                  W
+WWWWWWWWWWWWWWWWW  W
+W..................W
+W.P...............XW
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW

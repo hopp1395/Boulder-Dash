@@ -1,0 +1,43 @@
+# Prüfstand 2 — Drehsinn der Kreaturen (kein BD1-Original, nur über den Testmodus F5 erreichbar).
+#
+# Zu prüfen: Firefly und Butterfly drehen sich in ENTGEGENGESETZTE Richtungen (BDCFF 0008/0009).
+#   links:  Firefly  bevorzugt links  = GEGEN den Uhrzeigersinn -> umrundet seinen Pfeiler linksherum
+#   rechts: Butterfly bevorzugt rechts = IM Uhrzeigersinn        -> umrundet seinen Pfeiler rechtsherum
+# Beide starten in derselben Ecke ihres Pfeilers, die Drehrichtung ist dadurch direkt vergleichbar.
+#
+# Vorher (DOS): Die Kreaturen drehten in einer Schleife bis zu viermal pro Scan weiter. Die
+# Bewegung stimmte zwar, die Blickrichtung nach einer Blockade aber nicht — und der Butterfly
+# drehte bei Blockade sogar auf seine Vorzugsseite statt auf die Gegenseite.
+
+[Cave]
+Cave        = Z
+Name        = Drehsinn
+Description = Firefly linksherum, Butterfly rechtsherum
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W  F     W    B    W
+W        W         W
+W  WW    W    WW   W
+W  WW    W    WW   W
+W        W         W
+W        W         W
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W.P.......d.......XW
+W..................W
+WWWWWWWWWWWWWWWWWWWW

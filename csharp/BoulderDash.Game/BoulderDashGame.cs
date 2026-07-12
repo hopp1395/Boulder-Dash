@@ -96,7 +96,7 @@ public class BoulderDashGame : XnaGame
         SyncPalette();
         _audioPlayer.Update(_session.State);
 
-        if (_session.Phase == SessionPhase.Menu)
+        if (_session.Phase is SessionPhase.Menu or SessionPhase.TestMenu)
         {
             _audioPlayer.PlayMusic();
         }
@@ -126,6 +126,19 @@ public class BoulderDashGame : XnaGame
                 if (_inputAdapter.IsJustPressed(Keys.F2)) _session.MenuDemo();
                 // F3 (Hilfe) ist bereits im Original ohne Funktion.
                 if (_inputAdapter.IsJustPressed(Keys.F4)) _session.MenuQuit();
+                // F5: kein Original-Menüpunkt, sondern der Zugang zum Testmodus (GameSession.TestCaves).
+                if (_inputAdapter.IsJustPressed(Keys.F5)) _session.MenuTestMode();
+                break;
+            case SessionPhase.TestMenu:
+                if (_inputAdapter.IsJustPressed(Keys.Up)) _session.TestMenuPrevious();
+                if (_inputAdapter.IsJustPressed(Keys.Down)) _session.TestMenuNext();
+                for (var i = 0; i < GameSession.TestCaves.Count; i++)
+                {
+                    if (_inputAdapter.IsJustPressed(Keys.D1 + i)) _session.TestMenuSelect(i);
+                }
+
+                if (_inputAdapter.IsJustPressed(Keys.F1) || _inputAdapter.IsJustPressed(Keys.Enter)) _session.TestMenuStart();
+                if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.TestMenuBack();
                 break;
             case SessionPhase.Playing:
                 _inputAdapter.ApplyGameplay(_session.Input, _session.Cave?.Width ?? 1);
@@ -164,6 +177,10 @@ public class BoulderDashGame : XnaGame
         {
             _menuRenderer.Draw(_spriteBatch, _session);
         }
+        else if (_session.Phase == SessionPhase.TestMenu)
+        {
+            _menuRenderer.DrawTestMenu(_spriteBatch, _session);
+        }
         else if (_session.Cave is not null)
         {
             _caveRenderer.Draw(_spriteBatch, _session.Cave, _session.Camera, _session.State, _session.Input, _session.Clocks, _session.ScreenCover);
@@ -198,7 +215,7 @@ public class BoulderDashGame : XnaGame
 
     private void SyncPalette()
     {
-        if (_session.Phase == SessionPhase.Menu)
+        if (_session.Phase is SessionPhase.Menu or SessionPhase.TestMenu)
         {
             if (_paletteContext != PaletteContext.Menu)
             {

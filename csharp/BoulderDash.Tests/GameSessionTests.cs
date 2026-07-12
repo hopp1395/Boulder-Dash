@@ -21,6 +21,37 @@ public class GameSessionTests
         }
     }
 
+    /// <summary>F5 öffnet den Testmodus; von dort startet jede Prüfstand-Cave einzeln. Sie stehen
+    /// außerhalb der PlayOrder — ein Escape führt daher zurück in den Testmodus und nicht in eine
+    /// Cave der Spielreihenfolge.</summary>
+    [Fact]
+    public void Testmodus_startet_jede_Pruefstand_Cave_und_kehrt_danach_dorthin_zurueck()
+    {
+        var session = NewRealSession();
+
+        session.MenuTestMode();
+        Assert.Equal(SessionPhase.TestMenu, session.Phase);
+
+        for (var i = 0; i < GameSession.TestCaves.Count; i++)
+        {
+            session.TestMenuSelect(i);
+            session.TestMenuStart();
+
+            Assert.Equal(SessionPhase.Playing, session.Phase);
+            Assert.NotNull(session.CurrentCaveData);
+
+            session.EscapePressed();
+            AdvanceThroughCovering(session);
+            for (var frame = 0; frame < 120 && session.Phase != SessionPhase.TestMenu; frame++)
+            {
+                session.Update(1.0 / 60.0);
+            }
+
+            Assert.Equal(SessionPhase.TestMenu, session.Phase);
+            Assert.Null(session.Cave);
+        }
+    }
+
     [Fact]
     public void Menu_Cave_Auswahl_ist_auf_A_bis_P_begrenzt()
     {

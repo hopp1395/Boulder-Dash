@@ -1,0 +1,43 @@
+# Prüfstand 3 — Kreatur zündet an bewegtem Rockford (kein BD1-Original, nur über den Testmodus F5).
+#
+# Zu prüfen: Beide Kreaturen explodieren bei Kontakt zu Rockford — der Firefly zu LEERE, der
+# Butterfly zu DIAMANTEN. Grab dich in die linke Kammer (Firefly) und in die rechte (Butterfly)
+# und vergleiche, was übrig bleibt. Rockford stirbt dabei jeweils mit; das gehört so.
+#
+# Vorher (DOS): Der Butterfly prüfte mit der Maske 0xFE und übersah dadurch einen Rockford, der
+# sich im selben Cave-Scan schon bewegt hatte (Kachel 0x86 statt 0x06). Er zündete erst einen Scan
+# später. Der Unterschied ist von Hand kaum zu sehen (ein Scan = 150 ms) — hier prüfst du vor allem,
+# DASS beide zünden und was sie hinterlassen; den Scan-genauen Fall deckt der Unit-Test ab.
+
+[Cave]
+Cave        = Z
+Name        = Kontakt-Explosion
+Description = Firefly zu Leere, Butterfly zu Diamanten
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W...   ......   ...W
+W... F ...... B ...W
+W...   ......   ...W
+W..................W
+W..................W
+W........P........XW
+W..................W
+W.....d............W
+W..................W
+WWWWWWWWWWWWWWWWWWWW
