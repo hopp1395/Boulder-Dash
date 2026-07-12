@@ -243,7 +243,8 @@ public sealed class CavePhysics
             return;
         }
 
-        var below = cave.GetRaw(idx + width) & 0x0F;
+        var belowRaw = cave.GetRaw(idx + width);
+        var below = belowRaw & 0x0F;
         switch (below)
         {
             case 0:
@@ -252,6 +253,15 @@ public sealed class CavePhysics
                 break;
             case 2:
             case 3:
+                // "Rounded" sind nach BDCFF 0000 nur die Brick Wall und RUHENDE Boulder/Jewels. Trägt das
+                // Objekt darunter noch das Fall-Bit, ist es keine Rundung — dann wird nicht abgerollt,
+                // sondern gelandet. Das DOS-Original prüfte hier nur die Element-ID.
+                if ((belowRaw & 0x40) == 0x40)
+                {
+                    goto default;
+                }
+
+                goto case 4;
             case 4:
                 if (cave.GetRaw(idx - 1) == 0 && cave.GetRaw((idx - 1) + width) == 0)
                 {

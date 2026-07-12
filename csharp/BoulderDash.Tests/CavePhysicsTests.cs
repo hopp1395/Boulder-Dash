@@ -77,6 +77,28 @@ public class CavePhysicsTests
         Assert.Equal(Element.Boulder, cave.GetElement(3, 1));
     }
 
+    /// <summary>Abgerollt wird nur von RUHENDEN runden Objekten (BDCFF 0000). Liegt darunter ein
+    /// FALLENDER Stein, bleibt der obere liegen, statt zur Seite auszuweichen.</summary>
+    [Fact]
+    public void Boulder_rollt_nicht_von_einem_fallenden_Boulder_ab()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 0, 2, 0, Wall, // ruhender Stein...
+            Wall, 0, 0x42, 0, Wall, // ...auf einem FALLENDEN Stein (Bit 0x40)
+            Wall, 0, 0, 0, Wall, // links/rechts wäre Platz zum Abrollen
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
+
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
+
+        Assert.Equal(Element.Boulder, cave.GetElement(2, 1)); // bleibt liegen, rollt nicht nach links
+        Assert.Equal(Element.Empty, cave.GetElement(1, 1));
+        Assert.Equal(Element.Boulder, cave.GetElement(2, 3)); // der untere fällt normal weiter
+    }
+
     /// <summary>Butterfly startet nach BD1 nach unten blickend und sucht seine Vorzugsrichtung im
     /// Uhrzeigersinn — im freien Feld zieht er deshalb zuerst nach LINKS (BDCFF 0009). Der Firefly
     /// startet nach links und sucht gegen den Uhrzeigersinn, zieht also zuerst nach UNTEN (BDCFF 0008).</summary>
