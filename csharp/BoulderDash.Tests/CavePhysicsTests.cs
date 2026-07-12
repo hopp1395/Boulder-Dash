@@ -363,6 +363,9 @@ public class CavePhysicsTests
         Assert.Equal(Element.Empty, cave.GetElement(1, 1));
         Assert.Equal(Element.Rockford, cave.GetElement(2, 1));
         Assert.Equal(Element.Boulder, cave.GetElement(3, 1));
+
+        // Der gelungene Schub klingt (AudioPlayer spielt dafür den Stein-Aufschlag, BDCFF 0006).
+        Assert.Contains(SoundEvent.PushBoulder, state.SoundEvents);
     }
 
     /// <summary>Der Schub gelingt nur mit 1:8 pro Versuch (BDCFF 0006) — geht der Wurf daneben,
@@ -384,6 +387,7 @@ public class CavePhysicsTests
 
         Assert.Equal(Element.Rockford, cave.GetElement(1, 1)); // unverändert, kein Schub
         Assert.Equal(Element.Boulder, cave.GetElement(2, 1));
+        Assert.DoesNotContain(SoundEvent.PushBoulder, state.SoundEvents); // und bleibt still
     }
 
     /// <summary>Ein FALLENDER Stein lässt sich nicht schieben ("he cannot push falling boulders",

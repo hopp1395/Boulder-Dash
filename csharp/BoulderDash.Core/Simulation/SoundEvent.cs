@@ -4,8 +4,9 @@ namespace BoulderDash.Core.Simulation;
 /// Sound-Ereignisse, die CavePhysics/GameTick auslösen können. Core bleibt audiofrei — die
 /// Game-Schicht (AudioPlayer) konsumiert diese über GameState.SoundEvents und synthetisiert die
 /// passenden Klänge (siehe Audio/SoundRecipes.cs, nach der Original-C64-Sound-Dokumentation).
-/// PushBoulder und Death bleiben bewusst stumm: für "Boulder schieben" ist im Original kein
-/// eigener Sound dokumentiert, und der Tod selbst klingt bereits über den Explosion-Sound.
+/// PushBoulder hat keinen eigenen Klang, sondern den des aufschlagenden Steins ("A boulder sound
+/// plays upon successful pushes", BDCFF 0006). Death bleibt bewusst stumm — der Tod klingt bereits
+/// über den Explosion-Sound.
 /// Amoeba/EnchantedWall sind Dauerklänge (Drones), keine einmaligen Trigger — AudioPlayer
 /// leitet ihren Ein/Aus-Zustand direkt aus GameState ab, nicht aus dieser Queue.
 /// </summary>

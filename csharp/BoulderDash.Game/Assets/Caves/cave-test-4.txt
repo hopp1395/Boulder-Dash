@@ -1,9 +1,16 @@
 # Prüfstand 4 — Boulder schieben (kein BD1-Original, nur über den Testmodus F5 erreichbar).
 #
-# Zu prüfen: Jeder Schubversuch gelingt nur mit 1:8 pro Cave-Scan (BDCFF 0006). Drücke die
-# Richtungstaste gegen einen der drei Steine und halte sie — der Stein setzt sich erst nach
-# mehreren Anläufen in Bewegung, und die Wartezeit schwankt spürbar von Versuch zu Versuch.
-# Vorher (DOS): festes Clk4-Fenster, also gleichmäßig jeder 2. Scan — nie ein Zögern.
+# Zu prüfen (zwei Dinge auf einmal):
+#
+# a) Jeder Schubversuch gelingt nur mit 1:8 pro Cave-Scan (BDCFF 0006). Drücke die Richtungstaste
+#    gegen einen der drei Steine und halte sie — der Stein setzt sich erst nach mehreren Anläufen in
+#    Bewegung, und die Wartezeit schwankt spürbar von Versuch zu Versuch.
+#    Vorher (DOS): festes Clk4-Fenster, also gleichmäßig jeder 2. Scan — nie ein Zögern.
+#
+# b) Der gelungene Schub KLINGT, und zwar wie ein aufschlagender Stein ("A boulder sound plays upon
+#    successful pushes", BDCFF 0006). Achte darauf, dass der Ton genau im Moment des Anruckens kommt
+#    und nicht schon bei den vergeblichen Versuchen.
+#    Vorher (DOS): das Schieben war völlig stumm.
 #
 # Hinter jedem Stein liegt Leerraum, sonst ließe er sich gar nicht schieben. Ganz rechts führt eine
 # Lücke im Stahlboden nach unten zum Diamanten und zum Ausgang.

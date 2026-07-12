@@ -84,7 +84,7 @@ public sealed class GameSession
         new("cave-test-1", "BUTTERFLY ZIEHT ZUERST LINKS"),
         new("cave-test-2", "FIREFLY LINKS-, BUTTERFLY RECHTSRUM"),
         new("cave-test-3", "KREATUR ZUENDET BEI KONTAKT"),
-        new("cave-test-4", "SCHIEBEN GELINGT NUR MIT 1 ZU 8"),
+        new("cave-test-4", "SCHIEBEN: 1 ZU 8, UND ES KLINGT"),
         new("cave-test-5", "ZAUBERMAUER WANDELT UM UND KLINGT"),
         new("cave-test-6", "KEIN ABROLLEN VOM FALLENDEN STEIN"),
         new("cave-test-7", "AUSGANG ZAEHLT NICHT ALS DIAMANT"),

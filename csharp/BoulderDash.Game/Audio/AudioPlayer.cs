@@ -108,6 +108,9 @@ public sealed class AudioPlayer
                 _collectJewel.Play();
                 break;
             case SoundEvent.BoulderLand:
+            case SoundEvent.PushBoulder:
+                // Ein geschobener Stein klingt wie ein aufschlagender: "A boulder sound plays upon
+                // successful pushes" (BDCFF-Objektspezifikation 0006).
                 _boulderLand.Play();
                 break;
             case SoundEvent.JewelLand:
@@ -131,9 +134,8 @@ public sealed class AudioPlayer
             case SoundEvent.BonusCount:
                 PlayBonusSweep();
                 break;
-            case SoundEvent.PushBoulder:
             case SoundEvent.Death:
-                break; // kein Original-Sound dokumentiert bzw. bereits durch Explosion vertont.
+                break; // bereits durch den Explosion-Sound vertont.
         }
     }
 
