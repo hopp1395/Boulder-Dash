@@ -311,13 +311,16 @@ public sealed class GameSession
         QuitRequested = true;
     }
 
-    /// <summary>Spielstart ("PRESS SPACE TO PLAY"): leben=3, gewählte Menü-Cave laden.</summary>
+    /// <summary>Spielstart ("PRESS SPACE TO PLAY"): leben=3, gewählte Menü-Cave laden. Ein neues Spiel
+    /// vergisst auch die erkundeten Gebiete (siehe ExploreMap.Reset) — sie überdauern zwar den Tod,
+    /// aber nicht das Spiel.</summary>
     public void MenuStart()
     {
         if (Phase != SessionPhase.Menu) return;
         ResetIdleTimer();
         State.Chances = 3;
         _isTestCave = false;
+        _explore.Reset();
         LoadCaveWithSkip(MenuCaveIndices[_menuCaveSlot]);
     }
 
@@ -364,7 +367,8 @@ public sealed class GameSession
         if (Phase != SessionPhase.TestMenu) return;
 
         State.Chances = 3;
-        _isTestCave = TryLoadCave(_caves.Get(TestCaves[TestCaveIndex].Name));
+        _explore.Reset(); // auch der Prüfstand ist ein neues Spiel
+        _isTestCave = TryLoadCave(TestCaves[TestCaveIndex].Name);
         if (!_isTestCave)
         {
             Phase = SessionPhase.TestMenu; // Cave ohne Eingang — Sicherheitsnetz wie in LoadCaveWithSkip.
@@ -386,6 +390,7 @@ public sealed class GameSession
 
         _isDemo = true;
         _isTestCave = false;
+        _explore.Reset(); // die Demo ist ein eigenes Spiel und erbt keine Landkarte
         LoadCaveWithSkip(0, 1);
 
         if (Phase != SessionPhase.Playing)
@@ -659,7 +664,7 @@ public sealed class GameSession
         {
             if (_transitionReason is TransitionReason.TimeoutAlive or TransitionReason.DeathRetry)
             {
-                TryLoadCave(_caves.Get(TestCaves[TestCaveIndex].Name));
+                TryLoadCave(TestCaves[TestCaveIndex].Name);
             }
             else
             {
@@ -713,7 +718,7 @@ public sealed class GameSession
         for (var attempt = 0; attempt < PlayOrder.Length; attempt++)
         {
             var index = (caveIndex + attempt) % PlayOrder.Length;
-            if (!TryLoadCave(_caves.Get(NameFor(index, level))))
+            if (!TryLoadCave(NameFor(index, level)))
             {
                 continue;
             }
@@ -727,9 +732,12 @@ public sealed class GameSession
     }
 
     /// <summary>Baut das Simulationsgitter auf und versetzt die Session ins Spiel. Scheitert (false),
-    /// wenn die Cave keinen Eingang hat und damit unspielbar wäre.</summary>
-    private bool TryLoadCave(CaveData data)
+    /// wenn die Cave keinen Eingang hat und damit unspielbar wäre. Der Name ist zugleich der Schlüssel,
+    /// unter dem die ExploreMap sich das Erkundete merkt — nur so weiß sie beim Laden, ob es dieselbe
+    /// Cave ist wie eben (nach einem Tod) oder eine neue.</summary>
+    private bool TryLoadCave(string caveName)
     {
+        var data = _caves.Get(caveName);
         var cave = new Simulation.Cave(data, State, Input, Camera, _random);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
         if (entranceIndex < 0)
@@ -744,7 +752,7 @@ public sealed class GameSession
         Input.ResetForNewCave();
         Camera.CenterOn(entranceIndex % cave.Width, entranceIndex / cave.Width, cave.Width, cave.Height);
         _cover.BeginUncover(cave.Width, cave.Height);
-        _explore.BeginCave(cave.Width, cave.Height, entranceIndex);
+        _explore.BeginCave(caveName, cave.Width, cave.Height, entranceIndex);
 
         // Tempo der geladenen Cave (BD1: ergibt sich aus Schwierigkeitsgrad und Cave-Art, siehe
         // CaveSpeed). Die Clk18-Periode wird mitgesetzt, damit die Spielsekunde tempo-unabhängig

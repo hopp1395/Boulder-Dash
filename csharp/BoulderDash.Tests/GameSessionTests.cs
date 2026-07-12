@@ -689,6 +689,59 @@ public class GameSessionTests
         Assert.Equal(score, session.State.Score);
     }
 
+    /// <summary>Der Tod kostet ein Leben, nicht die Landkarte: Die Cave wird neu geladen, das schon
+    /// Erkundete bleibt stehen (siehe ExploreMap). Ohne das wäre das Erkunden einer großen Cave beim
+    /// ersten Fehltritt umsonst gewesen.</summary>
+    [Fact]
+    public void Tod_und_Neustart_behalten_die_erkundeten_Gebiete()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+        session.ExploreMap.Enabled = true;
+
+        // Eine Kachel fern des Eingangs erkunden — im Spiel tut das Rockford, wenn er dorthin läuft.
+        Assert.Equal(TileVisibility.Hidden, session.ExploreMap.Visibility(35, 18));
+        session.ExploreMap.Reveal(session.Cave!.IndexOf(35, 18));
+
+        Sterben(session);
+
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+        Assert.Equal('A', session.CurrentCaveData!.Letter); // dieselbe Cave
+        Assert.Equal(TileVisibility.Explored, session.ExploreMap.Visibility(35, 18));
+    }
+
+    /// <summary>Erst ein neues Spiel fängt wieder im Dunkeln an.</summary>
+    [Fact]
+    public void Neues_Spiel_vergisst_die_erkundeten_Gebiete()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+        session.ExploreMap.Enabled = true;
+        session.ExploreMap.Reveal(session.Cave!.IndexOf(35, 18));
+
+        // Zurück ins Menü (Escape) und neu anfangen — dieselbe Cave, aber ein neues Spiel.
+        session.EscapePressed();
+        AdvanceThroughCovering(session);
+        session.Update(10.0);
+        Assert.Equal(SessionPhase.Menu, session.Phase);
+
+        session.MenuStart();
+
+        Assert.Equal(TileVisibility.Hidden, session.ExploreMap.Visibility(35, 18));
+    }
+
+    /// <summary>Rockford stirbt (State.Stat, siehe Tod_kostet_ein_Leben...) und die Session läuft durch
+    /// Todespause und Zudeck-Animation bis in die neu geladene Cave.</summary>
+    private static void Sterben(GameSession session)
+    {
+        session.State.Stat = 1;
+        session.Update(0.001);
+        session.Update(10.0);
+        session.AnyKeyPressed();
+        AdvanceThroughCovering(session);
+        session.Update(10.0);
+    }
+
     /// <summary>Herauszoomen rückt Rockford in die Mitte des neuen Sichtfensters, statt das Fenster nur
     /// nach rechts und unten wachsen zu lassen — sonst driftete er an den Rand. Gewählt ist die große
     /// Prüfstand-Cave, weil in ihr überhaupt Platz ist, mittig zu stehen: Bei einer 40x22-Cave klemmt

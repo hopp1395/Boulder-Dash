@@ -31,6 +31,10 @@ public enum TileVisibility
 /// <see cref="Enabled"/> schaltet nur die DARSTELLUNG um: Die Karte wird immer fortgeschrieben, auch
 /// wenn das Feature aus ist. Ein- und Ausschalten blendet den Nebel deshalb bloß ein und aus, statt
 /// das Erkundete zu vergessen.
+///
+/// Die Karte überdauert den Tod: Wer eine Cave nach einem verlorenen Leben neu beginnt, findet sie so
+/// vor, wie er sie verlassen hat (<see cref="BeginCave"/>). Vergessen wird erst bei einem neuen Spiel
+/// (<see cref="Reset"/>) — sonst wäre das Erkunden einer großen Cave beim ersten Fehltritt umsonst.
 /// </summary>
 public sealed class ExploreMap
 {
@@ -55,6 +59,11 @@ public sealed class ExploreMap
     private int _width;
     private int _height;
 
+    /// <summary>Die Cave, deren Erkundung gerade in <see cref="_explored"/> steht — der Name, unter dem
+    /// sie im Repository liegt (z. B. "cave-A-1"; der Schwierigkeitsgrad steckt darin, jede Datei ist
+    /// eine eigene Cave). <c>null</c>, solange nichts erkundet ist.</summary>
+    private string? _caveName;
+
     /// <summary>Kachel-Index, um den der Blickradius liegt: Rockford — und solange er nicht auf dem
     /// Feld steht (vor dem Eingangsaufbau, nach seinem Tod) der zuletzt bekannte Platz.</summary>
     private int _centre;
@@ -62,15 +71,37 @@ public sealed class ExploreMap
     /// <summary>Der Feature-Schalter (E-Taste). Aus heißt: alles sichtbar wie bisher.</summary>
     public bool Enabled { get; set; }
 
-    /// <summary>Cave-Start: alles unerkundet, der Blick liegt auf dem Eingang. Damit ist dessen
-    /// Umgebung schon erkundet, wenn Rockford dort herausplatzt — er startet nicht im Schwarzen.</summary>
-    public void BeginCave(int width, int height, int entranceIndex)
+    /// <summary>
+    /// Cave-Start: Der Blick liegt auf dem Eingang. Damit ist dessen Umgebung schon erkundet, wenn
+    /// Rockford dort herausplatzt — er startet nicht im Schwarzen.
+    ///
+    /// Erkundet wird eine Cave über mehrere Leben hinweg: Ist es DIESELBE Cave wie beim letzten Mal,
+    /// bleibt das Erkundete stehen (ein Tod kostet ein Leben, nicht die Landkarte). Eine andere Cave
+    /// fängt bei Null an, und ein neues Spiel vergisst alles — dafür sorgt <see cref="Reset"/>.
+    /// </summary>
+    public void BeginCave(string caveName, int width, int height, int entranceIndex)
     {
-        _width = width;
-        _height = height;
-        _explored = new bool[width * height];
+        if (_caveName != caveName || _width != width || _height != height)
+        {
+            _caveName = caveName;
+            _width = width;
+            _height = height;
+            _explored = new bool[width * height];
+        }
+
         _centre = entranceIndex;
         Explore(entranceIndex);
+    }
+
+    /// <summary>Neues Spiel: Alles Erkundete ist vergessen. Der Fortschritt auf der Landkarte gehört
+    /// zum laufenden Spiel, nicht zum Spieler — wer neu anfängt, tappt wieder im Dunkeln.</summary>
+    public void Reset()
+    {
+        _caveName = null;
+        _explored = [];
+        _width = 0;
+        _height = 0;
+        _centre = 0;
     }
 
     /// <summary>Ein Tick: Der Blick folgt Rockford und erkundet, was er sieht. <c>null</c> heißt, dass
