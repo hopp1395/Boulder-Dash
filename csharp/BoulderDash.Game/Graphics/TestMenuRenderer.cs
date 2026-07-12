@@ -6,12 +6,13 @@ using Microsoft.Xna.Framework.Graphics;
 namespace BoulderDash.Game.Graphics;
 
 /// <summary>
-/// Hauptmenü, entspricht menuausgabe() + den Textausgaben in Start_menu (src/BOULDER.CPP:286,
-/// 431-468). Der dekorative Rahmen ist dasselbe 20x12-Kachelmuster wie im Original (obere 7
-/// Zeilen Mauer/Stahl-Rahmen, untere 5 Zeilen leer); die CP437-Rahmenzeichen ("Í», etc.) sind
-/// durch einfache ASCII-Zeichen ersetzt, da BiosFont kein originalgetreuer CP437-Font ist.
+/// Auswahlbildschirm des Testmodus (F5) — kein Original-Bildschirm, sondern der Entwicklerzugang
+/// zu den Prüfstand-Caves (GameSession.TestCaves). Er behält den Look des früheren DOS-Menüs
+/// (menuausgabe(), src/BOULDER.CPP:431-468): dasselbe 20x12-Kachelmuster als Rahmen und die
+/// DOS-Menüpalette. Das eigentliche Hauptmenü ist inzwischen der BD1-Titel-/Option-Screen
+/// (TitleRenderer, BD1-Ausnahme — siehe CLAUDE.md).
 /// </summary>
-public sealed class MenuRenderer
+public sealed class TestMenuRenderer
 {
     private const int TileSize = CaveRenderer.TileSize;
 
@@ -36,7 +37,7 @@ public sealed class MenuRenderer
     private readonly SpriteAtlas _atlas;
     private readonly BiosFont _font;
 
-    public MenuRenderer(SpriteAtlas atlas, BiosFont font)
+    public TestMenuRenderer(SpriteAtlas atlas, BiosFont font)
     {
         _atlas = atlas;
         _font = font;
@@ -53,28 +54,9 @@ public sealed class MenuRenderer
         return result;
     }
 
+    /// <summary>Jede Prüfstand-Cave prüft genau eine Korrektur am Objektverhalten; die Anleitung
+    /// dazu steht im Kopf der jeweiligen Cave-Datei.</summary>
     public void Draw(SpriteBatch batch, GameSession session)
-    {
-        DrawBackground(batch);
-        DrawTitleBox();
-        _font.DrawText(batch, MakeCopyrightOrMarqueeLine(session), RowPosition(17), Color.White);
-        _font.DrawText(batch, "F1 - SPIEL STARTEN  F2 - DEMO", RowPosition(19), Color.White);
-        // F5 ist kein Original-Menüpunkt, sondern der Zugang zur Prüfstand-Cave (GameSession.TestCaveName).
-        _font.DrawText(batch, "F3 - HILFE          F4 - ENDE  F5 - TEST", RowPosition(21), Color.White);
-        _font.DrawText(batch, BuildSelectorLine(session), RowPosition(23), Color.White);
-
-        void DrawTitleBox()
-        {
-            _font.DrawText(batch, "+-------------------+", RowPosition(5), Color.White);
-            _font.DrawText(batch, "| BOULDER DASH V1.1 |", RowPosition(6), Color.White);
-            _font.DrawText(batch, "+-------------------+", RowPosition(7), Color.White);
-        }
-    }
-
-    /// <summary>Auswahlbildschirm des Testmodus (F5) — kein Original-Bildschirm, sondern der
-    /// Entwicklerzugang zu den Prüfstand-Caves (GameSession.TestCaves). Jede Cave prüft genau eine
-    /// Korrektur am Objektverhalten; die Anleitung dazu steht im Kopf der jeweiligen Cave-Datei.</summary>
-    public void DrawTestMenu(SpriteBatch batch, GameSession session)
     {
         DrawBackground(batch);
 
@@ -109,11 +91,6 @@ public sealed class MenuRenderer
             }
         }
     }
-
-    private static string MakeCopyrightOrMarqueeLine(GameSession session) => session.MarqueeVisibleText;
-
-    private static string BuildSelectorLine(GameSession session) =>
-        $"     LEVEL : {session.DifficultyLevel:D2}       CAVE : {session.SelectedCaveLetter}";
 
     private static Vector2 RowPosition(int textRow) => new(0, (textRow - 1) * BiosFont.GlyphSize);
 }

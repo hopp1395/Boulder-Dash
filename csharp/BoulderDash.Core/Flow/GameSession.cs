@@ -5,6 +5,13 @@ namespace BoulderDash.Core.Flow;
 
 public enum SessionPhase
 {
+    /// <summary>Reiner BD1-Titelbildschirm (Logo + First-Star-Schriftzug) — der Anfangszustand.
+    /// Eine beliebige Taste öffnet den Option-Screen (Menu); nach Leerlauf startet die Demo
+    /// (Attract-Mode). Ersetzt zusammen mit Menu das DOS-Menü (BD1-Ausnahme, siehe CLAUDE.md).</summary>
+    TitleScreen,
+
+    /// <summary>BD1-Option-Screen: Logo plus Textzeilen mit der CAVE/LEVEL-Auswahl
+    /// ("PRESS BUTTON TO PLAY").</summary>
     Menu,
 
     /// <summary>Auswahl der Prüfstand-Caves (F5 im Hauptmenü) — kein Original-Zustand, sondern ein
@@ -19,10 +26,6 @@ public enum SessionPhase
     /// (ScreenCover, BD1) — läuft vor jeder CaveTransition, egal aus welchem Grund.</summary>
     ScreenCovering,
     CaveTransition,
-
-    /// <summary>Wartephase nach F2, vor dem ersten Demo-Zug — entspricht delay(7000) in
-    /// demo() (BOULDER.CPP:359), während dem der Eingang sich bereits aufbaut.</summary>
-    DemoWait,
     DemoPlaying,
 }
 
@@ -38,8 +41,8 @@ public enum TransitionReason
     GameOver,
     EscQuit,
 
-    /// <summary>Demo endet (Ende der Aufzeichnung, Cave-Ende oder Tod) — kehrt immer ins Menü
-    /// zurück, wie der F2-Zweig in Start_menu (BOULDER.CPP:321-328).</summary>
+    /// <summary>Demo endet (Ende der Aufzeichnung, Cave-Ende, Tod oder Tastendruck) — kehrt wie
+    /// im BD1-Attract-Zyklus immer zum Titelbildschirm zurück.</summary>
     DemoEnd,
 }
 
@@ -48,16 +51,22 @@ public enum TransitionReason
 /// Level_End() (src/BOULDER.CPP:273-423, GAME.CPP:34-62). Wandelt die im Original blockierenden
 /// delay()/getch()-Aufrufe in einen Zustandsautomaten mit Restzeit um (siehe Update()).
 ///
+/// Das DOS-Menü (Start_menu-Marquee, F-Tasten-Legende, Kachelrahmen) ist durch den BD1-Ablauf
+/// ersetzt (BD1-Ausnahme wie ScreenCover/Amoeba/CaveSpeed, siehe CLAUDE.md): Titelbildschirm →
+/// beliebige Taste → Option-Screen mit CAVE/LEVEL-Auswahl; nach Leerlauf startet automatisch
+/// die Demo (Attract-Mode), aus der Tastendruck oder Demo-Ende zum Titel zurückführen.
+///
 /// Nicht-offensichtliche Original-Regeln, hier bewusst nachgebildet:
-/// - Chances (leben) werden NUR bei F1-Druck auf 3 zurückgesetzt, nicht pro Cave.
+/// - Chances (leben) werden NUR beim Spielstart auf 3 zurückgesetzt, nicht pro Cave.
 /// - Zeitablauf OHNE Tod (Rockford lebt, Diamanten/Ausgang nicht erreicht) kostet kein Leben
 ///   und lädt dieselbe Cave erneut (level_next bleibt 0).
 /// - Nur ein Ausgangs-Erfolg (AdvanceToNextCave) rückt zur nächsten Cave vor.
 /// - Escape während des Spiels beendet die Session und kehrt ins Menü zurück (nicht nur die Cave),
 ///   durchläuft aber noch die Übergangs-Pause wie jedes andere Cave-Ende.
-/// - Die Menü-Cave-Auswahl ist auf die 16 reg. Caves A-P begrenzt (passend zum Handbuch
-///   "16 CAVES... A through P"); die 4 Intermissions (Q-T) sind nur über die Fortschritts-Kette
-///   nach jeder 4. Cave erreichbar (Original-BD1-Struktur), siehe PlayOrder.
+/// - Die Menü-Cave-Auswahl bietet wie BD1 nur die Caves A, E, I und M an (Handbuch: "You may
+///   choose CAVE A, E, I, or M, on Difficulty Levels 1-3. On Difficulty Levels 4 and 5, you
+///   must start with CAVE A."), siehe MenuCaveIndices. Die übrigen Caves und die Intermissions
+///   (Q-T) sind nur über die Fortschritts-Kette erreichbar, siehe PlayOrder.
 /// </summary>
 public sealed class GameSession
 {
@@ -72,7 +81,7 @@ public sealed class GameSession
     ];
 
     /// <summary>Eine Prüfstand-Cave: Dateiname im Repository plus die Zeile, die im Testmodus-Menü
-    /// erscheint. Der Titel darf höchstens 35 Zeichen haben — der MenuRenderer stellt Auswahlmarke und
+    /// erscheint. Der Titel darf höchstens 35 Zeichen haben — der TestMenuRenderer stellt Auswahlmarke und
     /// Nummer voran, und die Textzeile ist 40 Zeichen breit.</summary>
     public readonly record struct TestCave(string Name, string Title);
 
@@ -93,23 +102,20 @@ public sealed class GameSession
         new("cave-test-10", "WAAGERECHT SCHLAEGT SENKRECHT"),
     ];
 
-    private const int MaxCaveIndex = 18; // Menü-Auswahl A..P (letzte reguläre Cave in PlayOrder, Index 18=P)
+    /// <summary>In BD1 anwählbare Start-Caves: A, E, I, M als PlayOrder-Indizes — jeweils der
+    /// Anfang eines 4er-Blocks (Handbuch: "You may choose CAVE A, E, I, or M").</summary>
+    private static readonly sbyte[] MenuCaveIndices = [0, 5, 10, 15];
+
     private const double BonusSecondsPerPoint = 0.02; // delay(20) pro Punkt, GAME.CPP:58
     private const double PostBonusPauseSeconds = 1.0; // delay(1000) nach der Bonuszählung
     private const double DeathPauseSeconds = 1.0; // delay(1000)
     private const double GameOverExtraPauseSeconds = 1.0; // zweites delay(1000) vor GAME OVER
     private const double CaveTransitionPauseSeconds = 0.5; // delay(500) vor level_out()
-    private const double MarqueeSecondsPerChar = 3.0 / 18.2; // clk_18-Periode 3 bei 18,2 Hz Standardtimer
-    private const double DemoWaitSeconds = 7.0; // delay(7000), BOULDER.CPP:359
 
-    // Original-Marquee-Text (BOULDER.CPP:206-210), Umlaut ü->ue ersetzt (siehe BiosFont).
-    // "Boulde Dash" (ohne r) ist ein Tippfehler im Original und wird bewusst nicht korrigiert.
-    private const string MarqueeText =
-        "                                        Boulde Dash v1.1                        " +
-        "Copyright by Jan Hoppe 1999             " +
-        "Druecken Sie bitte die F1 Taste um das Sp" +
-        "iel zu starten                          " +
-        "                                        ";
+    /// <summary>Leerlaufzeit auf Titel-/Option-Screen, nach der die Demo anläuft (BD1-Attract-
+    /// Mode). Die Original-Wartezeit ist nicht vermessen — 12 s sind eine frei gewählte,
+    /// leicht justierbare Annahme.</summary>
+    public const double AttractIdleSeconds = 12.0;
 
     private readonly ICaveRepository _caves;
     private readonly Random _random;
@@ -120,8 +126,7 @@ public sealed class GameSession
     private double _phaseTimer;
     private double _tickAccumulator;
     private double _secondsPerTick;
-    private double _marqueeTimer;
-    private int _marqueeOffset;
+    private double _idleTimer;
 
     /// <summary>Wie das Original-`start` (WORD, BOULDER.CPP:112): einmal beim Laden ermittelt und
     /// danach unverändert weiterverwendet — die Eingangskachel wird während des Aufbaus zu
@@ -133,9 +138,13 @@ public sealed class GameSession
     private DemoPlayer? _demoPlayer;
     private bool _isDemo;
     private bool _isTestCave;
-    private sbyte _menuCaveIndexBeforeDemo;
 
-    public SessionPhase Phase { get; private set; } = SessionPhase.Menu;
+    /// <summary>Die Menü-Auswahl als Index in <see cref="MenuCaveIndices"/> (0-3 = A/E/I/M).
+    /// Sie lebt getrennt von <see cref="CaveIndex"/> (der laufenden Spielposition) und übersteht
+    /// damit Demo-Läufe und die Cave-Progression unverändert.</summary>
+    private int _menuCaveSlot;
+
+    public SessionPhase Phase { get; private set; } = SessionPhase.TitleScreen;
     public sbyte CaveIndex { get; private set; }
 
     /// <summary>Im Testmodus gewählte Prüfstand-Cave (Index in <see cref="TestCaves"/>).</summary>
@@ -174,24 +183,19 @@ public sealed class GameSession
         Clocks = new Clocks();
     }
 
-    public string MarqueeVisibleText => MarqueeText.Substring(_marqueeOffset, 40);
-
     /// <summary>Cave-Buchstabe der aktuell im Menü gewählten (nicht zwingend geladenen) Cave.</summary>
-    public char SelectedCaveLetter => PlayOrder[CaveIndex];
+    public char SelectedCaveLetter => PlayOrder[MenuCaveIndices[_menuCaveSlot]];
 
     /// <summary>Name, unter dem eine Cave im Repository liegt (= Dateiname ohne Endung).</summary>
     private static string NameFor(int playIndex, int level) => $"cave-{PlayOrder[playIndex]}-{level}";
-
-    /// <summary>Ob die Cave an dieser Stelle der Spielreihenfolge eine Intermission ist — steht in
-    /// der Cave-Datei selbst (Kind=Intermission) und ist für alle 5 Level gleich.</summary>
-    private bool IsIntermission(int playIndex) => _caves.Get(NameFor(playIndex, 1)).IsIntermission;
 
     public void Update(double deltaSeconds)
     {
         switch (Phase)
         {
+            case SessionPhase.TitleScreen:
             case SessionPhase.Menu:
-                UpdateMarquee(deltaSeconds);
+                UpdateAttractIdle(deltaSeconds);
                 break;
             case SessionPhase.Playing:
                 UpdatePlaying(deltaSeconds);
@@ -211,83 +215,108 @@ public sealed class GameSession
             case SessionPhase.CaveTransition:
                 UpdateCaveTransition(deltaSeconds);
                 break;
-            case SessionPhase.DemoWait:
-                UpdateDemoWait(deltaSeconds);
-                break;
             case SessionPhase.DemoPlaying:
                 UpdateDemoPlaying(deltaSeconds);
                 break;
         }
     }
 
-    private void UpdateMarquee(double deltaSeconds)
+    /// <summary>BD1-Attract-Mode: bleibt der Titel-/Option-Screen eine Weile unbedient, läuft
+    /// die Demo an. Jede Menü-Eingabe setzt den Zähler zurück (ResetIdleTimer).</summary>
+    private void UpdateAttractIdle(double deltaSeconds)
     {
-        _marqueeTimer += deltaSeconds;
-        while (_marqueeTimer >= MarqueeSecondsPerChar)
+        _idleTimer += deltaSeconds;
+        if (_idleTimer >= AttractIdleSeconds)
         {
-            _marqueeTimer -= MarqueeSecondsPerChar;
-            _marqueeOffset++;
-            // Original-Bug (uninitialisierte Vergleichsvariable) verhindert hier ein sauberes
-            // Zurückspringen — wir implementieren das offensichtlich beabsichtigte Verhalten.
-            if (_marqueeOffset > MarqueeText.Length - 40)
-            {
-                _marqueeOffset = 0;
-            }
+            _idleTimer = 0;
+            StartDemo();
         }
     }
 
-    // Menü-Eingaben: entspricht dem switch in Start_menu (BOULDER.CPP:291-329). Die Tasten
-    // wirken hier nach ihrer SINNVOLLEN Bedeutung (rechts=vor, links=zurück) — im Original
-    // sind die #define-Namen RECHTS/LINKS vertauscht, die tatsächlich abgefragten Scancodes
-    // (0x4B/0x4D) ergeben aber exakt dieses Verhalten, siehe InputState-Klassenkommentar.
+    private void ResetIdleTimer() => _idleTimer = 0;
+
+    /// <summary>Beliebige Taste auf dem Titelbildschirm: öffnet den Option-Screen — wie der
+    /// Feuerknopf/F1 im BD1-Original ("F1 or fire button: show menu lines").</summary>
+    public void TitleAnyKey()
+    {
+        if (Phase != SessionPhase.TitleScreen) return;
+        ResetIdleTimer();
+        Phase = SessionPhase.Menu;
+    }
+
+    /// <summary>Escape auf dem Option-Screen: zurück zum Titelbildschirm. Kein BD1-Beleg —
+    /// macht den reinen Titel ohne Neustart wieder erreichbar.</summary>
+    public void MenuBack()
+    {
+        if (Phase != SessionPhase.Menu) return;
+        ResetIdleTimer();
+        Phase = SessionPhase.TitleScreen;
+    }
+
+    // Menü-Eingaben des Option-Screens: Hoch/Runter = Level, Links/Rechts = Cave, wie die
+    // Joystick-Auswahl im BD1-Original (Handbuch: "move the joystick arm left or right/up or
+    // down when you are in the menu screen").
     public void MenuUp()
     {
         if (Phase != SessionPhase.Menu) return;
-        if (DifficultyLevel++ > 4) DifficultyLevel = 5;
+        ResetIdleTimer();
+        DifficultyLevel = Math.Min((sbyte)(DifficultyLevel + 1), (sbyte)5);
+
+        // "On Difficulty Levels 4 and 5, you must start with CAVE A." (Handbuch) — die Auswahl
+        // springt beim Überschreiten von Grad 3 auf Cave A zurück.
+        if (DifficultyLevel >= 4)
+        {
+            _menuCaveSlot = 0;
+        }
     }
 
     public void MenuDown()
     {
         if (Phase != SessionPhase.Menu) return;
-        if (DifficultyLevel-- < 2) DifficultyLevel = 1;
+        ResetIdleTimer();
+        DifficultyLevel = Math.Max((sbyte)(DifficultyLevel - 1), (sbyte)1);
     }
 
     public void MenuNextCave()
     {
         if (Phase != SessionPhase.Menu) return;
-        var next = CaveIndex + 1;
-        while (next <= MaxCaveIndex && IsIntermission(next)) next++;
-        CaveIndex = next > MaxCaveIndex ? (sbyte)MaxCaveIndex : (sbyte)next;
+        ResetIdleTimer();
+        if (DifficultyLevel >= 4) return; // Grad 4/5: Cave ist auf A festgenagelt (Handbuch).
+        // Zyklisch A→E→I→M→A — Joystick-Semantik ohne Anschlag (Annahme, im BD1 nicht vermessen).
+        _menuCaveSlot = (_menuCaveSlot + 1) % MenuCaveIndices.Length;
     }
 
     public void MenuPreviousCave()
     {
         if (Phase != SessionPhase.Menu) return;
-        var previous = CaveIndex - 1;
-        while (previous >= 0 && IsIntermission(previous)) previous--;
-        CaveIndex = previous < 0 ? (sbyte)0 : (sbyte)previous;
+        ResetIdleTimer();
+        if (DifficultyLevel >= 4) return;
+        _menuCaveSlot = (_menuCaveSlot + MenuCaveIndices.Length - 1) % MenuCaveIndices.Length;
     }
 
+    /// <summary>F4: Programm beenden — vom Titelbildschirm wie vom Option-Screen aus.</summary>
     public void MenuQuit()
     {
-        if (Phase != SessionPhase.Menu) return;
+        if (Phase is not (SessionPhase.Menu or SessionPhase.TitleScreen)) return;
         QuitRequested = true;
     }
 
-    /// <summary>F1: neue Session starten (leben=3, aktuelle Menü-Cave laden).</summary>
+    /// <summary>Spielstart ("PRESS BUTTON TO PLAY"): leben=3, gewählte Menü-Cave laden.</summary>
     public void MenuStart()
     {
         if (Phase != SessionPhase.Menu) return;
+        ResetIdleTimer();
         State.Chances = 3;
         _isTestCave = false;
-        LoadCaveWithSkip(CaveIndex);
+        LoadCaveWithSkip(MenuCaveIndices[_menuCaveSlot]);
     }
 
     /// <summary>F5: in den Testmodus wechseln (siehe <see cref="TestCaves"/>). Kein Original-Menüpunkt,
-    /// sondern ein Entwicklerzugang zum Prüfstand für das Objektverhalten.</summary>
+    /// sondern ein (auf dem Option-Screen unsichtbarer) Entwicklerzugang zum Prüfstand.</summary>
     public void MenuTestMode()
     {
         if (Phase != SessionPhase.Menu) return;
+        ResetIdleTimer();
         Phase = SessionPhase.TestMenu;
     }
 
@@ -330,21 +359,21 @@ public sealed class GameSession
         }
     }
 
-    /// <summary>F2: Demo starten — lädt IMMER Cave A (level_laden(0) in Start_menu, BOULDER.CPP:322),
-    /// unabhängig von der Menü-Cave-Auswahl. Chances/leben bleiben unangetastet (das Original
-    /// fasst leben nur in F1 an). level_laden(0) schreibt (anders als die F1-Progression) NICHT
-    /// in cavenr — die Menü-Auswahl muss daher separat gesichert und danach wiederhergestellt
-    /// werden (LoadCaveWithSkip setzt CaveIndex sonst dauerhaft auf 0).</summary>
-    public void MenuDemo()
+    /// <summary>Demo starten (Attract-Mode nach Leerlauf) — lädt wie im BD1-Original IMMER
+    /// Cave A auf Level 1, unabhängig von der Menü-Auswahl (die lebt in _menuCaveSlot weiter
+    /// und bleibt unberührt). Chances/leben bleiben unangetastet. Startet direkt in
+    /// DemoPlaying: die BD1-Aufzeichnung enthält ihre Anlauf-Wartezeit selbst (demo.txt
+    /// beginnt mit "Wait 15"-Zügen) — das delay(7000) des DOS-Originals (BOULDER.CPP:359)
+    /// war nur eine Krücke seines Scancode-Formats und entfällt.</summary>
+    public void StartDemo()
     {
-        if (Phase != SessionPhase.Menu || _demoSteps is null)
+        if (Phase is not (SessionPhase.TitleScreen or SessionPhase.Menu) || _demoSteps is null)
         {
             return;
         }
 
         _isDemo = true;
         _isTestCave = false;
-        _menuCaveIndexBeforeDemo = CaveIndex;
         LoadCaveWithSkip(0, 1);
 
         if (Phase != SessionPhase.Playing)
@@ -355,8 +384,16 @@ public sealed class GameSession
         }
 
         _demoPlayer = new DemoPlayer(_demoSteps);
-        Phase = SessionPhase.DemoWait;
-        _phaseTimer = DemoWaitSeconds;
+        Phase = SessionPhase.DemoPlaying;
+        _demoPlayer.ApplyCurrent(Input, Cave!.Width);
+    }
+
+    /// <summary>Beliebige Taste während der Demo: bricht sie ab und führt (über das übliche
+    /// Zudecken) zum Titelbildschirm zurück — wie im BD1-Attract-Zyklus.</summary>
+    public void DemoInterrupted()
+    {
+        if (Phase != SessionPhase.DemoPlaying) return;
+        BeginTransition(TransitionReason.DemoEnd);
     }
 
     /// <summary>Escape während des Spiels: beendet die Session, kehrt (nach der üblichen
@@ -429,20 +466,6 @@ public sealed class GameSession
         {
             BeginLevelEndBonus();
         }
-    }
-
-    private void UpdateDemoWait(double deltaSeconds)
-    {
-        AdvanceSimulation(deltaSeconds); // ISR läuft weiter, Eingang baut sich auf (wie im Original während delay(7000)).
-
-        _phaseTimer -= deltaSeconds;
-        if (_phaseTimer > 0)
-        {
-            return;
-        }
-
-        Phase = SessionPhase.DemoPlaying;
-        _demoPlayer!.ApplyCurrent(Input, Cave!.Width);
     }
 
     /// <summary>Eigene Tick-Schleife statt AdvanceSimulation: der Demo-Vorschub muss nach JEDEM
@@ -650,10 +673,11 @@ public sealed class GameSession
                 ReturnToMenu();
                 break;
             case TransitionReason.DemoEnd:
-                ReturnToMenu();
+                // Wie im BD1-Attract-Zyklus zurück zum Titelbildschirm; die Menü-Auswahl in
+                // _menuCaveSlot war vom Demo-Lauf nie betroffen.
+                ReturnToMenu(SessionPhase.TitleScreen);
                 _isDemo = false;
                 _demoPlayer = null;
-                CaveIndex = _menuCaveIndexBeforeDemo;
                 break;
         }
     }
@@ -721,12 +745,14 @@ public sealed class GameSession
     }
 
     /// <summary>Verlässt die laufende Cave. <paramref name="phase"/> ist für die Prüfstand-Caves
-    /// SessionPhase.TestMenu, damit man dort direkt die nächste auswählen kann.</summary>
+    /// SessionPhase.TestMenu (damit man dort direkt die nächste auswählen kann) und für das
+    /// Demo-Ende SessionPhase.TitleScreen (BD1-Attract-Zyklus).</summary>
     private void ReturnToMenu(SessionPhase phase = SessionPhase.Menu)
     {
         Phase = phase;
         Cave = null;
         CurrentCaveData = null;
         ShowGameOverMessage = false;
+        ResetIdleTimer();
     }
 }

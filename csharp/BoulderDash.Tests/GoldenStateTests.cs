@@ -16,23 +16,25 @@ public class GoldenStateTests
     // Die Demo ist jetzt die Original-BD1-Aufzeichnung (passend zur BD1-Cave-A), aber die unten
     // eingefrorenen Werte stammen noch vom alten DEMO.BIN-Lauf auf der 1999er-Cave-A. Neu
     // einfrieren (Hash/Steps/Score aus einem verifizierten Lauf übernehmen), sobald der Nutzer
-    // die Demo manuell abgenommen hat.
+    // die Demo manuell abgenommen hat. Achtung: der Demo-Start ist inzwischen der BD1-Attract-
+    // Mode ohne die 7-s-DemoWait-Phase — die Schrittzahl fällt beim Neu-Einfrieren also
+    // deutlich kleiner aus als früher.
     [Fact(Skip = "Golden-Werte stammen noch vom alten DEMO.BIN-Lauf - nach Abnahme der BD1-Demo neu einfrieren.")]
-    public void Demo_spielt_Cave_A_deterministisch_durch_und_kehrt_ins_Menue_zurueck()
+    public void Demo_spielt_Cave_A_deterministisch_durch_und_kehrt_zum_Titelbildschirm_zurueck()
     {
         var caves = new CaveTextRepository(Path.Combine(TestPaths.GameAssets, "Caves"));
         var demoSteps = DemoTextFile.Load(Path.Combine(TestPaths.GameAssets, "demo.txt"));
         var session = new GameSession(caves, demoSteps);
 
-        session.MenuDemo();
-        Assert.Equal(SessionPhase.DemoWait, session.Phase);
+        session.StartDemo();
+        Assert.Equal(SessionPhase.DemoPlaying, session.Phase);
 
         const double step = 1.0 / 60.0;
         const int maxSteps = 60 * 60; // 60s Sicherheitsnetz — die Demo läuft real nur wenige Sekunden.
 
         var hash = 2166136261u; // FNV-1a Offset-Basis
         var steps = 0;
-        while (session.Phase != SessionPhase.Menu && steps < maxSteps)
+        while (session.Phase != SessionPhase.TitleScreen && steps < maxSteps)
         {
             session.Update(step);
             steps++;
@@ -47,8 +49,8 @@ public class GoldenStateTests
             }
         }
 
-        Assert.True(steps < maxSteps, "Demo hat nicht innerhalb des Sicherheitsnetzes ins Menü zurückgefunden.");
-        Assert.Equal(SessionPhase.Menu, session.Phase);
+        Assert.True(steps < maxSteps, "Demo hat nicht innerhalb des Sicherheitsnetzes zum Titelbildschirm zurückgefunden.");
+        Assert.Equal(SessionPhase.TitleScreen, session.Phase);
 
         // Eingefroren aus dem ersten erfolgreichen Lauf (siehe Klassenkommentar).
         Assert.Equal(2791, steps);

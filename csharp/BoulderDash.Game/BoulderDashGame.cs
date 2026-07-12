@@ -27,7 +27,8 @@ public class BoulderDashGame : XnaGame
 
     private SpriteAtlas _spriteAtlas = null!;
     private CaveRenderer _caveRenderer = null!;
-    private MenuRenderer _menuRenderer = null!;
+    private TitleRenderer _titleRenderer = null!;
+    private TestMenuRenderer _testMenuRenderer = null!;
     private BiosFont _font = null!;
     private AudioPlayer _audioPlayer = null!;
     private InputAdapter _inputAdapter = null!;
@@ -39,7 +40,7 @@ public class BoulderDashGame : XnaGame
     private PaletteContext _paletteContext = PaletteContext.None;
     private CaveData? _lastPaletteCaveData;
     private Rgb? _lastExitOverride;
-    private SessionPhase _lastPhase = SessionPhase.Menu;
+    private SessionPhase _lastPhase = SessionPhase.TitleScreen;
 
     public BoulderDashGame()
     {
@@ -66,7 +67,8 @@ public class BoulderDashGame : XnaGame
         _spriteAtlas = new SpriteAtlas(GraphicsDevice, sprites);
         _caveRenderer = new CaveRenderer(_spriteAtlas);
         _font = new BiosFont(GraphicsDevice);
-        _menuRenderer = new MenuRenderer(_spriteAtlas, _font);
+        _titleRenderer = new TitleRenderer(GraphicsDevice, Path.Combine(assets, "Screens"), _font);
+        _testMenuRenderer = new TestMenuRenderer(_spriteAtlas, _font);
         _audioPlayer = new AudioPlayer();
         _inputAdapter = new InputAdapter();
 
@@ -96,7 +98,7 @@ public class BoulderDashGame : XnaGame
         SyncPalette();
         _audioPlayer.Update(_session.State);
 
-        if (_session.Phase is SessionPhase.Menu or SessionPhase.TestMenu)
+        if (_session.Phase is SessionPhase.TitleScreen or SessionPhase.Menu or SessionPhase.TestMenu)
         {
             _audioPlayer.PlayMusic();
         }
@@ -117,17 +119,25 @@ public class BoulderDashGame : XnaGame
     {
         switch (_session.Phase)
         {
+            case SessionPhase.TitleScreen:
+                // F4 zuerst, damit das Beenden nicht als "beliebige Taste" im Menü landet.
+                if (_inputAdapter.IsJustPressed(Keys.F4)) _session.MenuQuit();
+                else if (_inputAdapter.IsAnyKeyJustPressed()) _session.TitleAnyKey();
+                break;
             case SessionPhase.Menu:
                 if (_inputAdapter.IsJustPressed(Keys.Up)) _session.MenuUp();
                 if (_inputAdapter.IsJustPressed(Keys.Down)) _session.MenuDown();
                 if (_inputAdapter.IsJustPressed(Keys.Right)) _session.MenuNextCave();
                 if (_inputAdapter.IsJustPressed(Keys.Left)) _session.MenuPreviousCave();
-                if (_inputAdapter.IsJustPressed(Keys.F1)) _session.MenuStart();
-                if (_inputAdapter.IsJustPressed(Keys.F2)) _session.MenuDemo();
-                // F3 (Hilfe) ist bereits im Original ohne Funktion.
+                // Start wie am Joystick-Feuerknopf ("PRESS BUTTON TO PLAY"): F1, Enter oder Leertaste.
+                if (_inputAdapter.IsJustPressed(Keys.F1)
+                    || _inputAdapter.IsJustPressed(Keys.Enter)
+                    || _inputAdapter.IsJustPressed(Keys.Space)) _session.MenuStart();
                 if (_inputAdapter.IsJustPressed(Keys.F4)) _session.MenuQuit();
-                // F5: kein Original-Menüpunkt, sondern der Zugang zum Testmodus (GameSession.TestCaves).
+                // F5: kein Original-Menüpunkt, sondern der (unsichtbare) Zugang zum Testmodus
+                // (GameSession.TestCaves) — bewusst ohne Legendenzeile auf dem Option-Screen.
                 if (_inputAdapter.IsJustPressed(Keys.F5)) _session.MenuTestMode();
+                if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.MenuBack();
                 break;
             case SessionPhase.TestMenu:
                 if (_inputAdapter.IsJustPressed(Keys.Up)) _session.TestMenuPrevious();
@@ -152,6 +162,9 @@ public class BoulderDashGame : XnaGame
             case SessionPhase.GameOverMessage:
                 if (_inputAdapter.IsAnyKeyJustPressed()) _session.AnyKeyPressed();
                 break;
+            case SessionPhase.DemoPlaying:
+                if (_inputAdapter.IsAnyKeyJustPressed()) _session.DemoInterrupted();
+                break;
         }
     }
 
@@ -159,7 +172,7 @@ public class BoulderDashGame : XnaGame
     {
         GraphicsDevice.SetRenderTarget(_renderTarget);
         GraphicsDevice.Clear(Color.Black);
-        DrawScene();
+        DrawScene(gameTime.TotalGameTime.TotalSeconds);
         GraphicsDevice.SetRenderTarget(null);
 
         GraphicsDevice.Clear(Color.Black);
@@ -173,17 +186,21 @@ public class BoulderDashGame : XnaGame
         base.Draw(gameTime);
     }
 
-    private void DrawScene()
+    private void DrawScene(double totalSeconds)
     {
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        if (_session.Phase == SessionPhase.Menu)
+        if (_session.Phase == SessionPhase.TitleScreen)
         {
-            _menuRenderer.Draw(_spriteBatch, _session);
+            _titleRenderer.DrawTitle(_spriteBatch, totalSeconds);
+        }
+        else if (_session.Phase == SessionPhase.Menu)
+        {
+            _titleRenderer.DrawOptionScreen(_spriteBatch, _session, totalSeconds);
         }
         else if (_session.Phase == SessionPhase.TestMenu)
         {
-            _menuRenderer.DrawTestMenu(_spriteBatch, _session);
+            _testMenuRenderer.Draw(_spriteBatch, _session);
         }
         else if (_session.Cave is not null)
         {
@@ -224,11 +241,14 @@ public class BoulderDashGame : XnaGame
 
     private void SyncPalette()
     {
-        if (_session.Phase is SessionPhase.Menu or SessionPhase.TestMenu)
+        // Die Atlas-Menüpalette braucht real nur noch der Testmodus (Titel-/Option-Screen haben
+        // eigene Texturen mit festen Farben, siehe TitleRenderer) — Titel und Menü hier trotzdem
+        // als Menü-Kontext zu behandeln hält den Kontextwechsel beim Spielstart unverändert einfach.
+        if (_session.Phase is SessionPhase.TitleScreen or SessionPhase.Menu or SessionPhase.TestMenu)
         {
             if (_paletteContext != PaletteContext.Menu)
             {
-                _spriteAtlas.ApplyPalette(Palette.BuildCavePalette(MenuRenderer.MenuBaseColors));
+                _spriteAtlas.ApplyPalette(Palette.BuildCavePalette(TestMenuRenderer.MenuBaseColors));
                 _paletteContext = PaletteContext.Menu;
             }
 
