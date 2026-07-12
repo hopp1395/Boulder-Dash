@@ -26,6 +26,10 @@ public abstract class CreatureObject : CaveObject
     {
     }
 
+    /// <summary>Eine Kreatur zieht aus eigenem Antrieb umher — Rockford kann sie sich nicht merken.
+    /// Im Nebel des Cave-Explore-Features ist sie deshalb nicht zu sehen (siehe ExploreMap).</summary>
+    public override bool VisibleInFog => false;
+
     public CreatureFacing Facing { get; set; }
 
     /// <summary>Wohin sich die Kreatur bevorzugt dreht: der Geist gegen, der Schmetterling im

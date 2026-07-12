@@ -26,6 +26,11 @@ public sealed class CaveRenderer
     /// der Renderer hält ihn selbst und taktet ihn mit der Cave mit.</summary>
     private readonly BorderFillObject _cover = new(Cave.Nowhere);
 
+    /// <summary>Was an der Stelle einer Kreatur steht, die im Nebel vergessen ist
+    /// (CaveObject.VisibleInFog): Leerraum — genau das, worüber Geist und Schmetterling ziehen.
+    /// Gehört wie die Verdeckung zu keiner Höhle.</summary>
+    private readonly EmptyObject _forgotten = new(Cave.Nowhere);
+
     private readonly SpriteAtlas _atlas;
 
     public CaveRenderer(SpriteAtlas atlas)
@@ -95,11 +100,17 @@ public sealed class CaveRenderer
                     continue;
                 }
 
-                _atlas.Draw(
-                    batch,
-                    destination,
-                    cave.Get(x, y).Appearance(context),
-                    fogged: visibility == TileVisibility.Explored);
+                var fogged = visibility == TileVisibility.Explored;
+
+                // Der Nebel zeigt nur die erinnerte Umgebung. Wer aus eigenem Antrieb umherzieht, ist
+                // dort nicht zu sehen — an seiner Stelle steht der Leerraum, über den er zieht.
+                var tile = cave.Get(x, y);
+                if (fogged && !tile.VisibleInFog)
+                {
+                    tile = _forgotten;
+                }
+
+                _atlas.Draw(batch, destination, tile.Appearance(context), fogged);
             }
         }
     }

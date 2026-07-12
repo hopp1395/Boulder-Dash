@@ -159,4 +159,16 @@ public class CaveObjectTests
         Assert.Equal(CreatureFacing.Down, new ButterflyObject(Cave.Nowhere).Facing);
         Assert.Equal(CreatureFacing.Left, new FireflyObject(Cave.Nowhere).Facing);
     }
+
+    /// <summary>Cave-Explore (siehe ExploreMap): Im Nebel steht nur die erinnerte Umgebung. Genau die
+    /// beiden Kreaturen ziehen aus eigenem Antrieb umher und sind dort deshalb unsichtbar — die
+    /// Amoeba wuchert zwar auch, gehört aber zum Gelände und bleibt sichtbar.</summary>
+    [Theory]
+    [MemberData(nameof(AlleElemente))]
+    public void Im_Nebel_sind_nur_die_Kreaturen_vergessen(Element element)
+    {
+        var kreatur = element is Element.Firefly or Element.Butterfly;
+
+        Assert.Equal(!kreatur, CaveObjects.Prototype(element).VisibleInFog);
+    }
 }
