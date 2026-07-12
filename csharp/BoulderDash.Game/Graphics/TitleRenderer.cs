@@ -193,7 +193,7 @@ public sealed class TitleRenderer
 
         DrawCentered(batch, 152, ("BY PETER LIEPA WITH CHRIS GREY 1984", Color.White));
         DrawCentered(batch, 160, ("PC VERSION BY JAN HOPPE 1999, 2026", Color.White));
-        DrawCentered(batch, 168, ("PRESS BUTTON TO PLAY", Color.White));
+        DrawCentered(batch, 168, ("PRESS SPACE TO PLAY", Color.White));
         DrawCentered(batch, 176,
             ("1", Highlight), (" PLAYER  ", Color.White), ("1", Highlight), (" JOYSTICK", Color.White));
         DrawCentered(batch, 184,

@@ -323,6 +323,27 @@ public class CavePhysicsTests
         Assert.DoesNotContain(SoundEvent.CollectJewel, state.SoundEvents);
     }
 
+    /// <summary>In der Hälfte der BD1-Caves sitzt der Ausgang in der Randmauer selbst (Cave E: Spalte 39,
+    /// Cave H: Spalte 0) — Rockford steht dann beim Verlassen in der äußersten Spalte. Siehe CaveAssetTests.</summary>
+    [Fact]
+    public void Ausgang_in_der_Randmauer_ist_begehbar()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 1, 1, 6, 11, // Ausgang in der rechten Randspalte, Rockford davor
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 3, tiles, jewelQuota: 0));
+        var input = new InputState();
+        input.PressRight();
+
+        NewPhysics().Regel(cave, state, input, new Camera());
+
+        Assert.True(state.IsCaveEnded);
+        Assert.Equal(Element.Rockford, cave.GetElement(4, 1)); // steht in der Tür in der Randmauer
+    }
+
     [Fact]
     public void Greifen_ohne_Bewegen_laesst_Rockford_an_Ort_und_Stelle()
     {

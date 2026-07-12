@@ -77,14 +77,14 @@ public sealed class GameTick
 
         if (!state.IsCaveEnded)
         {
-            // Die Physik startet erst nach dem Levelaufbau: Höhle komplett aufgedeckt UND das
-            // Startsignal (die Eingangs-Explosion bei EntranceProgress==92, siehe BuildEntrance())
-            // ertönt — vorher fällt kein Stein und bewegt sich kein Gegner. Das DOS-Original
-            // wartete ähnlich, nur mit anderer Schwelle ("anfang_var>65", BOULDER.CPP:255).
-            // Beim ZUDECKEN am Cave-Ende (Covering) läuft die Physik dagegen weiter — wie im
-            // Original die ISR bis zum Ende von game_start().
-            var buildUpDone = _cover.Phase != ScreenCoverPhase.Uncovering && state.EntranceProgress > 92;
-            if (clocks.Clk1 == 0 && buildUpDone)
+            // Die Physik ruht, solange die Stahlwand läuft — beim Aufdecken wie beim Zudecken
+            // (ScreenCover.IsActive): kein Stein fällt, kein Gegner zieht. Beim Cave-Start kommt
+            // die zweite Bedingung dazu, das Startsignal (die Eingangs-Explosion bei
+            // EntranceProgress==92, siehe BuildEntrance()); das DOS-Original wartete ähnlich, nur
+            // mit anderer Schwelle ("anfang_var>65", BOULDER.CPP:255) und ließ die ISR am Cave-Ende
+            // bis zum Ende von game_start() weiterlaufen.
+            var physicsRunning = !_cover.IsActive && state.EntranceProgress > 92;
+            if (clocks.Clk1 == 0 && physicsRunning)
             {
                 cave.NextState();
             }

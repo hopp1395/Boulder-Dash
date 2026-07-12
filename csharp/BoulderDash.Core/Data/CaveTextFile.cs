@@ -106,6 +106,14 @@ public static class CaveTextFile
             throw new FormatException($"{sourceName}: [Map] enthält keinen Eingang ('P').");
         }
 
+        // Ohne Ausgang lässt sich die Cave nicht verlassen. In BD1 liegt er in der Hälfte der Caves
+        // in der Randmauer (Cave E: Spalte 39, Cave H: Spalte 0) — er ist dort als Stahlwand getarnt
+        // und erst am Blinken zu erkennen.
+        if (Array.IndexOf(tiles, (byte)Element.EscapeDoor) < 0)
+        {
+            throw new FormatException($"{sourceName}: [Map] enthält keinen Ausgang ('X').");
+        }
+
         return new CaveData
         {
             Index = letter - 'A',
