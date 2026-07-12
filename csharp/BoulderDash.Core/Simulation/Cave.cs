@@ -5,7 +5,7 @@ namespace BoulderDash.Core.Simulation;
 /// <summary>
 /// Veränderliches Simulationsgitter einer Cave (Kopie von CaveData.Tiles). Kachelbytes bleiben
 /// bewusst roh: Bits 0-3 Element-ID, Bit 0x80 "in diesem Sweep verarbeitet", Bit 0x40
-/// Fall-Momentum, Bits 0x60/0x70 Kreaturen-Richtungszustand (siehe CavePhysics). Kein Zerlegen
+/// Fall-Momentum, Bits 0x60 Kreaturen-Blickrichtung (siehe CavePhysics). Kein Zerlegen
 /// in separate Flag-Felder, da die Original-Masken quer durch diese Bitgruppen schneiden.
 /// </summary>
 public sealed class Cave

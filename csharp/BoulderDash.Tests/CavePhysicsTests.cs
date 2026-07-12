@@ -102,6 +102,68 @@ public class CavePhysicsTests
         Assert.Equal((Element)kreatur, cave.GetElement(erwartetX, erwartetY));
     }
 
+    /// <summary>Sind Vorzugsrichtung UND geradeaus versperrt, dreht die Kreatur sich genau einmal zur
+    /// Gegenseite und bleibt diesen Scan stehen (BDCFF 0008). Hier steckt die Kreatur in einer nach
+    /// rechts offenen Sackgasse: der Firefly (links blickend) kann weder nach unten (Vorzug) noch nach
+    /// links, dreht also nach oben und zieht erst im zweiten Scan dorthin.</summary>
+    [Fact]
+    public void Firefly_in_der_Sackgasse_dreht_einmal_und_zieht_erst_im_naechsten_Scan()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, Wall, 0, 0, Wall, // oben offen
+            Wall, Wall, 8, 0, Wall, // Firefly, links versperrt
+            Wall, Wall, Wall, 0, Wall, // unten versperrt
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
+        var physics = NewPhysics();
+
+        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+
+        // Erster Scan: nur gedreht, nicht gezogen.
+        Assert.Equal(Element.Firefly, cave.GetElement(2, 2));
+
+        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+
+        // Zweiter Scan: zieht in die neue Blickrichtung (oben).
+        Assert.Equal(Element.Empty, cave.GetElement(2, 2));
+        Assert.Equal(Element.Firefly, cave.GetElement(2, 1));
+    }
+
+    /// <summary>Der Butterfly dreht bei Blockade zur GEGENSEITE seiner Vorzugsrichtung, also gegen den
+    /// Uhrzeigersinn. In einer nur nach oben offenen Sackgasse braucht er dadurch zwei Drehungen
+    /// (unten -> rechts -> oben) und zieht erst im dritten Scan. Das DOS-Original drehte hier
+    /// fälschlich auf die Vorzugsseite und zog schon im zweiten Scan.</summary>
+    [Fact]
+    public void Butterfly_in_der_Sackgasse_dreht_gegen_den_Uhrzeigersinn()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, Wall, 0, Wall, Wall, // nur nach oben offen
+            Wall, Wall, 9, Wall, Wall, // Butterfly, blickt anfangs nach unten
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
+        var physics = NewPhysics();
+
+        // Scan 1: unten (Vorzug) und links versperrt -> dreht nach rechts, kein Zug.
+        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        Assert.Equal(Element.Butterfly, cave.GetElement(2, 2));
+
+        // Scan 2: rechts blickend sind unten (Vorzug) und rechts versperrt -> dreht nach oben, kein Zug.
+        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        Assert.Equal(Element.Butterfly, cave.GetElement(2, 2));
+
+        // Scan 3: oben blickend ist rechts (Vorzug) versperrt, geradeaus frei -> zieht nach oben.
+        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        Assert.Equal(Element.Empty, cave.GetElement(2, 2));
+        Assert.Equal(Element.Butterfly, cave.GetElement(2, 1));
+    }
+
     [Fact]
     public void Rockford_graebt_Erde_und_bewegt_sich()
     {
