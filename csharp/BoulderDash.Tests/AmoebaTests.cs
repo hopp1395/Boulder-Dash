@@ -29,8 +29,6 @@ public class AmoebaTests
         JewelQuota = 0,
         TimeSeconds = 99,
         Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)],
-        CameraStartX = 0,
-        CameraStartY = 0,
         EnchantedWallSeconds = 0,
         AmoebaSlowGrowthSeconds = amoebaSlowGrowthSeconds,
         PointsPerJewelBeforeQuota = 10,

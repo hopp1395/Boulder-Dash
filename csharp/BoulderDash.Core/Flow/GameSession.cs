@@ -294,10 +294,11 @@ public sealed class GameSession
         _menuCaveSlot = (_menuCaveSlot + MenuCaveIndices.Length - 1) % MenuCaveIndices.Length;
     }
 
-    /// <summary>F4: Programm beenden — vom Titelbildschirm wie vom Option-Screen aus.</summary>
+    /// <summary>Escape auf dem Titelbildschirm: Programm beenden. Escape führt damit überall eine
+    /// Ebene nach oben (Spiel → Option-Screen → Titel → beenden), siehe <see cref="MenuBack"/>.</summary>
     public void MenuQuit()
     {
-        if (Phase is not (SessionPhase.Menu or SessionPhase.TitleScreen)) return;
+        if (Phase != SessionPhase.TitleScreen) return;
         QuitRequested = true;
     }
 
@@ -729,7 +730,7 @@ public sealed class GameSession
         _entranceIndex = entranceIndex;
         State.ResetForCave(data);
         Input.ResetForNewCave();
-        Camera.ResetTo(data.CameraStartX, data.CameraStartY);
+        Camera.CenterOn(entranceIndex % cave.Width, entranceIndex / cave.Width, cave.Width, cave.Height);
         _cover.BeginUncover(cave.Width, cave.Height);
 
         // Tempo der geladenen Cave (BD1: ergibt sich aus Schwierigkeitsgrad und Cave-Art, siehe
@@ -742,6 +743,19 @@ public sealed class GameSession
 
         Phase = SessionPhase.Playing;
         return true;
+    }
+
+    /// <summary>Spielflächen-Zoom: stellt die Sichtfenstergröße ein (siehe ViewportSize). Läuft
+    /// gerade eine Cave, wird die Kamera neu geklemmt; steht Rockford danach außerhalb des
+    /// Sichtfensters, holen ihn die Scroll-Auslöser im nächsten Cave-Scan kachelweise ein. Der
+    /// Simulationszustand bleibt unberührt — das Sichtfenster ist reine Darstellung.</summary>
+    public void SetViewport(ViewportSize viewport)
+    {
+        Camera.Viewport = viewport;
+        if (Cave is not null)
+        {
+            Camera.Clamp(Cave.Width, Cave.Height);
+        }
     }
 
     /// <summary>Verlässt die laufende Cave. <paramref name="phase"/> ist für die Prüfstand-Caves

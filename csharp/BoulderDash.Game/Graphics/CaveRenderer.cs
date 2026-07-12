@@ -5,8 +5,9 @@ using Microsoft.Xna.Framework.Graphics;
 namespace BoulderDash.Game.Graphics;
 
 /// <summary>
-/// Zeichnet den laufenden Spielzustand: 20x12-Kachel-Sichtfenster ab der aktuellen
-/// Kameraposition, Verdeckungs-Überlagerung (ScreenCover), Ein-/Ausgangstür-Blinkanimation und die
+/// Zeichnet den laufenden Spielzustand: das Kachel-Sichtfenster ab der aktuellen Kameraposition
+/// (Original 20x12, per Spielflächen-Zoom bis zur vollen Cave, siehe ViewportSize), die
+/// Verdeckungs-Überlagerung (ScreenCover), Ein-/Ausgangstür-Blinkanimation und die
 /// Sprite-Animationszyklen (entspricht copy64()+BildschirmMaske() aus src/BOULDER.CPP, plus der
 /// Frameauswahl aus sprites_wechsel()/boulder_lauf(), :593-646).
 /// Die Rockford-Blickrichtung wird per SpriteEffects gespiegelt statt wie im Original die
@@ -15,8 +16,6 @@ namespace BoulderDash.Game.Graphics;
 public sealed class CaveRenderer
 {
     public const int TileSize = 16;
-    public const int ViewportColumns = 20;
-    public const int ViewportRows = 12;
 
     /// <summary>Höhe der Statuszeile in Pixeln (eine BIOS-Textzeile); das Spielfeld beginnt darunter.</summary>
     public const int StatusLineHeight = 8;
@@ -28,9 +27,24 @@ public sealed class CaveRenderer
         _atlas = atlas;
     }
 
+    /// <summary>Logische Größe der Zeichenfläche für ein Sichtfenster: Spielfeld plus Statuszeile.
+    /// Beim Original-Sichtfenster 20x12 ergibt das genau die VGA-Auflösung 320x200.</summary>
+    public static (int Width, int Height) LogicalSize(ViewportSize viewport) =>
+        (viewport.Columns * TileSize, StatusLineHeight + (viewport.Rows * TileSize));
+
     public void Draw(SpriteBatch batch, Cave cave, Camera camera, GameState state, InputState input, Clocks clocks, ScreenCover? cover)
     {
-        for (var row = 0; row < ViewportRows; row++)
+        var viewport = camera.Viewport;
+
+        // Ist das Sichtfenster größer als die Cave (z. B. eine 20x12-Intermission bei großem Zoom),
+        // steht die Kamera auf 0 (Camera.Clamp) und die Cave wird im schwarzen Rest zentriert.
+        var offsetX = Math.Max(0, (viewport.Columns - cave.Width) * TileSize / 2);
+        var offsetY = Math.Max(0, (viewport.Rows - cave.Height) * TileSize / 2);
+
+        var rows = Math.Min(viewport.Rows, cave.Height);
+        var columns = Math.Min(viewport.Columns, cave.Width);
+
+        for (var row = 0; row < rows; row++)
         {
             var y = camera.Y + row;
             if (y >= cave.Height)
@@ -38,7 +52,7 @@ public sealed class CaveRenderer
                 continue;
             }
 
-            for (var col = 0; col < ViewportColumns; col++)
+            for (var col = 0; col < columns; col++)
             {
                 var x = camera.X + col;
                 if (x >= cave.Width)
@@ -46,7 +60,11 @@ public sealed class CaveRenderer
                     continue;
                 }
 
-                var destination = new Rectangle(col * TileSize, StatusLineHeight + (row * TileSize), TileSize, TileSize);
+                var destination = new Rectangle(
+                    offsetX + (col * TileSize),
+                    offsetY + StatusLineHeight + (row * TileSize),
+                    TileSize,
+                    TileSize);
 
                 // Die Verdeckungsmaske liegt in Cave-Koordinaten (siehe ScreenCover) und entscheidet
                 // selbst, wie lange sie gilt: beim Cave-Start bis zum Vollaufdecken, am Cave-Ende

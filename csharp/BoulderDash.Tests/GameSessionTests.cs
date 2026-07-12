@@ -648,7 +648,7 @@ public class GameSessionTests
             {
                 Index = 0, Name = "Blank", Description = "", Letter = 'A', IsIntermission = false,
                 Width = 40, Height = 22, JewelQuota = 0, TimeSeconds = 99,
-                Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)], CameraStartX = 0, CameraStartY = 0,
+                Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)],
                 EnchantedWallSeconds = 0, AmoebaSlowGrowthSeconds = 0,
                 PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
                 GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = blankTiles,
@@ -657,7 +657,7 @@ public class GameSessionTests
             {
                 Index = 1, Name = "Valid", Description = "", Letter = 'B', IsIntermission = false,
                 Width = 20, Height = 12, JewelQuota = 0, TimeSeconds = 99,
-                Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)], CameraStartX = 0, CameraStartY = 0,
+                Colors = [new(0x20, 0x20, 0x20), new(0xFF, 0xFF, 0xFF), new(0xBA, 0x20, 0x20), new(0x71, 0xFF, 0xFF)],
                 EnchantedWallSeconds = 0, AmoebaSlowGrowthSeconds = 0,
                 PointsPerJewelBeforeQuota = 10, PointsPerJewelAfterQuota = 20,
                 GameSpeed = CaveSpeed.For(1, isIntermission: false), Tiles = validTiles,
@@ -676,5 +676,45 @@ public class GameSessionTests
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
         Assert.Equal(1, session.CaveIndex); // auf die gültige Cave übergesprungen (Cave B)
+    }
+
+    /// <summary>Spielflächen-Zoom auf die volle Cave-Größe: das Sichtfenster zeigt alles, die Kamera
+    /// steht damit zwangsläufig in der Ecke — und der Spielzustand bleibt davon unberührt.</summary>
+    [Fact]
+    public void SetViewport_klemmt_die_Kamera_mitten_im_Spiel_neu()
+    {
+        var session = NewRealSession();
+        session.MenuStart();
+        var score = session.State.Score;
+        session.Camera.ResetTo(15, 8); // als wäre schon zu Rockford gescrollt worden
+
+        session.SetViewport(new ViewportSize(40, 22));
+
+        Assert.Equal(0, session.Camera.X);
+        Assert.Equal(0, session.Camera.Y);
+        Assert.Equal(SessionPhase.Playing, session.Phase);
+        Assert.Equal(score, session.State.Score);
+    }
+
+    /// <summary>Der Eingang liegt beim Cave-Start mittig im Sichtfenster — auch in einem größeren.</summary>
+    [Fact]
+    public void Cave_Start_zentriert_den_Eingang_im_gewaehlten_Sichtfenster()
+    {
+        var viewport = new ViewportSize(24, 14);
+        var session = NewRealSession();
+        session.SetViewport(viewport);
+
+        session.MenuStart();
+
+        var entrance = session.Cave!.FindFirstIndexOf(Element.Entrance);
+        var entranceCol = entrance % session.Cave.Width;
+        var entranceRow = entrance / session.Cave.Width;
+
+        Assert.Equal(
+            Math.Clamp(entranceCol - (viewport.Columns / 2), 0, session.Cave.Width - viewport.Columns),
+            session.Camera.X);
+        Assert.Equal(
+            Math.Clamp(entranceRow - (viewport.Rows / 2), 0, session.Cave.Height - viewport.Rows),
+            session.Camera.Y);
     }
 }
