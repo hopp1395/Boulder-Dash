@@ -58,12 +58,25 @@ public sealed class GameTick
         // "pause" existiert im Original nur als nie gesetzter toter Code — hier weggelassen.
         if (clocks.Clk18 == 0 && !state.IsCaveEnded)
         {
-            if (state.EntranceProgress > 99 && state.CaveTimeRemaining > 0)
+            if (state.EntranceProgress > 99)
             {
-                state.CaveTimeRemaining--;
-                if (state.CaveTimeRemaining <= 9)
+                if (state.CaveTimeRemaining > 0)
                 {
-                    state.SoundEvents.Enqueue(SoundEvent.TimeWarning);
+                    state.CaveTimeRemaining--;
+                    if (state.CaveTimeRemaining <= 9)
+                    {
+                        state.SoundEvents.Enqueue(SoundEvent.TimeWarning);
+                    }
+                }
+                else
+                {
+                    // Die Nullsekunde wird noch ganz ausgespielt: Schluss ist erst beim FOLGENDEN
+                    // Sekundentakt. Die Anzeige steht dann schon eine Spielsekunde lang auf 000 und
+                    // Rockford kann in dieser Zeit noch ziehen — genau darin liegt das BD1-Fenster für
+                    // den Bonusüberlauf (Ausgang bei Zeit 0 -> Zähler läuft auf 255, siehe
+                    // GameSession.BeginLevelEndBonus). Das DOS-Original beendete die Cave sofort bei 0
+                    // (BOULDER.CPP:251) und kannte den Quirk deshalb nicht.
+                    state.IsCaveEnded = true;
                 }
             }
 
@@ -83,11 +96,6 @@ public sealed class GameTick
         if (state.EnchantedWallTimeRemaining == 0)
         {
             state.EnchantedWallRunning = false;
-        }
-
-        if (state.CaveTimeRemaining == 0)
-        {
-            state.IsCaveEnded = true;
         }
 
         if (!state.IsCaveEnded)

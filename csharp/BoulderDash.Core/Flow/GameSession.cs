@@ -427,9 +427,7 @@ public sealed class GameSession
         }
         else if (State.IsCaveEnded)
         {
-            Phase = SessionPhase.LevelEndBonus;
-            _bonusSubTimer = 0;
-            _postBonusPauseActive = false;
+            BeginLevelEndBonus();
         }
     }
 
@@ -489,9 +487,7 @@ public sealed class GameSession
 
         if (State.IsCaveEnded)
         {
-            Phase = SessionPhase.LevelEndBonus;
-            _bonusSubTimer = 0;
-            _postBonusPauseActive = false;
+            BeginLevelEndBonus();
         }
         else if (State.Stat != 0 || _demoPlayer.IsAtEnd)
         {
@@ -501,6 +497,25 @@ public sealed class GameSession
 
     private double _bonusSubTimer;
     private bool _postBonusPauseActive;
+
+    /// <summary>BD1-Quirk: Zieht Rockford genau in dem Tick in den Ausgang, in dem die Zeit auf 0
+    /// fällt (GameTick lässt ihn dort noch ziehen), startet die Bonuszählung bei 0 — und der Zähler
+    /// läuft als Byte unter. Der Spieler sieht die Zeit von 255 herunterlaufen und kassiert dafür
+    /// 255 Gratispunkte. Beim bloßen Zeitablauf ohne Ausgang (AdvanceToNextCave==false) passiert das
+    /// nicht: dort bleibt es bei 0 Bonuspunkten. Das DOS-Original kannte den Quirk nicht — dort
+    /// gewinnt der Zeitablauf gegen den Ausgang (BOULDER.CPP:251-255) und Level_End() zählt mit
+    /// vorheriger Prüfung (GAME.CPP:54).</summary>
+    private void BeginLevelEndBonus()
+    {
+        Phase = SessionPhase.LevelEndBonus;
+        _bonusSubTimer = 0;
+        _postBonusPauseActive = false;
+
+        if (State.AdvanceToNextCave && State.CaveTimeRemaining == 0)
+        {
+            State.CaveTimeRemaining = byte.MaxValue;
+        }
+    }
 
     private void UpdateLevelEndBonus(double deltaSeconds)
     {
