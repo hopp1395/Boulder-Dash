@@ -38,7 +38,7 @@ public sealed class CaveRenderer
     public static (int Width, int Height) LogicalSize(ViewportSize viewport) =>
         (viewport.Columns * TileSize, StatusLineHeight + (viewport.Rows * TileSize));
 
-    public void Draw(SpriteBatch batch, Cave cave, Camera camera, GameState state, InputState input, Clocks clocks, ScreenCover? cover)
+    public void Draw(SpriteBatch batch, Cave cave, Camera camera, GameState state, InputState input, Clocks clocks, ScreenCover? cover, ExploreMap? explore = null)
     {
         var viewport = camera.Viewport;
         var context = new RenderContext(clocks.Clk4, state.ExitFlashOn, state.EnchantedWallRunning, input);
@@ -78,10 +78,28 @@ public sealed class CaveRenderer
 
                 // Die Verdeckungsmaske liegt in Cave-Koordinaten (siehe ScreenCover) und entscheidet
                 // selbst, wie lange sie gilt: beim Cave-Start bis zum Vollaufdecken, am Cave-Ende
-                // bis zum vollständigen Zudecken.
-                var tile = cover is not null && cover.IsCovered(x, y) ? _cover : cave.Get(x, y);
+                // bis zum vollständigen Zudecken. Sie hat Vorrang vor dem Nebel — sonst wäre die
+                // Stahlwand-Animation über unerkundetem Gelände nicht zu sehen.
+                if (cover is not null && cover.IsCovered(x, y))
+                {
+                    _atlas.Draw(batch, destination, _cover.Appearance(context));
+                    continue;
+                }
 
-                _atlas.Draw(batch, destination, tile.Appearance(context));
+                // Cave-Explore (siehe ExploreMap): Unerkundetes wird schlicht nicht gezeichnet — das
+                // RenderTarget ist schwarz gelöscht (BoulderDashGame.Draw), es braucht kein schwarzes
+                // Sprite. Erkundetes außerhalb des Blickradius kommt im Nebelgrau.
+                var visibility = explore?.Visibility(x, y) ?? TileVisibility.Visible;
+                if (visibility == TileVisibility.Hidden)
+                {
+                    continue;
+                }
+
+                _atlas.Draw(
+                    batch,
+                    destination,
+                    cave.Get(x, y).Appearance(context),
+                    fogged: visibility == TileVisibility.Explored);
             }
         }
     }
