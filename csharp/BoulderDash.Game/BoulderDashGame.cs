@@ -97,7 +97,7 @@ public class BoulderDashGame : XnaGame
         _caveRenderer = new CaveRenderer(_spriteAtlas);
         _font = new BiosFont(GraphicsDevice);
         _titleRenderer = new TitleRenderer(GraphicsDevice, Path.Combine(assets, "Screens"), _font);
-        _testMenuRenderer = new TestMenuRenderer(_spriteAtlas, _font);
+        _testMenuRenderer = new TestMenuRenderer(_font);
         _audioPlayer = new AudioPlayer();
         _inputAdapter = new InputAdapter();
 
@@ -300,18 +300,12 @@ public class BoulderDashGame : XnaGame
                 if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.MenuBack();
                 break;
             case SessionPhase.TestMenu:
+                // Gewählt wird allein mit dem Pfeil vor der Cave (TestMenuRenderer): Hoch/Runter
+                // bewegt ihn, Enter oder Leertaste startet — wie im Option-Screen.
                 if (_inputAdapter.IsJustPressed(Keys.Up)) _session.TestMenuPrevious();
                 if (_inputAdapter.IsJustPressed(Keys.Down)) _session.TestMenuNext();
-                // Direktwahl über die Zifferntasten: 1-9, die zehnte Cave liegt auf der 0. Darüber
-                // hinaus bleibt nur die Auswahl über Hoch/Runter.
-                for (var i = 0; i < GameSession.TestCaves.Count && i < 9; i++)
-                {
-                    if (_inputAdapter.IsJustPressed(Keys.D1 + i)) _session.TestMenuSelect(i);
-                }
-
-                if (_inputAdapter.IsJustPressed(Keys.D0)) _session.TestMenuSelect(9);
-
-                if (_inputAdapter.IsJustPressed(Keys.Enter)) _session.TestMenuStart();
+                if (_inputAdapter.IsJustPressed(Keys.Enter)
+                    || _inputAdapter.IsJustPressed(Keys.Space)) _session.TestMenuStart();
                 if (_inputAdapter.IsJustPressed(Keys.Escape)) _session.TestMenuBack();
                 break;
             case SessionPhase.Playing:

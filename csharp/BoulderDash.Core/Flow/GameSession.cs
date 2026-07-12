@@ -82,8 +82,8 @@ public sealed class GameSession
     ];
 
     /// <summary>Eine Prüfstand-Cave: Dateiname im Repository plus die Zeile, die im Testmodus-Menü
-    /// erscheint. Der Titel darf höchstens 35 Zeichen haben — der TestMenuRenderer stellt Auswahlmarke und
-    /// Nummer voran, und die Textzeile ist 40 Zeichen breit.</summary>
+    /// erscheint. Der Titel darf höchstens 36 Zeichen haben — der TestMenuRenderer stellt den
+    /// Auswahlpfeil voran, und die Textzeile ist 40 Zeichen breit.</summary>
     public readonly record struct TestCave(string Name, string Title);
 
     /// <summary>Die Prüfstand-Caves (Assets/Caves/cave-test-N.txt) — je eine pro Korrektur am
@@ -341,7 +341,9 @@ public sealed class GameSession
         TestCaveIndex = Math.Max(TestCaveIndex - 1, 0);
     }
 
-    /// <summary>Direktwahl über die Zifferntasten 1-5.</summary>
+    /// <summary>Sprung auf eine Prüfstand-Cave. Im Menü selbst wird nur mit Hoch/Runter gewählt (der
+    /// Schirm zeigt nichts als die Liste und den Pfeil davor); das braucht der Reihum-Testlauf über
+    /// alle Prüfstände (GameSessionTests).</summary>
     public void TestMenuSelect(int index)
     {
         if (Phase != SessionPhase.TestMenu || index < 0 || index >= TestCaves.Count) return;
