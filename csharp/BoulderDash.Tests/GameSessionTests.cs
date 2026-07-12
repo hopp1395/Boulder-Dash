@@ -8,7 +8,23 @@ public class GameSessionTests
 {
     private static readonly string CavesPath = Path.Combine(TestPaths.GameAssets, "Caves");
 
-    private static GameSession NewRealSession() => new(new CaveTextRepository(CavesPath));
+    /// <summary>Session am Option-Screen (Menu): die Session startet auf dem BD1-Titelbildschirm,
+    /// erst eine beliebige Taste öffnet das Menü — die meisten Tests setzen dahinter auf.</summary>
+    private static GameSession NewRealSession()
+    {
+        var session = new GameSession(new CaveTextRepository(CavesPath));
+        session.TitleAnyKey();
+        return session;
+    }
+
+    /// <summary>Session am Option-Screen mit geladener BD1-Demo (für die Attract-Mode-Tests).</summary>
+    private static GameSession NewRealSessionWithDemo()
+    {
+        var demoSteps = DemoTextFile.Load(Path.Combine(TestPaths.GameAssets, "demo.txt"));
+        var session = new GameSession(new CaveTextRepository(CavesPath), demoSteps);
+        session.TitleAnyKey();
+        return session;
+    }
 
     /// <summary>Pumpt die Session in Frame-Schritten durch die Zudeck-Animation am Cave-Ende
     /// (ScreenCovering: 69 Runden, eine pro Tick — mehr, als AdvanceSimulation pro Update-Aufruf
@@ -84,23 +100,71 @@ public class GameSessionTests
     }
 
     [Fact]
-    public void Menu_Cave_Auswahl_ist_auf_A_bis_P_begrenzt()
+    public void Titelbildschirm_ist_Startphase_und_beliebige_Taste_oeffnet_das_Menue()
+    {
+        var session = new GameSession(new CaveTextRepository(CavesPath));
+
+        Assert.Equal(SessionPhase.TitleScreen, session.Phase);
+
+        session.TitleAnyKey();
+        Assert.Equal(SessionPhase.Menu, session.Phase);
+
+        // Escape auf dem Option-Screen führt zurück zum Titel.
+        session.MenuBack();
+        Assert.Equal(SessionPhase.TitleScreen, session.Phase);
+    }
+
+    /// <summary>BD1 bietet nur die Blockanfänge A, E, I, M zur Auswahl an (Handbuch: "You may
+    /// choose CAVE A, E, I, or M") — zyklisch in beide Richtungen.</summary>
+    [Fact]
+    public void Menu_Cave_Auswahl_laeuft_zyklisch_durch_A_E_I_M()
     {
         var session = NewRealSession();
 
-        for (var i = 0; i < 30; i++)
+        Assert.Equal('A', session.SelectedCaveLetter);
+
+        var vorwaerts = new List<char>();
+        for (var i = 0; i < 5; i++)
         {
             session.MenuNextCave();
+            vorwaerts.Add(session.SelectedCaveLetter);
         }
 
-        Assert.Equal('P', session.SelectedCaveLetter);
+        Assert.Equal(['E', 'I', 'M', 'A', 'E'], vorwaerts);
 
-        for (var i = 0; i < 30; i++)
-        {
-            session.MenuPreviousCave();
-        }
-
+        session.MenuPreviousCave();
         Assert.Equal('A', session.SelectedCaveLetter);
+        session.MenuPreviousCave();
+        Assert.Equal('M', session.SelectedCaveLetter);
+    }
+
+    /// <summary>"On Difficulty Levels 4 and 5, you must start with CAVE A." (Handbuch): das
+    /// Hochschalten auf Grad 4 zieht die Auswahl auf A zurück, und solange Grad 4/5 gewählt
+    /// ist, bleibt die Cave-Auswahl wirkungslos.</summary>
+    [Fact]
+    public void Level_4_und_5_erzwingen_Cave_A()
+    {
+        var session = NewRealSession();
+
+        session.MenuNextCave();
+        session.MenuNextCave();
+        Assert.Equal('I', session.SelectedCaveLetter);
+
+        session.MenuUp(); // 2
+        session.MenuUp(); // 3
+        Assert.Equal('I', session.SelectedCaveLetter); // bis Grad 3 bleibt die Auswahl stehen
+
+        session.MenuUp(); // 4 -> springt auf A
+        Assert.Equal(4, session.DifficultyLevel);
+        Assert.Equal('A', session.SelectedCaveLetter);
+
+        session.MenuNextCave();
+        session.MenuPreviousCave();
+        Assert.Equal('A', session.SelectedCaveLetter); // Cave-Wechsel gesperrt
+
+        session.MenuDown(); // 3 -> Auswahl wieder frei
+        session.MenuNextCave();
+        Assert.Equal('E', session.SelectedCaveLetter);
     }
 
     [Fact]
@@ -422,6 +486,73 @@ public class GameSessionTests
         Assert.True(session.ScreenCover.IsCovered(cave.Width - 1, cave.Height - 1));
     }
 
+    /// <summary>BD1-Attract-Mode: bleibt der Titelbildschirm unbedient, startet nach
+    /// AttractIdleSeconds automatisch die Demo (immer Cave A auf Level 1).</summary>
+    [Fact]
+    public void Leerlauf_auf_dem_Titelbildschirm_startet_die_Demo()
+    {
+        var demoSteps = DemoTextFile.Load(Path.Combine(TestPaths.GameAssets, "demo.txt"));
+        var session = new GameSession(new CaveTextRepository(CavesPath), demoSteps);
+        Assert.Equal(SessionPhase.TitleScreen, session.Phase);
+
+        Pump(session, GameSession.AttractIdleSeconds + 0.5);
+
+        Assert.Equal(SessionPhase.DemoPlaying, session.Phase);
+        Assert.Equal('A', session.CurrentCaveData!.Letter);
+    }
+
+    [Fact]
+    public void Menue_Eingabe_setzt_den_Leerlauf_Timer_zurueck()
+    {
+        var session = NewRealSessionWithDemo();
+
+        Pump(session, GameSession.AttractIdleSeconds * 0.8);
+        session.MenuNextCave();
+        Pump(session, GameSession.AttractIdleSeconds * 0.8);
+
+        Assert.Equal(SessionPhase.Menu, session.Phase); // Eingabe hat den Zähler zurückgesetzt
+
+        Pump(session, GameSession.AttractIdleSeconds * 0.4);
+        Assert.Equal(SessionPhase.DemoPlaying, session.Phase);
+    }
+
+    [Fact]
+    public void Taste_waehrend_der_Demo_fuehrt_ueber_das_Zudecken_zum_Titelbildschirm()
+    {
+        var session = NewRealSessionWithDemo();
+        session.StartDemo();
+        Assert.Equal(SessionPhase.DemoPlaying, session.Phase);
+
+        Pump(session, 1.0); // die Demo kurz laufen lassen
+        session.DemoInterrupted();
+        Assert.Equal(SessionPhase.ScreenCovering, session.Phase);
+
+        AdvanceThroughCovering(session);
+        session.Update(10.0); // Übergangspause abschließen
+
+        Assert.Equal(SessionPhase.TitleScreen, session.Phase);
+        Assert.Null(session.Cave);
+    }
+
+    /// <summary>Die Menü-Auswahl lebt getrennt von der Spielposition (_menuCaveSlot) und
+    /// übersteht einen Demo-Lauf (der immer Cave A lädt) unverändert.</summary>
+    [Fact]
+    public void Demo_laesst_die_Menue_Cave_Auswahl_unangetastet()
+    {
+        var session = NewRealSessionWithDemo();
+        session.MenuNextCave();
+        Assert.Equal('E', session.SelectedCaveLetter);
+
+        session.StartDemo();
+        Assert.Equal(SessionPhase.DemoPlaying, session.Phase);
+        session.DemoInterrupted();
+        AdvanceThroughCovering(session);
+        session.Update(10.0);
+
+        Assert.Equal(SessionPhase.TitleScreen, session.Phase);
+        Assert.Equal('E', session.SelectedCaveLetter);
+    }
+
     /// <summary>Startet Cave A auf dem gegebenen Schwierigkeitsgrad.</summary>
     private static GameSession StartedAtLevel(int level)
     {
@@ -540,7 +671,8 @@ public class GameSessionTests
     public void Leere_Platzhalter_Cave_wird_beim_Laden_uebersprungen()
     {
         var session = new GameSession(new BlankFirstCaveRepository());
-        session.MenuStart(); // CaveIndex steht auf 0 (Cave A, blank)
+        session.TitleAnyKey();
+        session.MenuStart(); // Menü-Auswahl steht auf Cave A (blank)
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
         Assert.Equal(1, session.CaveIndex); // auf die gültige Cave übergesprungen (Cave B)
