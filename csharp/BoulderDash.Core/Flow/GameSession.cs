@@ -88,6 +88,7 @@ public sealed class GameSession
         new("cave-test-5", "ZAUBERMAUER WANDELT UM UND KLINGT"),
         new("cave-test-6", "KEIN ABROLLEN VOM FALLENDEN STEIN"),
         new("cave-test-7", "AUSGANG ZAEHLT NICHT ALS DIAMANT"),
+        new("cave-test-8", "EXPLOSION VERSCHONT DEN AUSGANG"),
     ];
 
     private const int MaxCaveIndex = 18; // Menü-Auswahl A..P (letzte reguläre Cave in PlayOrder, Index 18=P)

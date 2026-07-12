@@ -22,6 +22,12 @@ public sealed class CavePhysics
     /// <summary>Kachel ist Leer(0) oder Erde(1), ohne Flags — die wiederkehrende Prüfung "(x&amp;0xFE)==0".</summary>
     private static bool IsEmptyOrEarthRaw(byte raw) => (raw & 0xFE) == 0;
 
+    /// <summary>Was eine Explosion stehen lässt: die Stahlwand sowie Ein- und Ausgang. In BD1 sind
+    /// Ein- und Ausgang Stahlwand-Varianten und damit ebenfalls unzerstörbar — der Ausgang sieht bis
+    /// zu seiner Freischaltung ja auch aus wie Stahl (siehe SpriteTables). Die Zaubermauer gehört
+    /// bewusst NICHT dazu, sie ist sprengbar. Das DOS-Original verschonte nur die Stahlwand.</summary>
+    private static bool IsExplosionProof(byte raw) => (raw & 0x0F) is 5 or 10 or 11;
+
     public void Regel(Cave cave, GameState state, InputState input, Camera camera)
     {
         var width = cave.Width;
@@ -461,7 +467,7 @@ public sealed class CavePhysics
         foreach (var offset in offsets)
         {
             var target = centerIdx + offset;
-            if (cave.GetRaw(target) != 5)
+            if (!IsExplosionProof(cave.GetRaw(target)))
             {
                 cave.SetRaw(target, anim);
             }

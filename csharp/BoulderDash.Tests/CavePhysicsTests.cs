@@ -271,6 +271,33 @@ public class CavePhysicsTests
         Assert.Equal(20, state.Score); // Quote mit diesem Diamanten erreicht -> sofort neuer Punktwert
     }
 
+    /// <summary>Eine Explosion lässt Stahlwand, Eingang und Ausgang stehen — in BD1 sind Ein- und
+    /// Ausgang Stahlwand-Varianten. Die Zaubermauer ist dagegen sprengbar. Das DOS-Original verschonte
+    /// nur die Stahlwand und riss Ein-/Ausgang mit.</summary>
+    [Fact]
+    public void Explosion_verschont_Eingang_und_Ausgang_sprengt_aber_die_Zaubermauer()
+    {
+        // Fallender Stein (0x42) über Rockford: er wird zerquetscht, die 3x3-Explosion deckt die
+        // ganze mittlere Zeile ab.
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall, Wall, Wall,
+            Wall, 1, 1, 0x42, 1, 1, Wall,
+            Wall, 10, 13, 6, 11, 1, Wall, // Eingang, Zaubermauer, Rockford, Ausgang
+            Wall, 1, 1, 1, 1, 1, Wall,
+            Wall, Wall, Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(7, 5, tiles));
+
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
+
+        Assert.Equal(Element.Entrance, cave.GetElement(1, 2)); // bleibt stehen
+        Assert.Equal(Element.EscapeDoor, cave.GetElement(4, 2)); // bleibt stehen
+        Assert.Equal(Element.TitaniumWall, cave.GetElement(0, 2)); // bleibt stehen
+        Assert.Equal(Element.Explosion, cave.GetElement(2, 2)); // Zaubermauer gesprengt
+        Assert.Equal(Element.Explosion, cave.GetElement(3, 2)); // Rockford gesprengt
+    }
+
     /// <summary>Das Betreten des Ausgangs beendet die Cave, zählt aber NICHT als eingesammelter Diamant.
     /// Das DOS-Original sprang hier auf den Diamant-Fall durch und gutschrieb Zähler, Punkte und Sound.</summary>
     [Fact]
