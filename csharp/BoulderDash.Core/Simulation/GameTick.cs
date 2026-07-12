@@ -97,7 +97,7 @@ public sealed class GameTick
             // Ungefährlich vor Rockfords Geburt: Regel() erkennt einen Tod erst ab EntranceProgress>100.
             if (clocks.Clk1 == 0)
             {
-                _physics.Regel(cave, state, input, camera, clocks);
+                _physics.Regel(cave, state, input, camera);
             }
 
             if (state.EntranceProgress < 101)

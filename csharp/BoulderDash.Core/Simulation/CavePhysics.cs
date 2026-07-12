@@ -22,7 +22,7 @@ public sealed class CavePhysics
     /// <summary>Kachel ist Leer(0) oder Erde(1), ohne Flags — die wiederkehrende Prüfung "(x&amp;0xFE)==0".</summary>
     private static bool IsEmptyOrEarthRaw(byte raw) => (raw & 0xFE) == 0;
 
-    public void Regel(Cave cave, GameState state, InputState input, Camera camera, Clocks clocks)
+    public void Regel(Cave cave, GameState state, InputState input, Camera camera)
     {
         var width = cave.Width;
         var height = cave.Height;
@@ -60,7 +60,7 @@ public sealed class CavePhysics
                 ProcessButterfly(cave, state, idx, width);
                 ProcessFirefly(cave, state, idx, width);
                 ProcessBoulderOrJewel(cave, state, idx, width);
-                ProcessRockford(cave, state, input, camera, clocks, idx, width, height, col, row);
+                ProcessRockford(cave, state, input, camera, idx, width, height, col, row);
             }
         }
 
@@ -326,8 +326,8 @@ public sealed class CavePhysics
     /// Original-Eigenheit (Dangling-Else): die "else"-Bewegungsverarbeitung bindet nur an die
     /// vierte Kamerabedingung — löst diese den Aufwärtsscroll aus, bleibt die Bewegung diesen
     /// Tick komplett aus, auch wenn keine der anderen drei Kamerabedingungen zutraf.</summary>
-    private static void ProcessRockford(
-        Cave cave, GameState state, InputState input, Camera camera, Clocks clocks,
+    private void ProcessRockford(
+        Cave cave, GameState state, InputState input, Camera camera,
         int idx, int width, int height, int col, int row)
     {
         var raw = cave.GetRaw(idx);
@@ -397,15 +397,21 @@ public sealed class CavePhysics
                 cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
                 break;
             case 2:
-                if (cave.GetRaw(idx + (input.Direction * 2)) == 0 && clocks.Clk4 == 0)
+                // Schieben nach BD1 (BDCFF-Objektspezifikation 0006): nur waagerecht, nur RUHENDE
+                // Boulder ("he cannot push falling boulders"), und dann mit einer Chance von 1:8 pro
+                // Versuch. Der Wurf steht bewusst hinter den geometrischen Prüfungen — gewürfelt wird
+                // nur, wenn Rockford es tatsächlich versucht ("each frame that he tries").
+                // Das DOS-Original nutzte stattdessen ein festes Clk4-Fenster (jeder 2. Scan) und ließ
+                // auch fallende Boulder schieben.
+                if ((input.Direction == 1 || input.Direction == -1) &&
+                    (cave.GetRaw(idx + input.Direction) & 0x40) == 0 &&
+                    cave.GetRaw(idx + (input.Direction * 2)) == 0 &&
+                    _random.Next(8) == 0)
                 {
-                    if (input.Direction == 1 || input.Direction == -1)
-                    {
-                        cave.SetRaw(idx + input.Direction, (byte)(0x86 ^ input.GrabModifier));
-                        cave.SetRaw(idx + (input.Direction * 2), 0x82);
-                        cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
-                        state.SoundEvents.Enqueue(SoundEvent.PushBoulder);
-                    }
+                    cave.SetRaw(idx + input.Direction, (byte)(0x86 ^ input.GrabModifier));
+                    cave.SetRaw(idx + (input.Direction * 2), 0x82);
+                    cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
+                    state.SoundEvents.Enqueue(SoundEvent.PushBoulder);
                 }
 
                 break;

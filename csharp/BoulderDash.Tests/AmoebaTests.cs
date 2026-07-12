@@ -48,7 +48,7 @@ public class AmoebaTests
     }
 
     private static void Scan(CavePhysics physics, Cave cave, GameState state) =>
-        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        physics.Regel(cave, state, new InputState(), new Camera());
 
     private static int CountAmoeba(Cave cave)
     {

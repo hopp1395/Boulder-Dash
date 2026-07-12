@@ -52,7 +52,7 @@ public class CavePhysicsTests
         ];
         var (cave, state) = Setup(BuildCaveData(5, 4, tiles));
 
-        NewPhysics().Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
 
         Assert.Equal(Element.Empty, cave.GetElement(2, 1));
         Assert.Equal(Element.Boulder, cave.GetElement(2, 2));
@@ -70,7 +70,7 @@ public class CavePhysicsTests
         ];
         var (cave, state) = Setup(BuildCaveData(5, 4, tiles));
 
-        NewPhysics().Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
 
         // Links blockiert (Stein bei (1,2), kein leerer Diagonalplatz), also Rollen nach rechts.
         Assert.Equal(Element.Empty, cave.GetElement(2, 1));
@@ -96,7 +96,7 @@ public class CavePhysicsTests
         ];
         var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
 
-        NewPhysics().Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
 
         Assert.Equal(Element.Empty, cave.GetElement(2, 2));
         Assert.Equal((Element)kreatur, cave.GetElement(erwartetX, erwartetY));
@@ -120,12 +120,12 @@ public class CavePhysicsTests
         var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
         var physics = NewPhysics();
 
-        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        physics.Regel(cave, state, new InputState(), new Camera());
 
         // Erster Scan: nur gedreht, nicht gezogen.
         Assert.Equal(Element.Firefly, cave.GetElement(2, 2));
 
-        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        physics.Regel(cave, state, new InputState(), new Camera());
 
         // Zweiter Scan: zieht in die neue Blickrichtung (oben).
         Assert.Equal(Element.Empty, cave.GetElement(2, 2));
@@ -153,7 +153,7 @@ public class CavePhysicsTests
         var input = new InputState();
         input.PressRight(); // Rockford tritt neben die Kreatur
 
-        NewPhysics().Regel(cave, state, input, new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, input, new Camera());
 
         Assert.Equal(explosion, cave.GetElement(3, 2)); // Kreatur explodiert
         Assert.Equal(explosion, cave.GetElement(2, 2)); // Rockford wird mitgerissen
@@ -178,15 +178,15 @@ public class CavePhysicsTests
         var physics = NewPhysics();
 
         // Scan 1: unten (Vorzug) und links versperrt -> dreht nach rechts, kein Zug.
-        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        physics.Regel(cave, state, new InputState(), new Camera());
         Assert.Equal(Element.Butterfly, cave.GetElement(2, 2));
 
         // Scan 2: rechts blickend sind unten (Vorzug) und rechts versperrt -> dreht nach oben, kein Zug.
-        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        physics.Regel(cave, state, new InputState(), new Camera());
         Assert.Equal(Element.Butterfly, cave.GetElement(2, 2));
 
         // Scan 3: oben blickend ist rechts (Vorzug) versperrt, geradeaus frei -> zieht nach oben.
-        physics.Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        physics.Regel(cave, state, new InputState(), new Camera());
         Assert.Equal(Element.Empty, cave.GetElement(2, 2));
         Assert.Equal(Element.Butterfly, cave.GetElement(2, 1));
     }
@@ -204,7 +204,7 @@ public class CavePhysicsTests
         var input = new InputState();
         input.PressRight();
 
-        NewPhysics().Regel(cave, state, input, new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, input, new Camera());
 
         Assert.Equal(Element.Empty, cave.GetElement(1, 1));
         Assert.Equal(Element.Rockford, cave.GetElement(2, 1));
@@ -223,7 +223,7 @@ public class CavePhysicsTests
         var input = new InputState();
         input.PressRight();
 
-        NewPhysics().Regel(cave, state, input, new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, input, new Camera());
 
         Assert.Equal(1, state.JewelsCollected);
         Assert.Equal(10, state.Score);
@@ -243,7 +243,7 @@ public class CavePhysicsTests
         var input = new InputState();
         input.PressRight();
 
-        NewPhysics().Regel(cave, state, input, new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, input, new Camera());
 
         Assert.Equal(1, state.JewelsCollected);
         Assert.Equal(20, state.Score); // Quote mit diesem Diamanten erreicht -> sofort neuer Punktwert
@@ -263,7 +263,7 @@ public class CavePhysicsTests
         input.PressRight();
         input.PressGrab();
 
-        NewPhysics().Regel(cave, state, input, new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, input, new Camera());
 
         Assert.Equal(Element.Rockford, cave.GetElement(1, 1)); // bleibt stehen
         Assert.Equal(Element.Empty, cave.GetElement(2, 1)); // Erde trotzdem entfernt
@@ -281,17 +281,18 @@ public class CavePhysicsTests
         var (cave, state) = Setup(BuildCaveData(6, 3, tiles));
         var input = new InputState();
         input.PressRight();
-        var clocks = new Clocks(); // Clk4 startet bei 0 -> Schub-Fenster offen
 
-        NewPhysics().Regel(cave, state, input, new Camera(), clocks);
+        new CavePhysics(new AlwaysHits()).Regel(cave, state, input, new Camera());
 
         Assert.Equal(Element.Empty, cave.GetElement(1, 1));
         Assert.Equal(Element.Rockford, cave.GetElement(2, 1));
         Assert.Equal(Element.Boulder, cave.GetElement(3, 1));
     }
 
+    /// <summary>Der Schub gelingt nur mit 1:8 pro Versuch (BDCFF 0006) — geht der Wurf daneben,
+    /// bleibt alles stehen. Das DOS-Original hatte hier ein festes Clk4-Fenster statt eines Wurfs.</summary>
     [Fact]
-    public void Stein_schiebt_nicht_wenn_Schubfenster_clk4_nicht_null_ist()
+    public void Stein_schiebt_nicht_wenn_der_Wurf_danebengeht()
     {
         byte[] tiles =
         [
@@ -302,13 +303,34 @@ public class CavePhysicsTests
         var (cave, state) = Setup(BuildCaveData(6, 3, tiles));
         var input = new InputState();
         input.PressRight();
-        var clocks = new Clocks();
-        clocks.Tick(); // Clk1=1,Clk4=1,Clk18=1 -> Schub-Fenster (Clk4==0) geschlossen
 
-        NewPhysics().Regel(cave, state, input, new Camera(), clocks);
+        new CavePhysics(new NeverHits()).Regel(cave, state, input, new Camera());
 
         Assert.Equal(Element.Rockford, cave.GetElement(1, 1)); // unverändert, kein Schub
         Assert.Equal(Element.Boulder, cave.GetElement(2, 1));
+    }
+
+    /// <summary>Ein FALLENDER Stein lässt sich nicht schieben ("he cannot push falling boulders",
+    /// BDCFF 0006) — er fällt einfach weiter, auch wenn der Wurf gelingen würde.</summary>
+    [Fact]
+    public void Fallender_Stein_laesst_sich_nicht_schieben()
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall, Wall,
+            Wall, 6, 0x42, 0, 0, Wall, // Stein mit Fall-Momentum neben Rockford
+            Wall, Wall, 0, 0, 0, Wall, // darunter frei -> er fällt wirklich
+            Wall, Wall, Wall, Wall, Wall, Wall,
+        ];
+        var (cave, state) = Setup(BuildCaveData(6, 4, tiles));
+        var input = new InputState();
+        input.PressRight();
+
+        new CavePhysics(new AlwaysHits()).Regel(cave, state, input, new Camera());
+
+        Assert.Equal(Element.Rockford, cave.GetElement(1, 1)); // Rockford bleibt stehen
+        Assert.Equal(Element.Empty, cave.GetElement(3, 1)); // nichts dahinter geschoben
+        Assert.Equal(Element.Boulder, cave.GetElement(2, 2)); // der Stein fällt stattdessen weiter
     }
 
     [Fact]
@@ -324,7 +346,7 @@ public class CavePhysicsTests
         ];
         var (cave, state) = Setup(BuildCaveData(5, 4, tiles));
 
-        NewPhysics().Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
 
         Assert.Equal(Element.Explosion, cave.GetElement(2, 2));
         Assert.Equal(1, state.WechselExplo);
@@ -343,7 +365,7 @@ public class CavePhysicsTests
         ];
         var (cave, state) = Setup(BuildCaveData(5, 5, tiles, enchantedWallSeconds: 10));
 
-        NewPhysics().Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        NewPhysics().Regel(cave, state, new InputState(), new Camera());
 
         Assert.True(state.EnchantedWallRunning);
         Assert.Equal(Element.Empty, cave.GetElement(2, 1));
@@ -369,10 +391,22 @@ public class CavePhysicsTests
         var camera = new Camera();
         camera.ResetTo(0, 1); // camera.Y=1>0, Rockford-Zeile=2 -> camera.Y+1==row trifft zu
 
-        NewPhysics().Regel(cave, state, input, camera, new Clocks());
+        NewPhysics().Regel(cave, state, input, camera);
 
         Assert.Equal(Element.Rockford, cave.GetElement(1, 2)); // keine Bewegung ausgeführt
         Assert.Equal(Element.Earth, cave.GetElement(2, 2)); // Erde unverändert
         Assert.Equal((sbyte)-5, camera.Rely); // Scroll-Ziel wurde trotzdem gesetzt
+    }
+
+    /// <summary>Würfelt immer die 0 — jeder 1:8-Wurf (Schieben) gelingt.</summary>
+    private sealed class AlwaysHits : Random
+    {
+        public override int Next(int maxValue) => 0;
+    }
+
+    /// <summary>Würfelt nie die 0 — jeder 1:8-Wurf (Schieben) geht daneben.</summary>
+    private sealed class NeverHits : Random
+    {
+        public override int Next(int maxValue) => maxValue - 1;
     }
 }

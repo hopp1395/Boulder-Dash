@@ -44,7 +44,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
 
         Assert.Contains(SoundEvent.Explosion, state.SoundEvents);
     }
@@ -63,7 +63,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
 
         Assert.True(state.AmoebaPresent);
     }
@@ -82,7 +82,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
 
         Assert.False(state.AmoebaPresent);
     }
