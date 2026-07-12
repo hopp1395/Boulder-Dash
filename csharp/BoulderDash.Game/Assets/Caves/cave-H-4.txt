@@ -30,7 +30,7 @@ JewelValueExtra = 20
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 W . r.... .. ..rr..rP... ...r......r.rrW
 W....r..r. ... ..r.  ..r.rr... ...dr.rrW
-W.... ..r...r.... ...F......wwwwwwwwwwwW
+X.... ..r...r.... ...F......wwwwwwwwwwwW
 W. rd. r....r..r.r.... ..........  r..rW
 Wwwwwwwwwwwww...r.  .....rr r..r. . r..W
 W....r..r.r.... .  ......rr r..r...  ..W

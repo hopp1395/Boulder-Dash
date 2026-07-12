@@ -29,7 +29,7 @@ JewelValueExtra = 20
 #          P Inbox, X Outbox, F Firefly, B Butterfly, a Amoeba
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 WP..r..........r........r.....r..r.....W
-W.r.rr.........r...r........r......r.r.W
+W.r.rr.........r...r........r......r.r.X
 W.r..r........r..r....r.r..........r.rrW
 W.......r..r.....r..............rr.r..rW
 W..r...r....r..r.r..............r..r..rW
