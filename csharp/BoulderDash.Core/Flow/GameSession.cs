@@ -11,7 +11,7 @@ public enum SessionPhase
     TitleScreen,
 
     /// <summary>BD1-Option-Screen: Logo plus Textzeilen mit der CAVE/LEVEL-Auswahl
-    /// ("PRESS BUTTON TO PLAY").</summary>
+    /// ("PRESS SPACE TO PLAY").</summary>
     Menu,
 
     /// <summary>Auswahl der Prüfstand-Caves (F5 im Hauptmenü) — kein Original-Zustand, sondern ein
@@ -302,7 +302,7 @@ public sealed class GameSession
         QuitRequested = true;
     }
 
-    /// <summary>Spielstart ("PRESS BUTTON TO PLAY"): leben=3, gewählte Menü-Cave laden.</summary>
+    /// <summary>Spielstart ("PRESS SPACE TO PLAY"): leben=3, gewählte Menü-Cave laden.</summary>
     public void MenuStart()
     {
         if (Phase != SessionPhase.Menu) return;
