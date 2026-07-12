@@ -3,47 +3,22 @@ namespace BoulderDash.Core.Simulation;
 /// <summary>
 /// Größe des Kamera-Sichtfensters in Kacheln. Das Original kannte nur eine Größe (20x12 Kacheln =
 /// 320x200 VGA-Pixel abzüglich der Statuszeile, src/BOULDER.CPP:78); der Port erlaubt darüber hinaus,
-/// die Spielfläche stufenweise aufzuziehen — bis zur vollen BD1-Cave (40x22), bei der gar nicht mehr
-/// gescrollt werden muss, und darüber hinaus bis zum Vierfachen davon (160x88), damit auch die großen
-/// Caves ganz ins Bild passen (seit ihre Größe frei ist, siehe CaveTextFile).
+/// die Spielfläche stufenweise aufzuziehen — welche Größen es dabei überhaupt gibt, hängt an der
+/// Zeichenfläche und wird deshalb nicht hier festgelegt, sondern in <see cref="ViewportSteps"/>.
 ///
 /// Die Scroll-Geometrie (Auslöser und Scrollweiten, siehe RockfordObject.ScrollCamera) leitet sich
 /// aus der Sichtfenstergröße ab und ergibt bei <see cref="Original"/> exakt die Originalwerte.
 /// </summary>
 public readonly record struct ViewportSize(int Columns, int Rows)
 {
-    /// <summary>Das Sichtfenster des Originals — die Referenzgröße für alles Verhalten.</summary>
+    /// <summary>Das Sichtfenster des Originals — die Referenzgröße für alles Verhalten und zugleich
+    /// die kleinste Zoomstufe (siehe ViewportSteps).</summary>
     public static readonly ViewportSize Original = new(20, 12);
 
     /// <summary>Die ganze BD1-Cave auf einmal — bei ihr scrollt eine Original-Cave nicht mehr.
-    /// Voreinstellung beim ersten Start (siehe GameSettings).</summary>
+    /// Der Wunsch-Zoom beim ersten Start (siehe GameSettings); ob es diese Stufe gibt, entscheidet
+    /// der Bildschirm (auf 1920x1080 im Vollbild ist sie genau der Maßstab 3x).</summary>
     public static readonly ViewportSize Full = new(40, 22);
-
-    /// <summary>
-    /// Wählbare Stufen. Bis zur vollen BD1-Cave in kleinen Schritten (+4 Spalten/+2 Zeilen), darüber
-    /// in halben BD1-Caves (+20/+11) bis zum Vierfachen — 160x88 Kacheln.
-    ///
-    /// Bewusst keine Stufe unter dem Original: Die Statuszeile ist genau 20 Kacheln (320 px) breit,
-    /// und ein kleineres Bild liefert schon der Bildschirm-Zoom (Fenstergröße). Nach oben ist die
-    /// Grenze dagegen die Anzeige, nicht das Spiel: 160x88 Kacheln sind 2560x1416 logische Pixel und
-    /// passen auf keinen gewöhnlichen Monitor mehr — der Bildschirm-Zoom rechnet sie dann herunter,
-    /// statt sie wie sonst ganzzahlig hochzuskalieren (BoulderDashGame.GetScale).
-    /// </summary>
-    public static readonly IReadOnlyList<ViewportSize> Steps =
-    [
-        new(20, 12),
-        new(24, 14),
-        new(28, 16),
-        new(32, 18),
-        new(36, 20),
-        new(40, 22),
-        new(60, 33),
-        new(80, 44),
-        new(100, 55),
-        new(120, 66),
-        new(140, 77),
-        new(160, 88),
-    ];
 
     /// <summary>Auslöser für den Rechts-Scroll: Rockford überschreitet diese Spalte im Sichtfenster.
     /// Original: 16 bei 20 Spalten (BOULDER.CPP:893, hier eine Kachel weiter innen).</summary>
@@ -61,43 +36,4 @@ public readonly record struct ViewportSize(int Columns, int Rows)
 
     /// <summary>Scrollweite senkrecht. Original: 5 bei 12 Zeilen.</summary>
     public int ScrollAmountY => (Rows / 2) - 1;
-
-    public ViewportSize NextLarger() => StepAt(IndexOfNearestStep() + 1);
-
-    public ViewportSize NextSmaller() => StepAt(IndexOfNearestStep() - 1);
-
-    /// <summary>Nächstgelegene gültige Stufe — fängt beliebige (z. B. aus einer alten oder
-    /// handgeschriebenen Einstellungsdatei gelesene) Werte ab.</summary>
-    public static ViewportSize Snap(int columns, int rows)
-    {
-        var best = Steps[0];
-        var bestDistance = int.MaxValue;
-        foreach (var step in Steps)
-        {
-            var distance = Math.Abs(step.Columns - columns) + Math.Abs(step.Rows - rows);
-            if (distance < bestDistance)
-            {
-                best = step;
-                bestDistance = distance;
-            }
-        }
-
-        return best;
-    }
-
-    private static ViewportSize StepAt(int index) => Steps[Math.Clamp(index, 0, Steps.Count - 1)];
-
-    private int IndexOfNearestStep()
-    {
-        var snapped = Snap(Columns, Rows);
-        for (var i = 0; i < Steps.Count; i++)
-        {
-            if (Steps[i] == snapped)
-            {
-                return i;
-            }
-        }
-
-        return 0;
-    }
 }

@@ -11,9 +11,8 @@ public class SettingsFileTests
         Path.Combine(Path.GetTempPath(), $"boulderdash-test-{Guid.NewGuid():N}", "settings.json");
 
     /// <summary>Erster Start (noch keine Einstellungsdatei): Vollbild mit der vollen BD1-Cave. Nicht
-    /// die größte Zoomstufe (die geht seit den frei geformten Caves bis 160x88 und wäre auf einem
-    /// gewöhnlichen Monitor stark heruntergerechnet), sondern die, bei der eine Original-Cave genau
-    /// hineinpasst und nicht mehr scrollt.</summary>
+    /// die größte Zoomstufe (die zeigt beim nativen Maßstab weit mehr als eine Cave), sondern die, bei
+    /// der eine Original-Cave genau hineinpasst und nicht mehr scrollt.</summary>
     [Fact]
     public void Fehlende_Datei_liefert_Vollbild_mit_voller_Cave()
     {
@@ -69,9 +68,11 @@ public class SettingsFileTests
         }
     }
 
-    /// <summary>Eine von Hand verstellte Sichtfenstergröße darf keine krumme Zwischengröße ergeben.</summary>
+    /// <summary>Die gemerkte Sichtfenstergröße ist nur ein Wunschwert: Welche Stufen es gibt, hängt am
+    /// Bildschirm (ViewportSteps) und steht erst in der Schale fest — die Einstellungen reichen den
+    /// Wert deshalb unverändert durch, gerundet wird dort (siehe ViewportStepsTests.Snap...).</summary>
     [Fact]
-    public void Krumme_Sichtfenstergroesse_wird_auf_eine_Stufe_gerundet()
+    public void Sichtfenstergroesse_wird_unveraendert_durchgereicht()
     {
         var path = NewTempPath();
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -81,7 +82,7 @@ public class SettingsFileTests
 
             var settings = SettingsFile.Load(path);
 
-            Assert.Equal(new ViewportSize(24, 14), settings.Viewport);
+            Assert.Equal(new ViewportSize(26, 15), settings.Viewport);
         }
         finally
         {

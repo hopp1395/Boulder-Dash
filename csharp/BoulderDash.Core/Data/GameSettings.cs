@@ -28,9 +28,10 @@ public sealed record GameSettings
     /// Ohne Einstellungsdatei — und in jeder älteren ohne dieses Feld — ist das Feature aus.</summary>
     public bool Explore { get; init; }
 
-    /// <summary>Sichtfenstergröße als Stufe — fängt krumme Werte aus einer von Hand bearbeiteten
-    /// Einstellungsdatei ab (siehe ViewportSize.Snap).</summary>
-    public ViewportSize Viewport => ViewportSize.Snap(ViewportColumns, ViewportRows);
+    /// <summary>Die gemerkte Sichtfenstergröße — ein Wunschwert. Welche Stufen es gibt, hängt am
+    /// Bildschirm und steht erst dort fest (ViewportSteps); die Schale rundet darauf (ViewportSteps.Snap)
+    /// und fängt damit auch krumme Werte aus einer von Hand bearbeiteten Einstellungsdatei ab.</summary>
+    public ViewportSize Viewport => new(ViewportColumns, ViewportRows);
 
     public static GameSettings From(ViewportSize viewport, int windowWidth, int windowHeight, bool fullscreen, bool explore) => new()
     {

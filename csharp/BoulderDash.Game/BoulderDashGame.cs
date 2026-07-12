@@ -18,7 +18,9 @@ namespace BoulderDash.Game;
 /// nur, welcher Renderer je nach SessionPhase zum Einsatz kommt.
 ///
 /// Bildschirm-Zoom: das Fenster ist frei skalierbar, F11 schaltet randloses Vollbild.
-/// Spielflächen-Zoom: +/- vergrößern/verkleinern das Sichtfenster (siehe ViewportSize).
+/// Spielflächen-Zoom: + zoomt hinein, - hinaus. Eine Stufe ist der Kachelmaßstab, das Sichtfenster
+/// ist, was bei diesem Maßstab auf die Zeichenfläche passt — die Stufen hängen deshalb an ihr und
+/// werden bei jeder Größenänderung neu abgeleitet (siehe ViewportSteps, SyncViewportSteps).
 /// Beides wird in der Einstellungsdatei gemerkt (siehe SettingsFile).
 /// </summary>
 public class BoulderDashGame : XnaGame
@@ -42,9 +44,18 @@ public class BoulderDashGame : XnaGame
 
     private GameSession _session = null!;
 
+    /// <summary>Der gewünschte Spielflächen-Zoom (aus der Einstellungsdatei bzw. zuletzt mit +/-
+    /// gewählt) — ein Wunsch, keine Tatsache: Gezeigt wird die Stufe der aktuellen Zeichenfläche, die
+    /// ihm am nächsten kommt (SyncViewportSteps). Maßgeblich ist immer Camera.Viewport.</summary>
     private ViewportSize _viewport;
+
     private Point _windowedSize;
     private bool _applyingClientSize;
+
+    /// <summary>Die Zoomstufen der aktuellen Zeichenfläche (siehe ViewportSteps) und die Fläche, aus
+    /// der sie stammen — ändert sie sich (Fenster gezogen, Vollbild geschaltet), wird neu abgeleitet.</summary>
+    private ViewportSteps _steps = null!;
+    private Point _surface;
 
     /// <summary>Cave-Explore (E-Taste im Spiel, siehe ExploreMap). Die Session hält den maßgeblichen
     /// Schalter; hier steht er nur mit, damit SaveSettings ihn in die Einstellungsdatei schreiben kann.</summary>
@@ -104,8 +115,10 @@ public class BoulderDashGame : XnaGame
         var caves = new CaveTextRepository(Path.Combine(assets, "Caves"));
         var demoSteps = DemoTextFile.Load(Path.Combine(assets, "demo.txt"));
         _session = new GameSession(caves, demoSteps);
-        _session.SetViewport(_viewport);
         _session.SetExplore(_explore);
+
+        // Der gemerkte Zoom ist nur ein Wunschwert: Welche Stufen es gibt, weiß erst die Zeichenfläche.
+        SyncViewportSteps();
 
         SyncPalette();
     }
@@ -115,6 +128,7 @@ public class BoulderDashGame : XnaGame
         var keyboard = Keyboard.GetState();
         _inputAdapter.Update(keyboard);
 
+        SyncViewportSteps();
         HandleShellInput();
         HandlePhaseInput();
 
@@ -165,53 +179,47 @@ public class BoulderDashGame : XnaGame
             return;
         }
 
-        var next = zoomIn ? _viewport.NextSmaller() : _viewport.NextLarger();
-        if (next == _viewport)
+        var current = _session.Camera.Viewport;
+        var next = zoomIn ? _steps.Smaller(current) : _steps.Larger(current);
+        if (next == current)
         {
             return;
         }
 
-        // Kachelgröße vor dem Wechsel merken: die beiden Zooms sollen sich nicht in die Quere kommen —
-        // der Spielflächen-Zoom ändert nur, WIE VIELE Kacheln zu sehen sind, nicht wie groß sie sind.
-        var (oldWidth, oldHeight) = CaveRenderer.LogicalSize(_viewport);
-        var scale = GetScale(oldWidth, oldHeight);
-
+        // Der Zoom ist gewollt: Er wird zum neuen Wunsch und damit gemerkt.
         _viewport = next;
-        _session.SetViewport(_viewport);
-        ResizeWindowToScale(scale);
+        _session.SetViewport(next);
         SaveSettings();
     }
 
-    /// <summary>Zieht das Fenster auf die neue Sichtfenstergröße im bisherigen Maßstab nach, damit die
-    /// Kacheln beim Spielflächen-Zoom gleich groß bleiben. Passt das nicht mehr auf den Bildschirm,
-    /// bleibt das Fenster auf Bildschirmgröße und der Maßstab sinkt von selbst (GetScale) — im Vollbild
-    /// wird gar nichts angefasst. Die Untergrenze ist der Menüschirm (320x200): Kleiner wird das
-    /// Fenster nie, egal wie klein der Maßstab ausfällt.</summary>
-    private void ResizeWindowToScale(float scale)
+    /// <summary>
+    /// Leitet die Zoomstufen aus der Zeichenfläche ab, sobald diese sich ändert — beim Start, nach dem
+    /// Ziehen des Fensters und beim Umschalten ins Vollbild (siehe ViewportSteps) — und setzt das
+    /// Sichtfenster auf die Stufe der neuen Leiter, die dem Wunsch (_viewport) am nächsten kommt.
+    ///
+    /// Gesnappt wird immer der WUNSCH, nicht die zuletzt gezeigte Größe: Sonst fräße ein kurzzeitig
+    /// kleines Fenster den Zoom auf, weil er beim Zurückziehen nur noch von der kleinen Stufe aus
+    /// zurückrechnen könnte. Zeichenflächen unterhalb des Menüschirms (320x200 — etwa ein minimiertes
+    /// Fenster) werden deshalb ganz übergangen.
+    ///
+    /// Das Fenster wird beim Zoomen NICHT nachgezogen: Eine Stufe IST der Kachelmaßstab, und der soll
+    /// sich beim Zoomen ja gerade ändern — jede Stufe füllt die Fläche dabei ganzzahlig aus.
+    /// </summary>
+    private void SyncViewportSteps()
     {
-        if (_graphics.IsFullScreen)
+        var surface = new Point(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
+        if (surface == _surface || surface.X < MenuWidth || surface.Y < MenuHeight)
         {
             return;
         }
 
-        var (logicalWidth, logicalHeight) = CaveRenderer.LogicalSize(_viewport);
-        var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+        _surface = surface;
+        _steps = ViewportSteps.For(surface.X, surface.Y, CaveRenderer.TileSize, CaveRenderer.StatusLineHeight);
 
-        // Etwas Luft für Fensterrahmen und Taskleiste lassen.
-        var width = Math.Min((int)(logicalWidth * scale), display.Width - 40);
-        var height = Math.Min((int)(logicalHeight * scale), display.Height - 80);
-
-        _applyingClientSize = true;
-        try
+        var viewport = _steps.Snap(_viewport);
+        if (viewport != _session.Camera.Viewport)
         {
-            _graphics.PreferredBackBufferWidth = Math.Max(MenuWidth, width);
-            _graphics.PreferredBackBufferHeight = Math.Max(MenuHeight, height);
-            _graphics.ApplyChanges();
-            _windowedSize = new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
-        }
-        finally
-        {
-            _applyingClientSize = false;
+            _session.SetViewport(viewport);
         }
     }
 
@@ -484,10 +492,11 @@ public class BoulderDashGame : XnaGame
     /// Der Maßstab, in dem die logische Zeichenfläche ins Fenster kommt.
     ///
     /// Passt sie hinein, wird sie GANZZAHLIG hochskaliert — Kachelpixel bleiben quadratisch und
-    /// scharf; das ist der Normalfall und war früher der einzige. Passt sie nicht, wird sie
-    /// bruchteilig heruntergerechnet, statt am Fensterrand abgeschnitten zu werden: Seit das
-    /// Sichtfenster bis 160x88 Kacheln geht (ViewportSize.Steps), sind das 2560x1416 logische Pixel —
-    /// mehr, als ein gewöhnlicher Monitor hergibt.
+    /// scharf. Für die Sichtfenster des Spiels ist das kein Zufall mehr: Die Zoomstufen sind aus
+    /// genau dieser Fläche abgeleitet (ViewportSteps), der Maßstab kommt also glatt heraus und
+    /// zwischen den Stufen bleibt nichts liegen. Herunterrechnen (bruchteilig, LinearClamp statt
+    /// PointClamp) bleibt nur für den Fall, dass die Fläche kleiner ist als die kleinste Stufe —
+    /// ein sehr kleines Fenster mit dem 320x200-Menüschirm oder dem Original-Sichtfenster.
     /// </summary>
     private float GetScale(int logicalWidth, int logicalHeight)
     {
