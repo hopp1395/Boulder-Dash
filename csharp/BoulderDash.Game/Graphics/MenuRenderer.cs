@@ -55,6 +55,48 @@ public sealed class MenuRenderer
 
     public void Draw(SpriteBatch batch, GameSession session)
     {
+        DrawBackground(batch);
+        DrawTitleBox();
+        _font.DrawText(batch, MakeCopyrightOrMarqueeLine(session), RowPosition(17), Color.White);
+        _font.DrawText(batch, "F1 - SPIEL STARTEN  F2 - DEMO", RowPosition(19), Color.White);
+        // F5 ist kein Original-Menüpunkt, sondern der Zugang zur Prüfstand-Cave (GameSession.TestCaveName).
+        _font.DrawText(batch, "F3 - HILFE          F4 - ENDE  F5 - TEST", RowPosition(21), Color.White);
+        _font.DrawText(batch, BuildSelectorLine(session), RowPosition(23), Color.White);
+
+        void DrawTitleBox()
+        {
+            _font.DrawText(batch, "+-------------------+", RowPosition(5), Color.White);
+            _font.DrawText(batch, "| BOULDER DASH V1.1 |", RowPosition(6), Color.White);
+            _font.DrawText(batch, "+-------------------+", RowPosition(7), Color.White);
+        }
+    }
+
+    /// <summary>Auswahlbildschirm des Testmodus (F5) — kein Original-Bildschirm, sondern der
+    /// Entwicklerzugang zu den Prüfstand-Caves (GameSession.TestCaves). Jede Cave prüft genau eine
+    /// Korrektur am Objektverhalten; die Anleitung dazu steht im Kopf der jeweiligen Cave-Datei.</summary>
+    public void DrawTestMenu(SpriteBatch batch, GameSession session)
+    {
+        DrawBackground(batch);
+
+        _font.DrawText(batch, "+-------------------+", RowPosition(5), Color.White);
+        _font.DrawText(batch, "|     TESTMODUS     |", RowPosition(6), Color.White);
+        _font.DrawText(batch, "+-------------------+", RowPosition(7), Color.White);
+
+        // Die Liste wächst mit jeder geprüften Korrektur: sie endet immer auf Zeile 18 und wächst nach
+        // oben, bleibt dabei aber unterhalb des Titelkastens (Zeilen 5-7).
+        var firstRow = Math.Max(8, 19 - GameSession.TestCaves.Count);
+        for (var i = 0; i < GameSession.TestCaves.Count; i++)
+        {
+            var marker = i == session.TestCaveIndex ? ">" : " ";
+            _font.DrawText(batch, $"{marker} {i + 1}  {GameSession.TestCaves[i].Title}", RowPosition(firstRow + i), Color.White);
+        }
+
+        _font.DrawText(batch, "HOCH/RUNTER ODER ZIFFER WAEHLEN", RowPosition(20), Color.White);
+        _font.DrawText(batch, "F1 - STARTEN        ESC - ZURUECK", RowPosition(22), Color.White);
+    }
+
+    private void DrawBackground(SpriteBatch batch)
+    {
         for (var row = 0; row < CaveRenderer.ViewportRows; row++)
         {
             for (var col = 0; col < CaveRenderer.ViewportColumns; col++)
@@ -65,19 +107,6 @@ public sealed class MenuRenderer
                     col * TileSize, CaveRenderer.StatusLineHeight + (row * TileSize), TileSize, TileSize);
                 batch.Draw(texture, destination, source, Color.White);
             }
-        }
-
-        DrawTitleBox();
-        _font.DrawText(batch, MakeCopyrightOrMarqueeLine(session), RowPosition(17), Color.White);
-        _font.DrawText(batch, "F1 - SPIEL STARTEN  F2 - DEMO", RowPosition(19), Color.White);
-        _font.DrawText(batch, "F3 - HILFE          F4 - ENDE", RowPosition(21), Color.White);
-        _font.DrawText(batch, BuildSelectorLine(session), RowPosition(23), Color.White);
-
-        void DrawTitleBox()
-        {
-            _font.DrawText(batch, "+-------------------+", RowPosition(5), Color.White);
-            _font.DrawText(batch, "| BOULDER DASH V1.1 |", RowPosition(6), Color.White);
-            _font.DrawText(batch, "+-------------------+", RowPosition(7), Color.White);
         }
     }
 

@@ -44,9 +44,64 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
 
         Assert.Contains(SoundEvent.Explosion, state.SoundEvents);
+    }
+
+    /// <summary>Die Zaubermauer meldet den Klang des Objekts, das unten HERAUSKOMMT: ein Boulder
+    /// klingt nach Jewel, ein Jewel nach Boulder (BDCFF 0000/0002).</summary>
+    [Theory]
+    [InlineData((byte)0x42, Element.Jewel, SoundEvent.JewelLand)] // Boulder rein -> Jewel raus
+    [InlineData((byte)0x43, Element.Boulder, SoundEvent.BoulderLand)] // Jewel rein -> Boulder raus
+    public void Zaubermauer_wandelt_um_und_meldet_den_Klang_des_Ergebnisses(
+        byte fallendesObjekt, Element ergebnis, SoundEvent erwarteterSound)
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 0, fallendesObjekt, 0, Wall,
+            Wall, 0, 13, 0, Wall, // Zaubermauer
+            Wall, 0, 0, 0, Wall, // darunter frei -> Objekt kommt durch
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var data = BuildCaveData(5, 5, tiles, enchantedWallSeconds: 5);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+
+        Assert.True(state.EnchantedWallRunning);
+        Assert.Equal(ergebnis, cave.GetElement(2, 3));
+        Assert.Contains(erwarteterSound, state.SoundEvents);
+    }
+
+    /// <summary>Auch wenn die Mauer das Objekt verschluckt — weil darunter kein Platz ist oder weil ihre
+    /// Zeit abgelaufen ist — erklingt der Auftreffton ("still with a sound", BDCFF 0002).</summary>
+    [Theory]
+    [InlineData((byte)5, (byte)5)] // Mauer aktiv, aber darunter versperrt
+    [InlineData((byte)0, (byte)0)] // Mauer abgelaufen (0 Sekunden), darunter frei
+    public void Zaubermauer_meldet_den_Auftreffton_auch_wenn_sie_das_Objekt_verschluckt(
+        byte enchantedWallSeconds, byte unterDerMauer)
+    {
+        byte[] tiles =
+        [
+            Wall, Wall, Wall, Wall, Wall,
+            Wall, 0, 0x42, 0, Wall, // fallender Boulder
+            Wall, 0, 13, 0, Wall, // Zaubermauer
+            Wall, 0, unterDerMauer, 0, Wall,
+            Wall, Wall, Wall, Wall, Wall,
+        ];
+        var data = BuildCaveData(5, 5, tiles, enchantedWallSeconds);
+        var cave = new BoulderDash.Core.Simulation.Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
+
+        Assert.Equal(Element.Empty, cave.GetElement(2, 1)); // Objekt ist weg
+        Assert.Contains(SoundEvent.JewelLand, state.SoundEvents);
     }
 
     [Fact]
@@ -63,7 +118,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
 
         Assert.True(state.AmoebaPresent);
     }
@@ -82,7 +137,7 @@ public class SoundEventTests
         var state = new GameState();
         state.ResetForCave(data);
 
-        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera(), new Clocks());
+        new CavePhysics(new Random(1)).Regel(cave, state, new InputState(), new Camera());
 
         Assert.False(state.AmoebaPresent);
     }

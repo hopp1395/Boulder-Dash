@@ -160,12 +160,12 @@ public static class CaveTextFile
 
             for (var x = 0; x < width; x++)
             {
-                if (!CaveAsciiMap.TryToElement(line[x], out var element))
+                if (!CaveAsciiMap.TryToRaw(line[x], out var raw))
                 {
                     throw new FormatException($"{sourceName}:{lineNumber}: unbekanntes Kartenzeichen '{line[x]}' an Spalte {x}.");
                 }
 
-                tiles[(y * width) + x] = (byte)element;
+                tiles[(y * width) + x] = raw;
             }
         }
 

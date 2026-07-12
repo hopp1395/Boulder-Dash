@@ -1,0 +1,49 @@
+# Prüfstand 8 — Explosion verschont den Ausgang (kein BD1-Original, nur über den Testmodus F5).
+#
+# Zu prüfen: Eine Explosion lässt Stahlwand, Eingang und Ausgang stehen — in BD1 sind Ein- und
+# Ausgang Stahlwand-Varianten (der Ausgang sieht bis zu seiner Freischaltung ja auch aus wie Stahl).
+# Die Zaubermauer ist dagegen sprengbar.
+# Vorher (DOS): Nur die Stahlwand blieb verschont, Ein- und Ausgang flogen mit in die Luft.
+#
+# In der Mitte sitzt ein Butterfly, eingemauert zwischen einer ZAUBERMAUER (links) und dem AUSGANG
+# (rechts), sonst nur Erde — er kann sich also nicht bewegen. Grab dich von unten an ihn heran und
+# berühre ihn. Er explodiert zu Diamanten, und im Krater siehst du:
+#
+#   JETZT (richtig):  Der Ausgang steht noch, die Zaubermauer ist weg.
+#   FRUEHER (falsch): Beide waren weg — die Cave damit unloesbar.
+#
+# Rockford stirbt bei der Berührung mit; das gehört so (er steht ja im 3x3-Radius). Die Cave ist zum
+# Zuschauen gedacht, nicht zum Gewinnen — nach dem Tod wird sie ohnehin neu geladen.
+
+[Cave]
+Cave        = Z
+Name        = Explosionsschutz
+Description = Ausgang bleibt stehen, Zaubermauer nicht
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 20
+AmoebaTime      = 20
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W..................W
+W..................W
+W..................W
+W.......MBX........W
+W..................W
+W..................W
+W.P.......d........W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW

@@ -22,7 +22,13 @@ public sealed class CavePhysics
     /// <summary>Kachel ist Leer(0) oder Erde(1), ohne Flags — die wiederkehrende Prüfung "(x&amp;0xFE)==0".</summary>
     private static bool IsEmptyOrEarthRaw(byte raw) => (raw & 0xFE) == 0;
 
-    public void Regel(Cave cave, GameState state, InputState input, Camera camera, Clocks clocks)
+    /// <summary>Was eine Explosion stehen lässt: die Stahlwand sowie Ein- und Ausgang. In BD1 sind
+    /// Ein- und Ausgang Stahlwand-Varianten und damit ebenfalls unzerstörbar — der Ausgang sieht bis
+    /// zu seiner Freischaltung ja auch aus wie Stahl (siehe SpriteTables). Die Zaubermauer gehört
+    /// bewusst NICHT dazu, sie ist sprengbar. Das DOS-Original verschonte nur die Stahlwand.</summary>
+    private static bool IsExplosionProof(byte raw) => (raw & 0x0F) is 5 or 10 or 11;
+
+    public void Regel(Cave cave, GameState state, InputState input, Camera camera)
     {
         var width = cave.Width;
         var height = cave.Height;
@@ -58,9 +64,9 @@ public sealed class CavePhysics
                 ResolveExplosion(cave, state, idx);
                 ProcessAmoeba(cave, state, idx, width, amoebaFate, ref amoebaFound, ref amoebaCanGrow);
                 ProcessButterfly(cave, state, idx, width);
-                ProcessGhost(cave, state, idx, width);
+                ProcessFirefly(cave, state, idx, width);
                 ProcessBoulderOrJewel(cave, state, idx, width);
-                ProcessRockford(cave, state, input, camera, clocks, idx, width, height, col, row);
+                ProcessRockford(cave, state, input, camera, idx, width, height, col, row);
             }
         }
 
@@ -147,240 +153,92 @@ public sealed class CavePhysics
         }
     }
 
-    /// <summary>Schmetterling/Butterfly: explodiert zu Jewels bei Kontakt zu Rockford/Amoeba oder
-    /// einem fallenden Boulder/Jewel von oben, sonst Wandfolge-Automat (:758-798).</summary>
-    private static void ProcessButterfly(Cave cave, GameState state, int idx, int width)
+    /// <summary>Schmetterling/Butterfly: dreht sich bevorzugt im Uhrzeigersinn und explodiert zu Jewels.</summary>
+    private static void ProcessButterfly(Cave cave, GameState state, int idx, int width) =>
+        ProcessCreature(cave, state, idx, width, element: 9, preferCcw: false, explosionAnim: 0xCE);
+
+    /// <summary>Geist/Firefly: dreht sich bevorzugt gegen den Uhrzeigersinn und explodiert zu Leere.</summary>
+    private static void ProcessFirefly(Cave cave, GameState state, int idx, int width) =>
+        ProcessCreature(cave, state, idx, width, element: 8, preferCcw: true, explosionAnim: 0xCC);
+
+    /// <summary>
+    /// Firefly und Butterfly nach BD1 (BDCFF-Objektspezifikationen 0008/0009,
+    /// elmerproductions.com/sp/peterb/BDCFF/objects/0008.html): Die Kreatur versucht zuerst ihre
+    /// Vorzugsdrehung (Firefly nach links = gegen den Uhrzeigersinn, Butterfly nach rechts = im
+    /// Uhrzeigersinn), sonst geradeaus. Ist beides versperrt, dreht sie sich genau EINMAL zur
+    /// Gegenseite und zieht in diesem Scan nicht ("if a firefly is forced to turn against its
+    /// 'preferred direction', it does not actually move for that frame").
+    ///
+    /// Das DOS-Original (BOULDER.CPP:758-840) drehte stattdessen in einer Schleife bis zu viermal
+    /// weiter und unterdrückte die Bewegung über ein Extra-Bit 0x10. Die Bewegung stimmte damit zwar,
+    /// die resultierende BLICKRICHTUNG einer blockierten Kreatur aber nicht — und der Butterfly drehte
+    /// bei Blockade sogar auf seine Vorzugsseite statt auf die Gegenseite. Beides ist hier korrigiert;
+    /// das Bit 0x10 entfällt ersatzlos.
+    /// </summary>
+    private static void ProcessCreature(
+        Cave cave, GameState state, int idx, int width, byte element, bool preferCcw, byte explosionAnim)
     {
         var raw = cave.GetRaw(idx);
-        if ((raw & 0x8F) != 9)
+        if ((raw & 0x8F) != element)
         {
             return;
         }
 
-        if ((cave.GetRaw(idx - width) & 0xFE) == 6 ||
-            (cave.GetRaw(idx + width) & 0xFE) == 6 ||
-            (cave.GetRaw(idx - 1) & 0xFE) == 6 ||
-            (cave.GetRaw(idx + 1) & 0xFE) == 6 ||
-            (cave.GetRaw(idx - width) & 0x4C) == 0x40)
-        {
-            Explode(cave, state, idx, 0xCE);
-            return;
-        }
-
-        for (var w = 0; w < 4; w++)
-        {
-            var current = cave.GetRaw(idx);
-            switch (current & 0x60)
-            {
-                case 0x00:
-                    if (cave.GetRaw(idx - width) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0xA9));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx - 1) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x39);
-                    }
-
-                    break;
-                case 0x20:
-                    if (cave.GetRaw(idx + 1) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0xC9));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx - width) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x59);
-                    }
-
-                    break;
-                case 0x40:
-                    if (cave.GetRaw(idx + width) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0xE9));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx + 1) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x79);
-                    }
-
-                    break;
-                case 0x60:
-                    if (cave.GetRaw(idx - 1) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0x89));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx + width) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x19);
-                    }
-
-                    break;
-            }
-        }
-
-        var afterLoop = cave.GetRaw(idx);
-        switch (afterLoop & 0x70)
-        {
-            case 0x00:
-                cave.SetRaw(idx - 1, 0x89);
-                cave.SetRaw(idx, 0);
-                break;
-            case 0x20:
-                cave.SetRaw(idx - width, 0xA9);
-                cave.SetRaw(idx, 0);
-                break;
-            case 0x40:
-                cave.SetRaw(idx + 1, 0xC9);
-                cave.SetRaw(idx, 0);
-                break;
-            case 0x60:
-                cave.SetRaw(idx + width, 0xE9);
-                cave.SetRaw(idx, 0);
-                break;
-        }
-
-        var final = (byte)(cave.GetRaw(idx) | 0x80);
-        final &= 0xEF;
-        cave.SetRaw(idx, final);
-    }
-
-    /// <summary>Geist/Firefly: spiegelbildliche Logik zu Butterfly, explodiert zu Leere statt Jewels (:801-840).</summary>
-    private static void ProcessGhost(Cave cave, GameState state, int idx, int width)
-    {
-        var raw = cave.GetRaw(idx);
-        if ((raw & 0x8F) != 8)
-        {
-            return;
-        }
-
+        // Kontakt zu Rockford (6) oder Amoeba (7) ringsum, oder ein fallendes Objekt direkt darüber.
+        // Die Maske 0x7E lässt Bit 0x80 bewusst offen: ein Rockford bzw. eine Amoeba, die sich in
+        // DIESEM Scan schon bewegt hat, trägt das Verarbeitet-Bit und zündet trotzdem — die BDCFF-
+        // Spezifikation zählt "Rockford, scanned this frame" ausdrücklich zu den Auslösern. Das
+        // DOS-Original prüfte hier beim Butterfly (anders als beim Firefly) mit 0xFE und übersah
+        // diesen Fall.
         if ((cave.GetRaw(idx - width) & 0x7E) == 6 ||
             (cave.GetRaw(idx + width) & 0x7E) == 6 ||
             (cave.GetRaw(idx - 1) & 0x7E) == 6 ||
             (cave.GetRaw(idx + 1) & 0x7E) == 6 ||
             (cave.GetRaw(idx - width) & 0x42) == 0x42)
         {
-            Explode(cave, state, idx, 0xCC);
+            Explode(cave, state, idx, explosionAnim);
             return;
         }
 
-        for (var w = 0; w < 4; w++)
+        var direction = raw & 0x60;
+        var preferred = preferCcw ? TurnCcw(direction) : TurnCw(direction);
+
+        if (cave.GetRaw(idx + DirectionOffset(preferred, width)) == 0)
         {
-            var current = cave.GetRaw(idx);
-            switch (current & 0x60)
-            {
-                case 0x00:
-                    if (cave.GetRaw(idx + width) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0xE8));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx - 1) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x38);
-                    }
-
-                    break;
-                case 0x20:
-                    if (cave.GetRaw(idx - 1) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0x88));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx - width) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x58);
-                    }
-
-                    break;
-                case 0x40:
-                    if (cave.GetRaw(idx - width) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0xA8));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx + 1) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x78);
-                    }
-
-                    break;
-                case 0x60:
-                    if (cave.GetRaw(idx + 1) == 0)
-                    {
-                        cave.SetRaw(idx, (byte)((current & 0x99) | 0xC8));
-                        w = 5;
-                    }
-                    else if (cave.GetRaw(idx + width) == 0)
-                    {
-                        w = 5;
-                    }
-                    else
-                    {
-                        cave.SetRaw(idx, 0x18);
-                    }
-
-                    break;
-            }
+            MoveCreature(cave, idx, width, element, preferred);
         }
-
-        var afterLoop = cave.GetRaw(idx);
-        switch (afterLoop & 0x70)
+        else if (cave.GetRaw(idx + DirectionOffset(direction, width)) == 0)
         {
-            case 0x00:
-                cave.SetRaw(idx - 1, 0x88);
-                cave.SetRaw(idx, 0);
-                break;
-            case 0x20:
-                cave.SetRaw(idx - width, 0xA8);
-                cave.SetRaw(idx, 0);
-                break;
-            case 0x40:
-                cave.SetRaw(idx + 1, 0xC8);
-                cave.SetRaw(idx, 0);
-                break;
-            case 0x60:
-                cave.SetRaw(idx + width, 0xE8);
-                cave.SetRaw(idx, 0);
-                break;
+            MoveCreature(cave, idx, width, element, direction);
         }
-
-        var final = (byte)(cave.GetRaw(idx) | 0x80);
-        final &= 0xEF;
-        cave.SetRaw(idx, final);
+        else
+        {
+            // Beides versperrt: einmal zur Gegenseite drehen, aber stehen bleiben.
+            var turned = preferCcw ? TurnCw(direction) : TurnCcw(direction);
+            cave.SetRaw(idx, (byte)(0x80 | turned | element));
+        }
     }
+
+    /// <summary>Setzt die Kreatur mit Verarbeitet-Bit ins Nachbarfeld und räumt ihr altes.</summary>
+    private static void MoveCreature(Cave cave, int idx, int width, byte element, int direction)
+    {
+        cave.SetRaw(idx + DirectionOffset(direction, width), (byte)(0x80 | direction | element));
+        cave.SetRaw(idx, 0x80);
+    }
+
+    /// <summary>Index-Offset der Kreaturen-Richtungsbits: 0x00 links, 0x20 oben, 0x40 rechts, 0x60 unten
+    /// (dieselbe Reihenfolge wie die BDCFF-Attributbits 00/01/10/11).</summary>
+    private static int DirectionOffset(int direction, int width) => direction switch
+    {
+        0x00 => -1,
+        0x20 => -width,
+        0x40 => 1,
+        _ => width,
+    };
+
+    private static int TurnCw(int direction) => (direction + 0x20) & 0x60;
+
+    private static int TurnCcw(int direction) => (direction - 0x20) & 0x60;
 
     /// <summary>Boulder/Jewel: fällt, rollt ab, wandelt sich am EnchantedWall, tötet Rockford beim Landen (:842-887).</summary>
     private static void ProcessBoulderOrJewel(Cave cave, GameState state, int idx, int width)
@@ -391,7 +249,8 @@ public sealed class CavePhysics
             return;
         }
 
-        var below = cave.GetRaw(idx + width) & 0x0F;
+        var belowRaw = cave.GetRaw(idx + width);
+        var below = belowRaw & 0x0F;
         switch (below)
         {
             case 0:
@@ -400,6 +259,15 @@ public sealed class CavePhysics
                 break;
             case 2:
             case 3:
+                // "Rounded" sind nach BDCFF 0000 nur die Brick Wall und RUHENDE Boulder/Jewels. Trägt das
+                // Objekt darunter noch das Fall-Bit, ist es keine Rundung — dann wird nicht abgerollt,
+                // sondern gelandet. Das DOS-Original prüfte hier nur die Element-ID.
+                if ((belowRaw & 0x40) == 0x40)
+                {
+                    goto default;
+                }
+
+                goto case 4;
             case 4:
                 if (cave.GetRaw(idx - 1) == 0 && cave.GetRaw((idx - 1) + width) == 0)
                 {
@@ -421,22 +289,30 @@ public sealed class CavePhysics
 
                 break;
             case 13:
+                // Nur ein FALLENDES Objekt trifft auf die Mauer — ein ruhendes liegt einfach darauf.
+                if ((cave.GetRaw(idx) & 0x40) != 0x40)
+                {
+                    break;
+                }
+
+                EnqueueEnchantedWallSound(state, raw);
+
                 if (state.EnchantedWallTimeRemaining > 0)
                 {
-                    if ((cave.GetRaw(idx) & 0x40) == 0x40)
+                    state.EnchantedWallRunning = true;
+                    if (cave.GetRaw(idx + (2 * width)) == 0)
                     {
-                        state.EnchantedWallRunning = true;
-                        if (cave.GetRaw(idx + (2 * width)) == 0)
-                        {
-                            var minusOne = (byte)(cave.GetRaw(idx) - 1);
-                            cave.SetRaw(idx + (2 * width), (byte)(minusOne | 0xC2));
-                        }
-
-                        cave.SetRaw(idx, 0x80);
+                        var minusOne = (byte)(cave.GetRaw(idx) - 1);
+                        cave.SetRaw(idx + (2 * width), (byte)(minusOne | 0xC2));
                     }
+
+                    // Steht unter der Mauer etwas im Weg, wird das Objekt trotzdem gelöscht:
+                    // "the boulder or diamond is lost" (BDCFF 0002).
+                    cave.SetRaw(idx, 0x80);
                 }
-                else if ((cave.GetRaw(idx) & 0x40) == 0x40)
+                else
                 {
+                    // Abgelaufene (oder nie aktivierte) Mauer: das Objekt verschwindet ersatzlos.
                     cave.SetRaw(idx, 0);
                 }
 
@@ -458,6 +334,13 @@ public sealed class CavePhysics
         }
     }
 
+    /// <summary>Auftreffen auf der Zaubermauer. Gemeldet wird der Klang des Objekts, das unten wieder
+    /// HERAUSKOMMT — ein Boulder klingt hier also nach Jewel und umgekehrt (BDCFF 0000: "When falling
+    /// boulders hit magic walls, a diamond sound plays regardless of outcome"). Das gilt in allen drei
+    /// Zuständen der Mauer, auch wenn sie das Objekt verschluckt. Das DOS-Original schwieg hier ganz.</summary>
+    private static void EnqueueEnchantedWallSound(GameState state, byte raw) =>
+        state.SoundEvents.Enqueue((raw & 0x0F) == 3 ? SoundEvent.BoulderLand : SoundEvent.JewelLand);
+
     /// <summary>Meldet BoulderLand/JewelLand nur, wenn das Objekt gerade wirklich aktiv fiel
     /// (Momentum-Bit 0x40 gesetzt) — ein bereits ruhendes Objekt löst kein Sound-Ereignis aus.</summary>
     private static void EnqueueLandingSoundIfFalling(GameState state, byte currentRaw, byte originalRaw)
@@ -471,11 +354,12 @@ public sealed class CavePhysics
     }
 
     /// <summary>Rockford: Kamera-Scroll-Auslöser plus Bewegung/Graben/Sammeln/Schieben (:890-923).
-    /// Original-Eigenheit (Dangling-Else): die "else"-Bewegungsverarbeitung bindet nur an die
-    /// vierte Kamerabedingung — löst diese den Aufwärtsscroll aus, bleibt die Bewegung diesen
-    /// Tick komplett aus, auch wenn keine der anderen drei Kamerabedingungen zutraf.</summary>
-    private static void ProcessRockford(
-        Cave cave, GameState state, InputState input, Camera camera, Clocks clocks,
+    /// Die vier Kamerabedingungen setzen nur das Scroll-Ziel und beeinflussen die Bewegung nicht.
+    /// Im DOS-Original hing die Bewegungsverarbeitung durch ein Dangling-Else an der vierten
+    /// Bedingung: löste Rockford den Aufwärtsscroll aus, blieb seine Bewegung den ganzen Scan über
+    /// aus — er hakte sichtbar. Ein reiner Programmierfehler ohne BD1-Entsprechung, hier behoben.</summary>
+    private void ProcessRockford(
+        Cave cave, GameState state, InputState input, Camera camera,
         int idx, int width, int height, int col, int row)
     {
         var raw = cave.GetRaw(idx);
@@ -504,7 +388,6 @@ public sealed class CavePhysics
         if (camera.Y + 1 == row && camera.Y > 0)
         {
             camera.Rely = -5;
-            return;
         }
 
         var target = cave.GetRaw(idx + input.Direction) & 0x9F;
@@ -519,7 +402,11 @@ public sealed class CavePhysics
                 state.IsCaveEnded = true;
                 state.AdvanceToNextCave = true;
                 state.EntranceProgress = 0;
-                goto case 3;
+
+                // Rockford zieht nur in die Tür — der Ausgang ist KEIN Diamant. Das DOS-Original
+                // sprang hier auf "case 3" durch und wertete das Betreten des Ausgangs als
+                // eingesammelten Diamanten (Zähler, Punkte und Sammel-Sound inklusive).
+                goto case 0;
             case 3:
                 state.JewelsCollected++;
                 if (state.JewelsCollected >= state.JewelQuota)
@@ -545,15 +432,21 @@ public sealed class CavePhysics
                 cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
                 break;
             case 2:
-                if (cave.GetRaw(idx + (input.Direction * 2)) == 0 && clocks.Clk4 == 0)
+                // Schieben nach BD1 (BDCFF-Objektspezifikation 0006): nur waagerecht, nur RUHENDE
+                // Boulder ("he cannot push falling boulders"), und dann mit einer Chance von 1:8 pro
+                // Versuch. Der Wurf steht bewusst hinter den geometrischen Prüfungen — gewürfelt wird
+                // nur, wenn Rockford es tatsächlich versucht ("each frame that he tries").
+                // Das DOS-Original nutzte stattdessen ein festes Clk4-Fenster (jeder 2. Scan) und ließ
+                // auch fallende Boulder schieben.
+                if ((input.Direction == 1 || input.Direction == -1) &&
+                    (cave.GetRaw(idx + input.Direction) & 0x40) == 0 &&
+                    cave.GetRaw(idx + (input.Direction * 2)) == 0 &&
+                    _random.Next(8) == 0)
                 {
-                    if (input.Direction == 1 || input.Direction == -1)
-                    {
-                        cave.SetRaw(idx + input.Direction, (byte)(0x86 ^ input.GrabModifier));
-                        cave.SetRaw(idx + (input.Direction * 2), 0x82);
-                        cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
-                        state.SoundEvents.Enqueue(SoundEvent.PushBoulder);
-                    }
+                    cave.SetRaw(idx + input.Direction, (byte)(0x86 ^ input.GrabModifier));
+                    cave.SetRaw(idx + (input.Direction * 2), 0x82);
+                    cave.SetRaw(idx, (byte)(0x80 ^ input.GrabModifier));
+                    state.SoundEvents.Enqueue(SoundEvent.PushBoulder);
                 }
 
                 break;
@@ -574,7 +467,7 @@ public sealed class CavePhysics
         foreach (var offset in offsets)
         {
             var target = centerIdx + offset;
-            if (cave.GetRaw(target) != 5)
+            if (!IsExplosionProof(cave.GetRaw(target)))
             {
                 cave.SetRaw(target, anim);
             }

@@ -21,6 +21,68 @@ public class GameSessionTests
         }
     }
 
+    /// <summary>Sichert die Aussage der Prüfstand-Cave 6 ab: Der obere Stein liegt auf einem FALLENDEN
+    /// Stein, weicht deshalb nicht nach links aus und landet gerade unter sich auf dem unteren. Wäre er
+    /// (wie im DOS-Original) abgerollt, hätte ihn die Ziegeltreppe nach links unten kaskadiert.</summary>
+    [Fact]
+    public void Pruefstand_6_laesst_den_oberen_Stein_gerade_fallen_statt_abzurollen()
+    {
+        var data = new CaveTextRepository(CavesPath).Get("cave-test-6");
+        var cave = new Cave(data);
+        var state = new GameState();
+        state.ResetForCave(data);
+        var physics = new CavePhysics(new Random(1));
+
+        for (var scan = 0; scan < 40; scan++)
+        {
+            physics.Regel(cave, state, new InputState(), new Camera());
+        }
+
+        // Beide Steine stehen übereinander im rechten Schacht (Spalte 12).
+        Assert.Equal(Element.Boulder, cave.GetElement(12, 7));
+        Assert.Equal(Element.Boulder, cave.GetElement(12, 8));
+
+        // In der linken Hälfte ist kein Stein gelandet — die Ziegeltreppe blieb ungenutzt.
+        for (var y = 0; y < data.Height; y++)
+        {
+            for (var x = 1; x < 11; x++)
+            {
+                Assert.NotEqual(Element.Boulder, cave.GetElement(x, y));
+            }
+        }
+    }
+
+    /// <summary>F5 öffnet den Testmodus; von dort startet jede Prüfstand-Cave einzeln. Sie stehen
+    /// außerhalb der PlayOrder — ein Escape führt daher zurück in den Testmodus und nicht in eine
+    /// Cave der Spielreihenfolge.</summary>
+    [Fact]
+    public void Testmodus_startet_jede_Pruefstand_Cave_und_kehrt_danach_dorthin_zurueck()
+    {
+        var session = NewRealSession();
+
+        session.MenuTestMode();
+        Assert.Equal(SessionPhase.TestMenu, session.Phase);
+
+        for (var i = 0; i < GameSession.TestCaves.Count; i++)
+        {
+            session.TestMenuSelect(i);
+            session.TestMenuStart();
+
+            Assert.Equal(SessionPhase.Playing, session.Phase);
+            Assert.NotNull(session.CurrentCaveData);
+
+            session.EscapePressed();
+            AdvanceThroughCovering(session);
+            for (var frame = 0; frame < 120 && session.Phase != SessionPhase.TestMenu; frame++)
+            {
+                session.Update(1.0 / 60.0);
+            }
+
+            Assert.Equal(SessionPhase.TestMenu, session.Phase);
+            Assert.Null(session.Cave);
+        }
+    }
+
     [Fact]
     public void Menu_Cave_Auswahl_ist_auf_A_bis_P_begrenzt()
     {
@@ -143,7 +205,6 @@ public class GameSessionTests
 
         Assert.Equal(SessionPhase.Playing, session.Phase);
         Assert.Equal(0, session.Input.Direction);
-        Assert.Equal(0, session.Input.Flags);
     }
 
     [Fact]

@@ -1,0 +1,56 @@
+# Prüfstand 9 — Kamera-Aufwärtsscroll bremst Rockford nicht (kein BD1-Original, Testmodus F5).
+#
+# Zu prüfen: Rockford läuft nach OBEN genauso flüssig wie nach unten.
+# Vorher (DOS): Ein Dangling-Else (BOULDER.CPP:896-898) hängte die gesamte Bewegungsverarbeitung an
+# die vierte Kamerabedingung. Löste Rockford den Aufwärtsscroll aus — also immer dann, wenn er die
+# obere Sichtfensterkante erreichte —, blieb seine Bewegung den ganzen Cave-Scan über aus: er hakte
+# bei jedem Scrollschritt sichtbar.
+#
+# Die Cave ist absichtlich hoch (22 Zeilen bei 12 sichtbaren), damit die Kamera überhaupt senkrecht
+# scrollt. Lauf den Erdschacht ein paarmal ganz hoch und wieder runter und vergleiche: beide
+# Richtungen müssen sich gleich anfühlen. Früher war nur das Hochlaufen ruckelig.
+#
+# Der Diamant liegt auf halber Höhe, der Ausgang ganz oben.
+
+[Cave]
+Cave        = Z
+Name        = Kamera-Scroll
+Description = Hochlaufen ruckelt nicht mehr
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 22
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W................X.W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W........d.........W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W.P................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW

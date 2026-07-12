@@ -1,0 +1,42 @@
+# Prüfstand 1 — Butterfly-Startrichtung (kein BD1-Original, nur über den Testmodus F5 erreichbar).
+#
+# Zu prüfen: Ein frisch geladener Butterfly blickt nach UNTEN (BDCFF 0009) und sucht seine
+# Vorzugsrichtung im Uhrzeigersinn. Sein allererster Zug geht deshalb nach LINKS.
+# Vorher (DOS): Er blickte nach links und zog zuerst nach OBEN.
+#
+# Der Butterfly sitzt in einer geschlossenen Kammer genau in der Mitte, mit gleich viel Platz nach
+# allen vier Seiten — die erste Bewegung ist dadurch eindeutig ablesbar. Danach umrundet er die
+# Kammer im Uhrzeigersinn. Rockford steht sicher darunter.
+
+[Cave]
+Cave        = Z
+Name        = Butterfly-Start
+Description = Erster Zug geht nach links
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W                  W
+W                  W
+W                  W
+W        B         W
+W                  W
+W                  W
+W                  W
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W.P......d........XW
+WWWWWWWWWWWWWWWWWWWW

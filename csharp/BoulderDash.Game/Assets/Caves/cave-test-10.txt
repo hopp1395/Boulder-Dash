@@ -1,0 +1,50 @@
+# Prüfstand 10 — Diagonale Eingabe (kein BD1-Original, nur über den Testmodus F5 erreichbar).
+#
+# Zu prüfen: InputState hält jetzt ALLE gedrückten Richtungen gleichzeitig, und bei diagonaler
+# Eingabe gilt "horizontal movement takes precedence over the vertical" (BDCFF 0006).
+# Vorher (DOS): Es zählte nur die ZULETZT gedrückte Richtung — jeder Tastendruck überschrieb den
+# Zustand komplett.
+#
+# Ein freies Erdfeld, damit du beides in Ruhe ausprobieren kannst:
+#
+#   a) Halte RECHTS und RUNTER gleichzeitig.
+#      JETZT (richtig):  Rockford geht nach RECHTS — waagerecht schlägt senkrecht.
+#      FRUEHER (falsch): Er ging in die zuletzt gedrückte Richtung, also mal so, mal so.
+#
+#   b) Halte RECHTS, tippe RUNTER kurz an und lass RUNTER wieder los — RECHTS bleibt gedrückt.
+#      JETZT (richtig):  Er läuft ohne Stocken weiter nach rechts.
+#      FRUEHER (falsch): Er blieb sofort stehen, obwohl RECHTS noch gehalten war. Das war der
+#                        eigentlich ärgerliche Teil des Quirks.
+
+[Cave]
+Cave        = Z
+Name        = Diagonale Eingabe
+Description = Waagerecht schlaegt senkrecht
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W..................W
+W.P................W
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+W.........d........W
+W................X.W
+WWWWWWWWWWWWWWWWWWWW

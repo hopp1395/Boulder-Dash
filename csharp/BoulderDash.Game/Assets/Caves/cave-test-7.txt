@@ -1,0 +1,47 @@
+# Prüfstand 7 — Ausgang zählt nicht als Diamant (kein BD1-Original, nur über den Testmodus F5).
+#
+# Zu prüfen: Das Betreten des Ausgangs beendet die Cave, gibt aber KEINEN Diamanten.
+# Vorher (DOS): Der Ausgang sprang im Code auf den Diamant-Fall durch und gutschrieb Zähler, Punkte
+# und den Sammel-Sound gleich mit.
+#
+# Die Zahlen sind bewusst so gewählt, dass man es an der Statuszeile direkt abliest:
+#   Quote = 1, Diamantwert = 10, Wert nach Quote = 20.
+#   Sammle den einen Diamanten -> er erfuellt die Quote und zaehlt schon mit 20 Punkten.
+#   Statuszeile: Diamanten 01, Punkte 000020.
+#
+#   Gehe dann in den Ausgang. Achte auf die Statuszeile waehrend des Zudeckens:
+#     JETZT (richtig):  Diamanten 01, Punkte 000020 (plus Zeitbonus) — unveraendert.
+#     FRUEHER (falsch): Diamanten 02, Punkte 000040 — und ein zweiter Sammel-Sound.
+
+[Cave]
+Cave        = Z
+Name        = Ausgang
+Description = Der Ausgang ist kein Diamant
+Kind        = Normal
+Level       = 1
+Width       = 20
+Height      = 12
+
+[Rules]
+JewelsNeeded    = 1
+CaveTime        = 250
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 20
+Colors          = 8, 11, 9
+
+[Map]
+WWWWWWWWWWWWWWWWWWWW
+W..................W
+W..................W
+W..................W
+W..................W
+W.P.......d.......XW
+W..................W
+W..................W
+W..................W
+W..................W
+W..................W
+WWWWWWWWWWWWWWWWWWWW
