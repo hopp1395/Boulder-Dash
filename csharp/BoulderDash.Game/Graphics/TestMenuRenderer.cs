@@ -70,17 +70,17 @@ public sealed class TestMenuRenderer
         _font.DrawText(batch, "|     TESTMODUS     |", RowPosition(6), Color.White);
         _font.DrawText(batch, "+-------------------+", RowPosition(7), Color.White);
 
-        // Die Liste wächst mit jeder geprüften Korrektur: sie endet immer auf Zeile 18 und wächst nach
+        // Die Liste wächst mit jeder geprüften Korrektur: sie endet immer auf Zeile 20 und wächst nach
         // oben, bleibt dabei aber unterhalb des Titelkastens (Zeilen 5-7).
-        var firstRow = Math.Max(8, 19 - GameSession.TestCaves.Count);
+        var firstRow = Math.Max(8, 21 - GameSession.TestCaves.Count);
         for (var i = 0; i < GameSession.TestCaves.Count; i++)
         {
             var marker = i == session.TestCaveIndex ? ">" : " ";
             _font.DrawText(batch, $"{marker} {i + 1}  {GameSession.TestCaves[i].Title}", RowPosition(firstRow + i), Color.White);
         }
 
-        _font.DrawText(batch, "HOCH/RUNTER ODER ZIFFER WAEHLEN", RowPosition(20), Color.White);
-        _font.DrawText(batch, "ENTER - STARTEN     ESC - ZURUECK", RowPosition(22), Color.White);
+        _font.DrawText(batch, "HOCH/RUNTER ODER ZIFFER WAEHLEN", RowPosition(22), Color.White);
+        _font.DrawText(batch, "ENTER - STARTEN     ESC - ZURUECK", RowPosition(24), Color.White);
     }
 
     private void DrawBackground(SpriteBatch batch)

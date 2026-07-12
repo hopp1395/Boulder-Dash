@@ -85,6 +85,14 @@ public abstract class CaveObject
     /// </summary>
     public virtual bool VisibleInFog => true;
 
+    /// <summary>
+    /// Ob die Bildschirm-Verdeckung (ScreenCover) diese Kachel überzeichnen darf. Sie tut es mit dem
+    /// Rand-Füllstein, einer laufenden Stahlwand — und die gehört über die Höhle, nicht über das
+    /// Nichts um sie herum: Sonst deckte sich beim Cave-Start und -Ende ein Stahl-RECHTECK auf und zu
+    /// statt der Silhouette der Höhle. Einzig <see cref="VoidObject"/> sagt hier nein.
+    /// </summary>
+    public virtual bool CoveredByScreen => true;
+
     /// <summary>Ein Animationsschritt — einmal pro Tick, für jede Kachel.</summary>
     public virtual void NextFrame() =>
         AnimationPhase = (byte)((AnimationPhase + 1) % AnimationPeriod);

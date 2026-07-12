@@ -81,11 +81,15 @@ public sealed class CaveRenderer
                     TileSize,
                     TileSize);
 
+                var tile = cave.Get(x, y);
+
                 // Die Verdeckungsmaske liegt in Cave-Koordinaten (siehe ScreenCover) und entscheidet
                 // selbst, wie lange sie gilt: beim Cave-Start bis zum Vollaufdecken, am Cave-Ende
                 // bis zum vollständigen Zudecken. Sie hat Vorrang vor dem Nebel — sonst wäre die
-                // Stahlwand-Animation über unerkundetem Gelände nicht zu sehen.
-                if (cover is not null && cover.IsCovered(x, y))
+                // Stahlwand-Animation über unerkundetem Gelände nicht zu sehen. Außerhalb der Höhle
+                // deckt sie nichts zu (CaveObject.CoveredByScreen): Dort bleibt es schwarz, damit die
+                // Silhouette der Cave auf- und zugeht und nicht das Rechteck des Gitters.
+                if (cover is not null && cover.IsCovered(x, y) && tile.CoveredByScreen)
                 {
                     _atlas.Draw(batch, destination, _cover.Appearance(context));
                     continue;
@@ -104,7 +108,6 @@ public sealed class CaveRenderer
 
                 // Der Nebel zeigt nur die erinnerte Umgebung. Wer aus eigenem Antrieb umherzieht, ist
                 // dort nicht zu sehen — an seiner Stelle steht der Leerraum, über den er zieht.
-                var tile = cave.Get(x, y);
                 if (fogged && !tile.VisibleInFog)
                 {
                     tile = _forgotten;

@@ -1,0 +1,59 @@
+# Prüfstand 13 — Unregelmäßig geformte Cave (kein BD1-Original, nur über den Testmodus F5 erreichbar).
+#
+# Zu prüfen: Eine Cave muss weder rechteckig sein noch 40x22 groß. Width/Height spannen nur das
+# GITTER auf; die Höhle darin ist ein Achteck mit einem Tunnel in eine Ausgangskammer. Alles um sie
+# herum ist Void ('_') — außerhalb der Cave wird nichts gezeichnet, dort bleibt es schwarz statt der
+# früheren Stahl-Randmauer. Auch beim Auf- und Zudecken: Es geht die SILHOUETTE der Höhle auf und zu,
+# nicht das Rechteck des Gitters.
+#
+# Die Karte muss das Gitter nicht ausfüllen: Zeilen dürfen kürzer sein (der Rest ist Void), und die
+# drei untersten Zeilen fehlen ganz. Eine Zeile aus lauter Void braucht ein '_', weil der Parser
+# Leerzeilen überliest — siehe die erste Kartenzeile.
+#
+# Der Stahlring muss trotzdem lückenlos sein; darauf besteht der Parser (CaveTextFile), denn auf ihm
+# beruht die ganze Physik: Kein Objekt greift je über den Gitterrand hinaus.
+
+[Cave]
+Cave        = Z
+Name        = Unregelmaessige Cave
+Description = Achteck mit Tunnel, aussen herum Void
+Kind        = Normal
+Level       = 1
+Width       = 40
+Height      = 22
+Color1      = #202020
+Color2      = #FFFFFF
+Color3      = #717171
+Color4      = #BA7120
+
+[Rules]
+JewelsNeeded    = 12
+CaveTime        = 150
+GameSpeed       = 150
+MagicWallTime   = 0
+AmoebaTime      = 0
+JewelValue      = 10
+JewelValueExtra = 15
+
+[Map]
+# Legende wie sonst, dazu: '_' Void (außerhalb der Cave).
+_
+______________WWW
+____________WWW.WWW
+___________WW. ...WW
+_________WWW...r...WWW
+_______WWWdr.  ......WWW
+______WW.....d......  dWW
+____WWWr....r.d. d.. . .WWW____WWWWWWWW
+___WW..r... r....r....r...WW___W... d.W
+_WWW ..d.. ..r......... ..dWWWWW.. d..W
+_Wr P  .... .r.d...r...d.. .......... W
+_WWW .r.... r ...r. ..r rrr .r  .rd...W
+___WW....  r.r..d.r....r.. ...... ..X.W
+____WWW...d  .....ddr ..WWWWWWWW......W
+______WW.d ... .r..r...WW______W.d....W
+_______WWW...d r.....WWW_______Wr...r.W
+_________WWW.r.r . WWW_________WWWWWWWW
+___________WWr... WW
+____________WWW.WWW
+______________WWW

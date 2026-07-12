@@ -9,6 +9,17 @@ namespace BoulderDash.Core.Objects;
 /// </summary>
 public static class CaveObjects
 {
+    /// <summary>
+    /// Die Bits eines Kachelbytes, in denen die Element-ID steckt. Im Original waren es 4 (0x0F) —
+    /// mehr als 16 Elemente gab es nicht. Element.Void ist das 17. und braucht deshalb Bit 0x10.
+    ///
+    /// Weiter geht es nicht: Darüber liegen die Flags — 0x20/0x40 die Blickrichtung der Kreaturen
+    /// (CreatureFacing), 0x40 zugleich das Fall-Momentum, 0x80 "verarbeitet". Wer je ein 33. Element
+    /// braucht, muss das Kachelbyte verlassen; es dient ohnehin nur noch Serialisierung und
+    /// Golden-Hash (siehe CaveObject.ToRaw).
+    /// </summary>
+    public const byte ElementMask = 0x1F;
+
     private static readonly CaveObject[] Prototypes = BuildPrototypes();
 
     /// <summary>
@@ -20,7 +31,7 @@ public static class CaveObjects
     /// </summary>
     public static CaveObject Prototype(Element element) => Prototypes[(byte)element];
 
-    /// <summary>Alle 16 Prototypen, für Registry-getriebene Tabellen (siehe CaveAsciiMap).</summary>
+    /// <summary>Alle Prototypen, für Registry-getriebene Tabellen (siehe CaveAsciiMap).</summary>
     public static IEnumerable<CaveObject> All => Prototypes;
 
     /// <summary>Eine frische Instanz für eine Cave. <paramref name="animationPhase"/> ist deren
@@ -35,11 +46,11 @@ public static class CaveObjects
     }
 
     /// <summary>Baut ein Objekt aus einem Kachelbyte der Cave-Datei: Element-ID in den unteren
-    /// 4 Bits, dazu das Fall-Bit 0x40 der Sonderglyphen 'R'/'D' (siehe CaveAsciiMap). Weitere Bits
-    /// kommen in Cave-Dateien nicht vor.</summary>
+    /// 5 Bits (<see cref="ElementMask"/>), dazu das Fall-Bit 0x40 der Sonderglyphen 'R'/'D' (siehe
+    /// CaveAsciiMap). Weitere Bits kommen in Cave-Dateien nicht vor.</summary>
     public static CaveObject FromRaw(Cave cave, byte raw)
     {
-        var created = New(cave, (Element)(raw & 0x0F));
+        var created = New(cave, (Element)(raw & ElementMask));
         if (created is FallingObject falling)
         {
             falling.Falling = (raw & 0x40) != 0;
@@ -66,15 +77,19 @@ public static class CaveObjects
         Element.EnchantedWall => new EnchantedWallObject(cave),
         Element.JewelExplosion => new JewelExplosionObject(cave),
         Element.BorderFill => new BorderFillObject(cave),
+        Element.Void => new VoidObject(cave),
         _ => throw new ArgumentOutOfRangeException(nameof(element), element, "Unbekanntes Element."),
     };
 
+    /// <summary>Ein Prototyp je Element, abgelegt unter seiner ID — die Element-IDs sind lückenlos,
+    /// die höchste bestimmt die Länge.</summary>
     private static CaveObject[] BuildPrototypes()
     {
-        var prototypes = new CaveObject[16];
-        for (var i = 0; i < prototypes.Length; i++)
+        var elements = Enum.GetValues<Element>();
+        var prototypes = new CaveObject[elements.Max(element => (byte)element) + 1];
+        foreach (var element in elements)
         {
-            prototypes[i] = New(Cave.Nowhere, (Element)i);
+            prototypes[(byte)element] = New(Cave.Nowhere, element);
         }
 
         return prototypes;

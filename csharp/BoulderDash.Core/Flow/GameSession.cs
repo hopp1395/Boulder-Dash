@@ -103,6 +103,7 @@ public sealed class GameSession
         new("cave-test-10", "WAAGERECHT SCHLAEGT SENKRECHT"),
         new("cave-test-11", "AMOEBE: NUR DER LINKE ZUENDET (B)"),
         new("cave-test-12", "AMOEBE: NUR DER LINKE ZUENDET (F)"),
+        new("cave-test-13", "CAVE OHNE RECHTECK, AUSSEN VOID"),
     ];
 
     /// <summary>Anwählbare Start-Caves als PlayOrder-Indizes: alle 16 regulären Caves A-P, also

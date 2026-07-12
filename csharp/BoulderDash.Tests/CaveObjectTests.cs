@@ -43,6 +43,7 @@ public class CaveObjectTests
     [InlineData(Element.EnchantedWall, 11)]
     [InlineData(Element.JewelExplosion, 68)]
     [InlineData(Element.BorderFill, 76)]
+    [InlineData(Element.Void, 0)] // das Nichts außerhalb der Cave zeigt dasselbe Bild wie der Leerraum: schwarz
     public void Standardframe_jedes_Objekts_steht_fest(Element element, int frame)
     {
         Assert.Equal(frame, CaveObjects.Prototype(element).DefaultFrame);
@@ -68,6 +69,7 @@ public class CaveObjectTests
     [InlineData(Element.EnchantedWall, 'M')]
     [InlineData(Element.JewelExplosion, '?')]
     [InlineData(Element.BorderFill, '?')]
+    [InlineData(Element.Void, '_')]
     public void Kartenglyphe_jedes_Objekts_steht_fest(Element element, char glyph)
     {
         Assert.Equal(glyph, CaveObjects.Prototype(element).MapGlyph);

@@ -4,8 +4,11 @@ namespace BoulderDash.Core.Objects;
 
 /// <summary>Leerraum. Trägt trotzdem Zustand: Eine Leerzelle, die in diesem Scan gerade erst
 /// freigeräumt wurde (<see cref="CaveObject.ScannedThisFrame"/>), ist noch kein freier Platz — sonst würde
-/// ein Objekt der eigenen Bewegung im selben Scan hinterherfallen.</summary>
-public sealed class EmptyObject : CaveObject
+/// ein Objekt der eigenen Bewegung im selben Scan hinterherfallen.
+///
+/// Nicht versiegelt, weil das Nichts außerhalb der Höhle (<see cref="VoidObject"/>) darauf aufbaut:
+/// Es ist für die Physik derselbe Leerraum und unterscheidet sich nur in der Darstellung.</summary>
+public class EmptyObject : CaveObject
 {
     public EmptyObject(Cave cave)
         : base(cave)

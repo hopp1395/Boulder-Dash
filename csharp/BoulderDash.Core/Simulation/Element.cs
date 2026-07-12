@@ -2,7 +2,11 @@ namespace BoulderDash.Core.Simulation;
 
 /// <summary>
 /// Kachel-Grundelemente einer Cave, benannt nach dem Original-Handbuch (First Star Software).
-/// Werte entsprechen den MASK_*-Konstanten in src/BOULDER.CPP:41-56 (untere 4 Bits eines Kachelbytes).
+/// Die Werte 0-15 entsprechen den MASK_*-Konstanten in src/BOULDER.CPP:41-56 (im Original die unteren
+/// 4 Bits eines Kachelbytes — mehr passten dort nicht hinein).
+///
+/// <see cref="Void"/> hat keine Original-Entsprechung und sprengt als erstes Element diese 4 Bits;
+/// Platz dafür ist, weil Bit 0x10 im Kachelbyte frei geblieben ist (siehe CaveObjects.ElementMask).
 /// </summary>
 public enum Element : byte
 {
@@ -22,4 +26,8 @@ public enum Element : byte
     EnchantedWall = 13,
     JewelExplosion = 14,
     BorderFill = 15,
+
+    /// <summary>Das Nichts außerhalb der Höhle — alles im Gitter, was nicht zur Cave gehört
+    /// (siehe VoidObject). Keine Original-Entsprechung: Dort war jede Cave rechteckig.</summary>
+    Void = 16,
 }
