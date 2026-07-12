@@ -4,12 +4,12 @@ using BoulderDash.Core.Simulation;
 namespace BoulderDash.Tests;
 
 /// <summary>
-/// Die vier Farben einer Cave stehen als RGB-Werte in der Cave-Datei (WYSIWYG) — es gibt keine
-/// Farbtabelle mehr, aus der ein Index nachgeschlagen würde.
+/// Die vier Farben einer Cave stehen als Color1-Color4 im [Cave]-Abschnitt der Cave-Datei, je ein
+/// RGB-Wert (WYSIWYG) — es gibt keine Farbtabelle mehr, aus der ein Index nachgeschlagen würde.
 /// </summary>
 public class CaveColorsTests
 {
-    private static string CaveText(string colors) => $"""
+    private static string CaveText(string colorLines) => $"""
         [Cave]
         Cave        = A
         Name        = Test
@@ -18,6 +18,7 @@ public class CaveColorsTests
         Level       = 1
         Width       = 3
         Height      = 3
+        {colorLines}
 
         [Rules]
         JewelsNeeded    = 1
@@ -27,7 +28,6 @@ public class CaveColorsTests
         AmoebaTime      = 0
         JewelValue      = 10
         JewelValueExtra = 15
-        Colors          = {colors}
 
         [Map]
         WWW
@@ -35,10 +35,17 @@ public class CaveColorsTests
         WWW
         """;
 
+    private const string GueltigeFarben = """
+        Color1      = #202020
+        Color2      = #FFFFFF
+        Color3      = #717171
+        Color4      = #BA7120
+        """;
+
     [Fact]
-    public void Colors_wird_als_vier_RGB_Werte_in_Palettenreihenfolge_gelesen()
+    public void Color1_bis_Color4_werden_als_RGB_Werte_in_Palettenreihenfolge_gelesen()
     {
-        var cave = CaveTextFile.Parse(CaveText("#202020, #FFFFFF, #717171, #BA7120"), "test");
+        var cave = CaveTextFile.Parse(CaveText(GueltigeFarben), "test");
 
         Assert.Equal(
             [new Rgb(0x20, 0x20, 0x20), new Rgb(0xFF, 0xFF, 0xFF), new Rgb(0x71, 0x71, 0x71), new Rgb(0xBA, 0x71, 0x20)],
@@ -46,13 +53,17 @@ public class CaveColorsTests
     }
 
     [Theory]
-    [InlineData("#202020, #FFFFFF, #717171")]          // zu wenige Farben
-    [InlineData("#202020, #FFFFFF, #717171, #BA7120, #FFFF20")] // zu viele Farben
-    [InlineData("#202020, #FFFFFF, #717171, 8")]       // alter Farbindex statt RGB
-    [InlineData("#202020, #FFFFFF, #717171, #BA712")]  // unvollständiger RGB-Wert
-    public void Ungueltiges_Colors_Feld_wird_abgelehnt(string colors)
+    // fehlendes Farbfeld
+    [InlineData("Color1      = #202020\nColor2      = #FFFFFF\nColor3      = #717171")]
+    // alter Farbindex statt RGB
+    [InlineData("Color1      = #202020\nColor2      = #FFFFFF\nColor3      = #717171\nColor4      = 8")]
+    // unvollständiger RGB-Wert
+    [InlineData("Color1      = #202020\nColor2      = #FFFFFF\nColor3      = #717171\nColor4      = #BA712")]
+    // altes Sammelfeld aus [Cave] heraus
+    [InlineData("Colors      = #202020, #FFFFFF, #717171, #BA7120")]
+    public void Ungueltige_Farbfelder_werden_abgelehnt(string colorLines)
     {
-        Assert.Throws<FormatException>(() => CaveTextFile.Parse(CaveText(colors), "test"));
+        Assert.Throws<FormatException>(() => CaveTextFile.Parse(CaveText(colorLines), "test"));
     }
 
     /// <summary>Sicherung der Umrechnung der früheren 16-Farben-Tabelle: Cave A/1 stand auf den

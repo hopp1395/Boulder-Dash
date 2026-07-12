@@ -24,6 +24,10 @@ Kind        = Normal
 Level       = 1
 Width       = 20
 Height      = 12
+Color1      = #202020
+Color2      = #FFFFFF
+Color3      = #717171
+Color4      = #BA7120
 
 [Rules]
 JewelsNeeded    = 1
@@ -33,7 +37,6 @@ MagicWallTime   = 0
 AmoebaTime      = 0
 JewelValue      = 10
 JewelValueExtra = 15
-Colors          = #202020, #FFFFFF, #717171, #BA7120
 
 [Map]
 WWWWWWWWWWWWWWWWWWWW

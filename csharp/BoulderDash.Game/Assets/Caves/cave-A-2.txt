@@ -9,6 +9,10 @@ Kind        = Normal
 Level       = 2
 Width       = 40
 Height      = 22
+Color1      = #202020
+Color2      = #FFFFFF
+Color3      = #717171
+Color4      = #BA7120
 
 [Rules]
 JewelsNeeded    = 12
@@ -18,7 +22,6 @@ MagicWallTime   = 20
 AmoebaTime      = 20
 JewelValue      = 10
 JewelValueExtra = 15
-Colors          = #202020, #FFFFFF, #717171, #BA7120
 
 [Map]
 # Die Karte ist die maßgebliche Kachelquelle - Änderungen hier wirken direkt im Spiel.

@@ -87,7 +87,7 @@ public static class CaveTextFile
             _ => throw new FormatException($"{sourceName}: Kind muss 'Normal' oder 'Intermission' sein, gefunden: '{kind}'."),
         };
 
-        var colors = ParseColors(sourceName, RequireField(rulesFields, "Colors", sourceName));
+        var colors = ParseColors(sourceName, caveFields);
 
         var letter = char.ToUpperInvariant(RequireField(caveFields, "Cave", sourceName)[0]);
 
@@ -139,23 +139,20 @@ public static class CaveTextFile
     }
 
     /// <summary>
-    /// Liest das Colors-Feld: 4 RGB-Werte (#RRGGBB) in Palettenreihenfolge, also die Farben der
-    /// Palettenindizes 0-3, mit denen die Sprites der Cave eingefärbt werden (siehe Palette).
+    /// Liest die Farbfelder Color1-Color4 des [Cave]-Abschnitts: je ein RGB-Wert (#RRGGBB). Color1
+    /// ist die Farbe des Palettenindex 0, Color4 die des Index 3 — damit werden die Sprites der Cave
+    /// eingefärbt (siehe Palette).
     /// </summary>
-    private static Rgb[] ParseColors(string sourceName, string field)
+    private static Rgb[] ParseColors(string sourceName, Dictionary<string, string> caveFields)
     {
-        var tokens = field.Split(',', StringSplitOptions.TrimEntries);
-        if (tokens.Length != PaletteSize)
-        {
-            throw new FormatException($"{sourceName}: Colors muss genau {PaletteSize} kommagetrennte RGB-Werte haben.");
-        }
-
         var colors = new Rgb[PaletteSize];
-        for (var i = 0; i < tokens.Length; i++)
+        for (var i = 0; i < PaletteSize; i++)
         {
-            if (!Rgb.TryParse(tokens[i], out colors[i]))
+            var key = $"Color{i + 1}";
+            var token = RequireField(caveFields, key, sourceName);
+            if (!Rgb.TryParse(token, out colors[i]))
             {
-                throw new FormatException($"{sourceName}: 'Colors' erwartet RGB-Werte im Format #RRGGBB, gefunden: '{tokens[i]}'.");
+                throw new FormatException($"{sourceName}: '{key}' erwartet einen RGB-Wert im Format #RRGGBB, gefunden: '{token}'.");
             }
         }
 
