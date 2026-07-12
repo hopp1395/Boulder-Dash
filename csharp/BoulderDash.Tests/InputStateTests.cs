@@ -72,7 +72,7 @@ public class InputStateTests
         input.ResetForNewCave();
 
         Assert.Equal(0, input.Direction);
-        Assert.Equal((byte)0, input.GrabModifier);
+        Assert.False(input.IsGrabbing);
         Assert.Equal((byte)0, input.FacingLeft); // Blickrichtung bleibt erhalten (Original)
     }
 }

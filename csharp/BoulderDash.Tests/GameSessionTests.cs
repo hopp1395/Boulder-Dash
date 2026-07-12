@@ -44,14 +44,11 @@ public class GameSessionTests
     public void Pruefstand_6_laesst_den_oberen_Stein_gerade_fallen_statt_abzurollen()
     {
         var data = new CaveTextRepository(CavesPath).Get("cave-test-6");
-        var cave = new Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var physics = new CavePhysics(new Random(1));
+        var cave = TestWorld.NewCave(data);
 
         for (var scan = 0; scan < 40; scan++)
         {
-            physics.Regel(cave, state, new InputState(), new Camera());
+            cave.NextState();
         }
 
         // Beide Steine stehen übereinander im rechten Schacht (Spalte 12).
@@ -220,7 +217,7 @@ public class GameSessionTests
         var session = NewRealSession();
         session.MenuStart();
 
-        // Simuliert einen erfolgreichen Ausgang, wie ihn CavePhysics.ProcessRockford setzt.
+        // Simuliert einen erfolgreichen Ausgang, wie ihn RockfordObject.Interact setzt.
         session.State.IsCaveEnded = true;
         session.State.Stat = 0;
         session.State.AdvanceToNextCave = true;
@@ -402,7 +399,8 @@ public class GameSessionTests
         session.Update(0.001);
         Assert.Equal(SessionPhase.DeathPause, session.Phase);
 
-        var wechselVierVorher = session.State.WechselVier;
+        // Der Animationstakt gehört seit dem Objektmodell der Cave (früher die globale wechsel_vier).
+        var animationsphaseVorher = session.Cave!.AnimationPhase;
         var clk18Vorher = session.Clocks.Clk18;
 
         // Mehrere kleine Schritte innerhalb der 1s-Todespause (nicht genug, um sie zu beenden).
@@ -413,7 +411,7 @@ public class GameSessionTests
 
         Assert.Equal(SessionPhase.DeathPause, session.Phase); // Pause läuft noch
         Assert.True(
-            session.State.WechselVier != wechselVierVorher || session.Clocks.Clk18 != clk18Vorher,
+            session.Cave!.AnimationPhase != animationsphaseVorher || session.Clocks.Clk18 != clk18Vorher,
             "Animationszähler haben sich während der Todes-Pause nicht bewegt — Spiel wirkt eingefroren.");
     }
 

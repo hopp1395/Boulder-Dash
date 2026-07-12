@@ -36,24 +36,18 @@ public class GameTickTests
             Wall, 10, 0, 0, Wall,
             Wall, Wall, Wall, Wall, Wall,
         ];
-        var data = BuildCaveData(5, 3, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var input = new InputState();
-        var camera = new Camera();
-        var clocks = new Clocks();
         var random = new Random(1);
-        var physics = new CavePhysics(random);
-        var cover = new ScreenCover(random);
-        var tick = new GameTick(physics, cover, random);
+        var cave = TestWorld.NewCave(BuildCaveData(5, 3, tiles), random);
+        var state = cave.State;
+        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
+        var clocks = new Clocks();
+        var tick = TestWorld.NewTick(random);
 
         // Eintretend mit EntranceProgress==92 löst die Explosion aus -> 93 Ticks nötig
         // (Tick 1 bringt EntranceProgress von 0 auf 1, ..., Tick 93 sieht beim Eintritt 92).
         for (var i = 0; i < 93; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
         }
 
         Assert.Equal(93, state.EntranceProgress);
@@ -62,7 +56,7 @@ public class GameTickTests
         // Analog: EntranceProgress==99 beim Eintritt löst den Rockford-Spawn aus -> 100 Ticks gesamt.
         for (var i = 93; i < 100; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
         }
 
         Assert.Equal(100, state.EntranceProgress);
@@ -83,30 +77,26 @@ public class GameTickTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 4, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var input = new InputState();
-        var camera = new Camera();
-        var clocks = new Clocks();
         var random = new Random(1);
+        var cave = TestWorld.NewCave(data, random);
+        var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
+        var clocks = new Clocks();
         var cover = new ScreenCover(random);
         cover.BeginUncover(data.Width, data.Height);
-        var tick = new GameTick(new CavePhysics(random), cover, random);
+        var tick = TestWorld.NewTick(random, cover);
 
         // Während des Aufdeckens (69 Runden) und bis zum Startsignal (Tick 93 sieht beim Eintritt
         // EntranceProgress==92) rührt sich der Stein nicht.
         for (var i = 0; i < 93; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
             Assert.Equal(Element.Boulder, cave.GetElement(2, 1));
         }
 
         // Der nächste Physik-Scan (spätestens 3 Ticks später) lässt ihn fallen.
         for (var i = 0; i < 3; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
         }
 
         Assert.Equal(Element.Empty, cave.GetElement(2, 1));
@@ -127,22 +117,18 @@ public class GameTickTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 4, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        state.EntranceProgress = 101; // Eingang längst fertig, Cave lief bereits
-        var input = new InputState();
-        var camera = new Camera();
-        var clocks = new Clocks();
         var random = new Random(1);
+        var cave = TestWorld.NewCave(data, random);
+        cave.State.EntranceProgress = 101; // Eingang längst fertig, Cave lief bereits
+        var clocks = new Clocks();
         var cover = new ScreenCover(random);
         cover.BeginUncover(data.Width, data.Height);
         cover.BeginCover(); // Cave-Ende: die Stahlwand schiebt sich wieder darüber
-        var tick = new GameTick(new CavePhysics(random), cover, random);
+        var tick = TestWorld.NewTick(random, cover);
 
         for (var i = 0; i < ScreenCover.Iterations; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+            tick.Tick(cave, clocks, entranceIndex: 0);
             Assert.Equal(Element.Boulder, cave.GetElement(2, 1)); // kein Stein fällt
         }
 
@@ -150,7 +136,7 @@ public class GameTickTests
         Assert.False(cover.IsActive);
         for (var i = 0; i < 3; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+            tick.Tick(cave, clocks, entranceIndex: 0);
         }
 
         Assert.Equal(Element.Boulder, cave.GetElement(2, 2));
@@ -158,7 +144,7 @@ public class GameTickTests
 
     /// <summary>Baut Rockford direkt vor den offenen Ausgang (Quote 0), mit fertigem Eingang und
     /// genau einer verbleibenden Spielsekunde.</summary>
-    private static (BoulderDash.Core.Simulation.Cave Cave, GameState State, GameTick Tick, Clocks Clocks) SetupLetzteSekundeVorDemAusgang()
+    private static (Cave Cave, GameState State, GameTick Tick, Clocks Clocks) SetupLetzteSekundeVorDemAusgang()
     {
         byte[] tiles =
         [
@@ -166,14 +152,11 @@ public class GameTickTests
             Wall, 6, 11, 0, Wall,
             Wall, Wall, Wall, Wall, Wall,
         ];
-        var data = BuildCaveData(5, 3, tiles);
-        var cave = new BoulderDash.Core.Simulation.Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        state.EntranceProgress = 101; // Eingang fertig, Rockford lebt
-        state.CaveTimeRemaining = 1;
         var random = new Random(1);
-        return (cave, state, new GameTick(new CavePhysics(random), new ScreenCover(random), random), new Clocks());
+        var cave = TestWorld.NewCave(BuildCaveData(5, 3, tiles), random);
+        cave.State.EntranceProgress = 101; // Eingang fertig, Rockford lebt
+        cave.State.CaveTimeRemaining = 1;
+        return (cave, cave.State, TestWorld.NewTick(random), new Clocks());
     }
 
     /// <summary>BD1-Quirk (Vorbedingung für den Bonusüberlauf in GameSession.BeginLevelEndBonus): Die
@@ -184,23 +167,21 @@ public class GameTickTests
     public void Ausgang_ist_in_der_Nullsekunde_noch_erreichbar()
     {
         var (cave, state, tick, clocks) = SetupLetzteSekundeVorDemAusgang();
-        var input = new InputState();
-        var camera = new Camera();
 
         // Bis die Zeit auf 000 fällt — ohne Eingabe, Rockford bleibt vor dem Ausgang stehen.
         for (var i = 0; i < 200 && state.CaveTimeRemaining > 0; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+            tick.Tick(cave, clocks, entranceIndex: 0);
         }
 
         Assert.Equal(0, state.CaveTimeRemaining);
         Assert.False(state.IsCaveEnded); // Gnadensekunde: die Cave läuft noch
 
         // Jetzt erst in den Ausgang ziehen (Physik läuft jeden 3. Tick).
-        input.PressRight();
+        cave.Input.PressRight();
         for (var i = 0; i < 3; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+            tick.Tick(cave, clocks, entranceIndex: 0);
         }
 
         Assert.True(state.IsCaveEnded);
@@ -212,14 +193,13 @@ public class GameTickTests
     [Fact]
     public void Nullsekunde_beendet_die_Cave_am_folgenden_Sekundentakt()
     {
+        // Keine Eingabe: Rockford bleibt stehen.
         var (cave, state, tick, clocks) = SetupLetzteSekundeVorDemAusgang();
-        var input = new InputState(); // keine Eingabe: Rockford bleibt stehen
-        var camera = new Camera();
 
         var ticks = 0;
         for (; ticks < 200 && !state.IsCaveEnded; ticks++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex: 0);
+            tick.Tick(cave, clocks, entranceIndex: 0);
         }
 
         Assert.True(state.IsCaveEnded);

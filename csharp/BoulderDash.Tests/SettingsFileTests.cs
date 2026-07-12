@@ -50,7 +50,7 @@ public class SettingsFileTests
         var path = NewTempPath();
         try
         {
-            var saved = GameSettings.From(new ViewportSize(32, 18), 1280, 800, fullscreen: true);
+            var saved = GameSettings.From(new ViewportSize(32, 18), 1280, 800, fullscreen: true, explore: true);
             SettingsFile.Save(path, saved);
 
             var loaded = SettingsFile.Load(path);
@@ -59,6 +59,7 @@ public class SettingsFileTests
             Assert.Equal(1280, loaded.WindowWidth);
             Assert.Equal(800, loaded.WindowHeight);
             Assert.True(loaded.Fullscreen);
+            Assert.True(loaded.Explore);
         }
         finally
         {

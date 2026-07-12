@@ -39,14 +39,9 @@ public class AmoebaTests
 
     private static (Cave Cave, GameState State) Setup(CaveData data)
     {
-        var cave = new Cave(data);
-        var state = new GameState();
-        state.ResetForCave(data);
-        return (cave, state);
+        var cave = TestWorld.NewCave(data);
+        return (cave, cave.State);
     }
-
-    private static void Scan(CavePhysics physics, Cave cave, GameState state) =>
-        physics.Regel(cave, state, new InputState(), new Camera());
 
     private static int CountAmoeba(Cave cave)
     {
@@ -96,13 +91,12 @@ public class AmoebaTests
             Wall, Wall, Wall,  Wall,  Wall,
         ];
         var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
-        var physics = new CavePhysics(new Random(1));
 
         // Sobald beide Nachbarn Amoeba sind, ist sie eingeschlossen — ab dem übernächsten Scan wären es
         // Jewels, also hier abbrechen und den Zustand prüfen.
         for (var scan = 0; scan < 500 && CountAmoeba(cave) < 3; scan++)
         {
-            Scan(physics, cave, state);
+            cave.NextState();
         }
 
         Assert.Equal(Element.Amoeba, cave.GetElement(2, 1)); // vormals Leerraum
@@ -114,9 +108,8 @@ public class AmoebaTests
     {
         var tiles = BuildBox(5, 5, Stone, amoebaIndex: 12);
         var (cave, state) = Setup(BuildCaveData(5, 5, tiles));
-        var physics = new CavePhysics(new Random(1));
 
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(1, CountAmoeba(cave));
     }
@@ -126,17 +119,16 @@ public class AmoebaTests
     {
         var tiles = BuildBox(3, 3, Stone, amoebaIndex: 4);
         var (cave, state) = Setup(BuildCaveData(3, 3, tiles));
-        var physics = new CavePhysics(new Random(1));
 
         // Erster Scan erkennt den Einschluss nur — die Zelle bleibt Amoeba.
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(Element.Amoeba, cave.GetElement(1, 1));
         Assert.True(state.AmoebaSuffocatedLastScan);
         Assert.True(state.AmoebaPresent);
 
         // Erst der Folge-Scan wandelt um.
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(Element.Jewel, cave.GetElement(1, 1));
         Assert.False(state.AmoebaPresent); // Drone verstummt
@@ -147,14 +139,13 @@ public class AmoebaTests
     {
         // Innenraum 20x10 = genau 200 Zellen, komplett Amoeba und rundum eingemauert.
         var (cave, state) = Setup(BuildCaveData(22, 12, BuildBox(22, 12, Amoeba, amoebaIndex: 23)));
-        var physics = new CavePhysics(new Random(1));
 
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(200, state.AmoebaCountLastScan);
         Assert.Equal(200, CountAmoeba(cave));
 
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(0, CountAmoeba(cave));
         Assert.Equal(Element.Boulder, cave.GetElement(1, 1));
@@ -168,14 +159,13 @@ public class AmoebaTests
         var tiles = BuildBox(22, 12, Amoeba, amoebaIndex: 23);
         tiles[(1 * 22) + 1] = Stone;
         var (cave, state) = Setup(BuildCaveData(22, 12, tiles));
-        var physics = new CavePhysics(new Random(1));
 
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(199, state.AmoebaCountLastScan);
 
         // Zu groß hat Vorrang vor eingeschlossen — hier greift also der Einschluss: Jewels, keine Boulders.
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(Element.Jewel, cave.GetElement(20, 10));
     }
@@ -197,11 +187,10 @@ public class AmoebaTests
         {
             var data = BuildCaveData(40, 22, BuildBox(40, 22, Empty, amoebaIndex: (11 * 40) + 20), amoebaSlowGrowthSeconds);
             var (cave, state) = Setup(data);
-            var physics = new CavePhysics(new Random(1));
 
             for (var scan = 0; scan < scans; scan++)
             {
-                Scan(physics, cave, state);
+                cave.NextState();
             }
 
             return CountAmoeba(cave);
@@ -218,18 +207,17 @@ public class AmoebaTests
             Wall, Wall, Wall, Wall, Wall,
         ];
         var data = BuildCaveData(5, 3, tiles, amoebaSlowGrowthSeconds: 50);
-        var (cave, state) = Setup(data);
         var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
+        var cave = TestWorld.NewCave(data, random);
+        var state = cave.State;
+        var tick = TestWorld.NewTick(random);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
-        var input = new InputState();
-        var camera = new Camera();
         var clocks = new Clocks();
 
         // Die ersten 100 Ticks baut der Eingang auf, danach läuft die Spieluhr.
         for (var i = 0; i < 400; i++)
         {
-            tick.Tick(cave, state, input, camera, clocks, entranceIndex);
+            tick.Tick(cave, clocks, entranceIndex);
         }
 
         var caveSekunden = data.TimeSeconds - state.CaveTimeRemaining;
@@ -251,9 +239,8 @@ public class AmoebaTests
             Wall, Wall,    Wall,   Wall,  Wall,
         ];
         var (cave, state) = Setup(BuildCaveData(5, 3, tiles));
-        var physics = new CavePhysics(new Random(1));
 
-        Scan(physics, cave, state);
+        cave.NextState();
 
         Assert.Equal(explosion, cave.GetElement(1, 1));
         Assert.Equal(explosion, cave.GetElement(2, 1));
