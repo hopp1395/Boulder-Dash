@@ -14,8 +14,9 @@ namespace BoulderDash.Game.Graphics;
 /// über SpriteAtlas/Palette, damit die Cave-Palettenlogik (SyncPalette) unberührt bleibt.
 ///
 /// Das Mauermuster im Hintergrund ist wie im Original animiert: Es läuft vertikal durch,
-/// mit demselben Gleitfenster-Mechanismus wie die Zudeck-Stahlwand (SpriteAtlas.
-/// GetBorderFillSprite mit WechselVier 0-7). Die beiden Referenz-Screenshots belegen das —
+/// mit demselben Gleitfenster-Mechanismus wie die Zudeck-Stahlwand (siehe BorderFillObject:
+/// ein 16-Zeilen-Fenster, das in 8 Phasen durch ein 24 Zeilen hohes Sprite wandert). Die
+/// beiden Referenz-Screenshots belegen das —
 /// ihr Muster unterscheidet sich exakt um eine vertikale Phasenverschiebung des 8x8-Rasters.
 /// Beim Laden wird das Muster aus dem Titelbild extrahiert, jede reine Muster-Zeichenzelle
 /// der Assets transparent gemacht und dahinter das durchlaufende Muster gezeichnet; Zellen
@@ -30,7 +31,7 @@ public sealed class TitleRenderer
 {
     /// <summary>Das Hintergrundmuster ist ein 8x8-Zeichenraster (C64-Chars) und in beide
     /// Richtungen 8-periodisch — zugleich die Zellgröße der Muster-Erkennung und die
-    /// Phasenzahl der Animation (wie WechselVier 0-7).</summary>
+    /// Phasenzahl der Animation (wie CaveObject.AnimationPhase 0-7).</summary>
     private const int PatternSize = 8;
 
     private const int ScreenWidth = 320;
@@ -52,8 +53,8 @@ public sealed class TitleRenderer
     private readonly Texture2D _pattern;
     private readonly BiosFont _font;
 
-    /// <summary>Takt der Muster-Animation: WechselVier rückt im Spiel einen Schritt pro Tick
-    /// weiter — auf dem Titel gibt es kein Cave-Tempo, deshalb dient die Grad-1-Tickrate
+    /// <summary>Takt der Muster-Animation: Im Spiel rückt die Animationsphase einen Schritt pro
+    /// Tick weiter — auf dem Titel gibt es kein Cave-Tempo, deshalb dient die Grad-1-Tickrate
     /// (50 ms) als Referenztakt.</summary>
     private readonly double _secondsPerPhase = CaveSpeed.For(1, isIntermission: false).SecondsPerTick;
 
@@ -203,7 +204,7 @@ public sealed class TitleRenderer
     /// <summary>Das durchlaufende Mauermuster hinter den transparenten Zellen des Overlays:
     /// Der Quellausschnitt wandert mit wachsender Phase nach unten durch die Mustertextur,
     /// das Muster scheint dadurch nach oben zu laufen — dieselbe Richtung und derselbe
-    /// 8-Phasen-Zyklus wie bei der Zudeck-Stahlwand (GetBorderFillSprite/WechselVier).</summary>
+    /// 8-Phasen-Zyklus wie bei der Zudeck-Stahlwand (siehe BorderFillObject).</summary>
     private void DrawAnimatedPattern(SpriteBatch batch, double totalSeconds, int height)
     {
         var phase = (int)(totalSeconds / _secondsPerPhase) % PatternSize;

@@ -1,51 +1,25 @@
+using BoulderDash.Core.Objects;
 using BoulderDash.Core.Simulation;
 
 namespace BoulderDash.Core.Data;
 
 /// <summary>
-/// Legende der ASCII-Kartendarstellung (identisch zu Boulder-Dash-C64/extracted/caves/cave_*.txt)
-/// in beide Richtungen: Render() erzeugt die Kartenzeilen einer fertigen Cave, ToElement() liest ein
+/// Legende der ASCII-Kartendarstellung (identisch zu Boulder-Dash-C64/extracted/caves/cave_*.txt) in
+/// beide Richtungen: Render() erzeugt die Kartenzeilen einer fertigen Cave, TryToRaw() liest ein
 /// Kartenzeichen zurück (verwendet vom [Map]-Parser in CaveTextFile).
+///
+/// Die Legende selbst steht nicht mehr hier, sondern bei den Objekten (CaveObject.MapGlyph) — diese
+/// Klasse baut daraus nur noch die Nachschlagetabellen. Übrig bleiben die Fälle, die keinem Objekt
+/// gehören: die Zweitschreibweise des Ausgangs und die Fall-Bit-Sonderglyphen.
 /// </summary>
 public static class CaveAsciiMap
 {
-    private static readonly Dictionary<Element, char> ElementToChar = new()
-    {
-        [Element.TitaniumWall] = 'W',
-        [Element.Wall] = 'w',
-        [Element.EnchantedWall] = 'M',
-        [Element.Earth] = '.',
-        [Element.Empty] = ' ',
-        [Element.Boulder] = 'r',
-        [Element.Jewel] = 'd',
-        [Element.Entrance] = 'P',
-        [Element.EscapeDoor] = 'X',
-        [Element.Firefly] = 'F',
-        [Element.Butterfly] = 'B',
-        [Element.Amoeba] = 'a',
-        [Element.Rockford] = 'P',
-    };
+    private static readonly Dictionary<Element, char> ElementToChar = BuildElementToChar();
 
-    private static readonly Dictionary<char, Element> CharToElement = new()
-    {
-        ['W'] = Element.TitaniumWall,
-        ['w'] = Element.Wall,
-        ['M'] = Element.EnchantedWall,
-        ['.'] = Element.Earth,
-        [' '] = Element.Empty,
-        ['r'] = Element.Boulder,
-        ['d'] = Element.Jewel,
-        ['P'] = Element.Entrance,
-        ['X'] = Element.EscapeDoor,
-        // 'x' ist im Original der blinkende (aktive) Ausgang - dieselbe Kachel, siehe extract_data.py.
-        ['x'] = Element.EscapeDoor,
-        ['F'] = Element.Firefly,
-        ['B'] = Element.Butterfly,
-        ['a'] = Element.Amoeba,
-    };
+    private static readonly Dictionary<char, Element> CharToElement = BuildCharToElement();
 
     /// <summary>Sonderglyphen, die ein ROHES Kachelbyte setzen statt nur ein Element — nämlich ein
-    /// Objekt mit bereits gesetztem Fall-Bit (0x40). Gedacht für die Prüfstand-Caves: manche Zustände
+    /// Objekt mit bereits gesetztem Fall-Bit. Gedacht für die Prüfstand-Caves: manche Zustände
     /// entstehen im normalen Spiel nur für einen einzigen Cave-Scan und lassen sich sonst nicht
     /// gezielt herstellen (siehe cave-test-6.txt). In den 100 BD1-Caves kommen sie nicht vor.</summary>
     private static readonly Dictionary<char, byte> CharToFallingRaw = new()
@@ -54,7 +28,7 @@ public static class CaveAsciiMap
         ['D'] = 0x40 | (byte)Element.Jewel,
     };
 
-    public static char ToChar(Element element) => ElementToChar.TryGetValue(element, out var c) ? c : '?';
+    public static char ToChar(Element element) => ElementToChar.GetValueOrDefault(element, '?');
 
     public static bool TryToElement(char c, out Element element) => CharToElement.TryGetValue(c, out element);
 
@@ -92,5 +66,41 @@ public static class CaveAsciiMap
         }
 
         return lines;
+    }
+
+    private static Dictionary<Element, char> BuildElementToChar()
+    {
+        var map = new Dictionary<Element, char>();
+        foreach (var prototype in CaveObjects.All)
+        {
+            if (prototype.MapGlyph != '?')
+            {
+                map[prototype.Element] = prototype.MapGlyph;
+            }
+        }
+
+        return map;
+    }
+
+    private static Dictionary<char, Element> BuildCharToElement()
+    {
+        var map = new Dictionary<char, Element>();
+        foreach (var prototype in CaveObjects.All)
+        {
+            // Rockford teilt sich die Glyphe 'P' mit dem Eingang und steht nie selbst in einer Datei
+            // — er entsteht erst aus dem Eingang (siehe EntranceObject). Beim Lesen gewinnt deshalb
+            // der Eingang.
+            if (prototype.MapGlyph == '?' || prototype.Element == Element.Rockford)
+            {
+                continue;
+            }
+
+            map[prototype.MapGlyph] = prototype.Element;
+        }
+
+        // Im Original ist 'x' der blinkende (aktive) Ausgang - dieselbe Kachel, siehe extract_data.py.
+        map['x'] = Element.EscapeDoor;
+
+        return map;
     }
 }

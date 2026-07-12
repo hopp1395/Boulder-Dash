@@ -101,6 +101,8 @@ public sealed class GameSession
         new("cave-test-8", "EXPLOSION VERSCHONT DEN AUSGANG"),
         new("cave-test-9", "HOCHLAUFEN RUCKELT NICHT MEHR"),
         new("cave-test-10", "WAAGERECHT SCHLAEGT SENKRECHT"),
+        new("cave-test-11", "AMOEBE: NUR DER LINKE ZUENDET (B)"),
+        new("cave-test-12", "AMOEBE: NUR DER LINKE ZUENDET (F)"),
     ];
 
     /// <summary>Anwählbare Start-Caves als PlayOrder-Indizes: alle 16 regulären Caves A-P, also
@@ -128,7 +130,6 @@ public sealed class GameSession
 
     private readonly ICaveRepository _caves;
     private readonly Random _random;
-    private readonly CavePhysics _physics;
     private readonly ScreenCover _cover;
     private readonly GameTick _gameTick;
 
@@ -182,9 +183,8 @@ public sealed class GameSession
         // Fester Seed: Das Original ruft nie srand(), läuft also bei jedem Start durch dieselbe
         // rand()-Sequenz. Amoeba-Ausbreitung und ScreenCover sind damit reproduzierbar.
         _random = new Random(1);
-        _physics = new CavePhysics(_random);
         _cover = new ScreenCover(_random);
-        _gameTick = new GameTick(_physics, _cover, _random);
+        _gameTick = new GameTick(_cover, _random);
 
         State = new GameState();
         Input = new InputState();
@@ -437,7 +437,7 @@ public sealed class GameSession
         var ticks = 0;
         while (_tickAccumulator >= _secondsPerTick && ticks < maxTicksPerFrame)
         {
-            _gameTick.Tick(Cave, State, Input, Camera, Clocks, _entranceIndex);
+            _gameTick.Tick(Cave, Clocks, _entranceIndex);
             _tickAccumulator -= _secondsPerTick;
             ticks++;
         }
@@ -484,7 +484,7 @@ public sealed class GameSession
         var ticks = 0;
         while (_tickAccumulator >= _secondsPerTick && ticks < maxTicksPerFrame)
         {
-            _gameTick.Tick(Cave, State, Input, Camera, Clocks, _entranceIndex);
+            _gameTick.Tick(Cave, Clocks, _entranceIndex);
             _demoPlayer.AdvanceIfDue(Clocks, Input, Cave.Width);
             _tickAccumulator -= _secondsPerTick;
             ticks++;
@@ -719,7 +719,7 @@ public sealed class GameSession
     /// wenn die Cave keinen Eingang hat und damit unspielbar wäre.</summary>
     private bool TryLoadCave(CaveData data)
     {
-        var cave = new Simulation.Cave(data);
+        var cave = new Simulation.Cave(data, State, Input, Camera, _random);
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
         if (entranceIndex < 0)
         {

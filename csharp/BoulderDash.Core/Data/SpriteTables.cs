@@ -3,12 +3,13 @@ using BoulderDash.Core.Simulation;
 namespace BoulderDash.Core.Data;
 
 /// <summary>
-/// Statische Frame-Tabellen für die Sprite-Zuordnung, 1:1 aus Init_Pointer (src/INIT.CPP:138-208)
-/// übernommen. z_zeiger (dort: 90 Einträge, hier nur die 77 tatsächlich belegten 0-76) ordnet
-/// "geordnete" Animationsframes den 49 Rohsprites aus den Sprite-Textdateien zu (Reihenfolge
-/// siehe SpriteTextRepository.Manifest); DefaultFrame liefert je
-/// Element den z_zeiger-Index, den ein frisch geladenes, noch nicht angelaufenes Spiel zeigt
-/// (buffer[MASK_*]-Initialwerte, INIT.CPP:187-202, inklusive der Sonderbehandlung des Ausgangs).
+/// Die z_zeiger-Tabelle der Sprite-Schicht, 1:1 aus Init_Pointer (src/INIT.CPP:138-208) übernommen
+/// (dort 90 Einträge, hier nur die 77 tatsächlich belegten 0-76): Sie ordnet die "geordneten"
+/// Animationsframes den 49 Rohsprites aus den Sprite-Textdateien zu (Reihenfolge siehe
+/// SpriteTextRepository.Manifest).
+///
+/// WELCHEN Frame ein Objekt zeigt, steht nicht mehr hier, sondern beim Objekt selbst
+/// (CaveObject.DefaultFrame und CaveObject.Appearance).
 /// </summary>
 public static class SpriteTables
 {
@@ -30,31 +31,4 @@ public static class SpriteTables
         43, 44, 44, 45, 46, 46, 47, 47, // 68-75 Explo2
         48, // 76 Stahl-lauf
     ];
-
-    /// <summary>
-    /// Frame-Index (in FrameToRawSprite) je Element, wie unmittelbar nach level_laden sichtbar:
-    /// die statischen Init_Pointer-Zuweisungen (INIT.CPP:187-202), überlagert von der
-    /// Ausgangs-Tarnung aus level_laden ("buffer[MASK_HAUSA]=buffer[MASK_STAHL]", BOULDER.CPP:1000) —
-    /// der Ausgang sieht beim Laden identisch zur Stahlwand aus, bis ende() ihn freischaltet.
-    /// </summary>
-    public static int GetDefaultFrame(Element element) => element switch
-    {
-        Element.Empty => 0,
-        Element.Earth => 1,
-        Element.Boulder => 2,
-        Element.Jewel => 3,
-        Element.Wall => 11,
-        Element.TitaniumWall => 12,
-        Element.Rockford => 13,
-        Element.Amoeba => 24,
-        Element.Firefly => 32,
-        Element.Butterfly => 40,
-        Element.Entrance => 48,
-        Element.EscapeDoor => 12, // getarnt als Stahlwand, siehe Klassenkommentar
-        Element.Explosion => 52,
-        Element.EnchantedWall => 11, // wie Mauer, bis mrun die Animation aktiviert
-        Element.JewelExplosion => 68,
-        Element.BorderFill => 76,
-        _ => throw new ArgumentOutOfRangeException(nameof(element), element, null),
-    };
 }
