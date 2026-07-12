@@ -70,6 +70,14 @@ public sealed class GameState
     /// Bewegungsrichtung (boulder_lauf(), BOULDER.CPP:611-646).</summary>
     public byte WechselBoulder { get; set; }
 
+    /// <summary>Ruheanimation (BD1): Blinzelt Rockford in der laufenden 8-Frame-Sequenz? Wird zu
+    /// deren Beginn neu ausgewürfelt und gilt nur für diese eine Sequenz (siehe GameTick).</summary>
+    public bool RockfordBlinking { get; set; }
+
+    /// <summary>Ruheanimation (BD1): Tappt Rockford mit dem Fuß? Anders als das Blinzeln ist das
+    /// ein Dauerzustand, der pro Sequenz nur mit 1/16 umschlägt (siehe GameTick).</summary>
+    public bool RockfordTapping { get; set; }
+
     /// <summary>Sound-Ereignisse dieses Ticks, von CavePhysics befüllt und von der
     /// Game-Schicht (AudioPlayer) pro Frame geleert. Core selbst bleibt audiofrei.</summary>
     public Queue<SoundEvent> SoundEvents { get; } = new();
@@ -97,5 +105,7 @@ public sealed class GameState
         WechselExplo = 0;
         WechselVier = 0;
         WechselBoulder = 0;
+        RockfordBlinking = false;
+        RockfordTapping = false;
     }
 }

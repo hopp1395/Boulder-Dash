@@ -156,7 +156,7 @@ public class SoundEventTests
         state.CaveTimeRemaining = 11; // -> nach zwei Sekunden-Countdowns bei 9 (Warnung), dann bei 10 (keine)
         var entranceIndex = cave.FindFirstIndexOf(Element.Entrance);
         var random = new Random(1);
-        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random));
+        var tick = new GameTick(new CavePhysics(random), new ScreenCover(random), random);
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();
@@ -189,7 +189,7 @@ public class SoundEventTests
         var random = new Random(1);
         var cover = new ScreenCover(random);
         cover.BeginUncover(data.Width, data.Height);
-        var tick = new GameTick(new CavePhysics(random), cover);
+        var tick = new GameTick(new CavePhysics(random), cover, random);
         var input = new InputState();
         var camera = new Camera();
         var clocks = new Clocks();

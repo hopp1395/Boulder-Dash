@@ -3,7 +3,10 @@
 # . = Farbe 0 (Hintergrund), : = Farbe 1, x = Farbe 2, # = Farbe 3
 # Innerhalb der [Frame]-Abschnitte sind keine Kommentarzeilen möglich,
 # da Pixelzeilen mit '#' beginnen dürfen.
-# Frame 1 = stehend, Frames 6-11 = Laufzyklus (Frames 2-5 derzeit ungenutzt).
+# Frame 1 = stehend, Frames 6-11 = Laufzyklus.
+# Frames 2-5 sind die Ruheanimation (BD1): 2/3 schliessen die Augen (Blinzeln) und aendern nur
+# die obere Bildhaelfte, 4/5 zeigen den Tappfuss und aendern nur die untere — beide Haelften
+# lassen sich deshalb frei kombinieren (siehe CaveRenderer.DrawRockford).
 
 [Sprite]
 Name   = Rockford
