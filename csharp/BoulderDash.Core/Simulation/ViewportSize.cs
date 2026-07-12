@@ -2,9 +2,10 @@ namespace BoulderDash.Core.Simulation;
 
 /// <summary>
 /// Größe des Kamera-Sichtfensters in Kacheln. Das Original kannte nur eine Größe (20x12 Kacheln =
-/// 320x200 VGA-Pixel abzüglich der Statuszeile, src/BOULDER.CPP:78); der Port erlaubt darüber
-/// hinaus, die Spielfläche stufenweise bis auf die volle Cave-Größe (40x22) aufzuziehen, sodass
-/// gar nicht mehr gescrollt werden muss.
+/// 320x200 VGA-Pixel abzüglich der Statuszeile, src/BOULDER.CPP:78); der Port erlaubt darüber hinaus,
+/// die Spielfläche stufenweise aufzuziehen — bis zur vollen BD1-Cave (40x22), bei der gar nicht mehr
+/// gescrollt werden muss, und darüber hinaus bis zum Vierfachen davon (160x88), damit auch die großen
+/// Caves ganz ins Bild passen (seit ihre Größe frei ist, siehe CaveTextFile).
 ///
 /// Die Scroll-Geometrie (Auslöser und Scrollweiten, siehe RockfordObject.ScrollCamera) leitet sich
 /// aus der Sichtfenstergröße ab und ergibt bei <see cref="Original"/> exakt die Originalwerte.
@@ -14,13 +15,20 @@ public readonly record struct ViewportSize(int Columns, int Rows)
     /// <summary>Das Sichtfenster des Originals — die Referenzgröße für alles Verhalten.</summary>
     public static readonly ViewportSize Original = new(20, 12);
 
-    /// <summary>Die ganze Cave auf einmal — die größte Stufe, bei der gar nicht mehr gescrollt wird.
+    /// <summary>Die ganze BD1-Cave auf einmal — bei ihr scrollt eine Original-Cave nicht mehr.
     /// Voreinstellung beim ersten Start (siehe GameSettings).</summary>
     public static readonly ViewportSize Full = new(40, 22);
 
-    /// <summary>Wählbare Stufen: vom Original bis zur vollen Cave (40x22), je +4 Spalten/+2 Zeilen.
-    /// Bewusst keine Stufe unter dem Original: die Statuszeile ist genau 20 Kacheln (320 px) breit,
-    /// und ein kleineres Bild liefert schon der Bildschirm-Zoom (Fenstergröße).</summary>
+    /// <summary>
+    /// Wählbare Stufen. Bis zur vollen BD1-Cave in kleinen Schritten (+4 Spalten/+2 Zeilen), darüber
+    /// in halben BD1-Caves (+20/+11) bis zum Vierfachen — 160x88 Kacheln.
+    ///
+    /// Bewusst keine Stufe unter dem Original: Die Statuszeile ist genau 20 Kacheln (320 px) breit,
+    /// und ein kleineres Bild liefert schon der Bildschirm-Zoom (Fenstergröße). Nach oben ist die
+    /// Grenze dagegen die Anzeige, nicht das Spiel: 160x88 Kacheln sind 2560x1416 logische Pixel und
+    /// passen auf keinen gewöhnlichen Monitor mehr — der Bildschirm-Zoom rechnet sie dann herunter,
+    /// statt sie wie sonst ganzzahlig hochzuskalieren (BoulderDashGame.GetScale).
+    /// </summary>
     public static readonly IReadOnlyList<ViewportSize> Steps =
     [
         new(20, 12),
@@ -29,6 +37,12 @@ public readonly record struct ViewportSize(int Columns, int Rows)
         new(32, 18),
         new(36, 20),
         new(40, 22),
+        new(60, 33),
+        new(80, 44),
+        new(100, 55),
+        new(120, 66),
+        new(140, 77),
+        new(160, 88),
     ];
 
     /// <summary>Auslöser für den Rechts-Scroll: Rockford überschreitet diese Spalte im Sichtfenster.

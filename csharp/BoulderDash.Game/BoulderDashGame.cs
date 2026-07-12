@@ -173,7 +173,7 @@ public class BoulderDashGame : XnaGame
         // Kachelgröße vor dem Wechsel merken: die beiden Zooms sollen sich nicht in die Quere kommen —
         // der Spielflächen-Zoom ändert nur, WIE VIELE Kacheln zu sehen sind, nicht wie groß sie sind.
         var (oldWidth, oldHeight) = CaveRenderer.LogicalSize(_viewport);
-        var scale = GetIntegerScale(oldWidth, oldHeight);
+        var scale = GetScale(oldWidth, oldHeight);
 
         _viewport = next;
         _session.SetViewport(_viewport);
@@ -183,9 +183,10 @@ public class BoulderDashGame : XnaGame
 
     /// <summary>Zieht das Fenster auf die neue Sichtfenstergröße im bisherigen Maßstab nach, damit die
     /// Kacheln beim Spielflächen-Zoom gleich groß bleiben. Passt das nicht mehr auf den Bildschirm,
-    /// bleibt das Fenster auf Bildschirmgröße und der Maßstab sinkt von selbst (GetIntegerScale) —
-    /// im Vollbild wird gar nichts angefasst.</summary>
-    private void ResizeWindowToScale(int scale)
+    /// bleibt das Fenster auf Bildschirmgröße und der Maßstab sinkt von selbst (GetScale) — im Vollbild
+    /// wird gar nichts angefasst. Die Untergrenze ist der Menüschirm (320x200): Kleiner wird das
+    /// Fenster nie, egal wie klein der Maßstab ausfällt.</summary>
+    private void ResizeWindowToScale(float scale)
     {
         if (_graphics.IsFullScreen)
         {
@@ -196,14 +197,14 @@ public class BoulderDashGame : XnaGame
         var display = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
 
         // Etwas Luft für Fensterrahmen und Taskleiste lassen.
-        var width = Math.Min(logicalWidth * scale, display.Width - 40);
-        var height = Math.Min(logicalHeight * scale, display.Height - 80);
+        var width = Math.Min((int)(logicalWidth * scale), display.Width - 40);
+        var height = Math.Min((int)(logicalHeight * scale), display.Height - 80);
 
         _applyingClientSize = true;
         try
         {
-            _graphics.PreferredBackBufferWidth = Math.Max(logicalWidth, width);
-            _graphics.PreferredBackBufferHeight = Math.Max(logicalHeight, height);
+            _graphics.PreferredBackBufferWidth = Math.Max(MenuWidth, width);
+            _graphics.PreferredBackBufferHeight = Math.Max(MenuHeight, height);
             _graphics.ApplyChanges();
             _windowedSize = new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
         }
@@ -338,18 +339,21 @@ public class BoulderDashGame : XnaGame
 
         GraphicsDevice.Clear(Color.Black);
 
-        // Bildschirm-Zoom: ganzzahlig hochskalieren (Pixel bleiben quadratisch und scharf) und im
-        // Fenster zentrieren; was übrig bleibt, ist schwarzer Rand.
-        var scale = GetIntegerScale(logicalWidth, logicalHeight);
-        var width = logicalWidth * scale;
-        var height = logicalHeight * scale;
+        // Bildschirm-Zoom: skalieren und im Fenster zentrieren; was übrig bleibt, ist schwarzer Rand.
+        var scale = GetScale(logicalWidth, logicalHeight);
+        var width = (int)(logicalWidth * scale);
+        var height = (int)(logicalHeight * scale);
         var destination = new Rectangle(
             (GraphicsDevice.Viewport.Width - width) / 2,
             (GraphicsDevice.Viewport.Height - height) / 2,
             width,
             height);
 
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        // Hochskaliert wird ganzzahlig, da hält PointClamp die Pixel scharf. Muss dagegen
+        // heruntergerechnet werden (großes Sichtfenster auf kleinem Monitor, siehe GetScale), fiele
+        // dabei jede zweite Pixelzeile weg — dort glättet LinearClamp.
+        var sampler = scale >= 1f ? SamplerState.PointClamp : SamplerState.LinearClamp;
+        _spriteBatch.Begin(samplerState: sampler);
         _spriteBatch.Draw(_renderTarget, destination, Color.White);
         _spriteBatch.End();
 
@@ -475,10 +479,21 @@ public class BoulderDashGame : XnaGame
         }
     }
 
-    private int GetIntegerScale(int logicalWidth, int logicalHeight)
+    /// <summary>
+    /// Der Maßstab, in dem die logische Zeichenfläche ins Fenster kommt.
+    ///
+    /// Passt sie hinein, wird sie GANZZAHLIG hochskaliert — Kachelpixel bleiben quadratisch und
+    /// scharf; das ist der Normalfall und war früher der einzige. Passt sie nicht, wird sie
+    /// bruchteilig heruntergerechnet, statt am Fensterrand abgeschnitten zu werden: Seit das
+    /// Sichtfenster bis 160x88 Kacheln geht (ViewportSize.Steps), sind das 2560x1416 logische Pixel —
+    /// mehr, als ein gewöhnlicher Monitor hergibt.
+    /// </summary>
+    private float GetScale(int logicalWidth, int logicalHeight)
     {
-        var scaleX = GraphicsDevice.Viewport.Width / logicalWidth;
-        var scaleY = GraphicsDevice.Viewport.Height / logicalHeight;
-        return Math.Max(1, Math.Min(scaleX, scaleY));
+        var fit = Math.Min(
+            GraphicsDevice.Viewport.Width / (float)logicalWidth,
+            GraphicsDevice.Viewport.Height / (float)logicalHeight);
+
+        return fit >= 1f ? MathF.Floor(fit) : fit;
     }
 }

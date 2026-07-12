@@ -4,18 +4,24 @@ namespace BoulderDash.Tests;
 
 public class ViewportSizeTests
 {
+    /// <summary>Vom Original-Sichtfenster bis zum Vierfachen der vollen BD1-Cave: bis zu ihr (40x22)
+    /// in kleinen Schritten, darüber in halben BD1-Caves.</summary>
     [Fact]
-    public void Stufen_reichen_vom_Original_bis_zur_vollen_Cave()
+    public void Stufen_reichen_vom_Original_bis_zum_Vierfachen_der_vollen_Cave()
     {
         Assert.Equal(ViewportSize.Original, ViewportSize.Steps[0]);
         Assert.Equal(new ViewportSize(20, 12), ViewportSize.Steps[0]);
-        Assert.Equal(new ViewportSize(40, 22), ViewportSize.Steps[^1]);
+        Assert.Equal(new ViewportSize(160, 88), ViewportSize.Steps[^1]);
+        Assert.Contains(ViewportSize.Full, ViewportSize.Steps);
 
-        // Jede Stufe wächst um genau 4 Spalten und 2 Zeilen und bleibt damit im 20:12-Seitenverhältnis.
+        // Jede Stufe wächst — bis zur vollen Cave um 4 Spalten/2 Zeilen, darüber um deren Hälfte.
         for (var i = 1; i < ViewportSize.Steps.Count; i++)
         {
-            Assert.Equal(ViewportSize.Steps[i - 1].Columns + 4, ViewportSize.Steps[i].Columns);
-            Assert.Equal(ViewportSize.Steps[i - 1].Rows + 2, ViewportSize.Steps[i].Rows);
+            var (previous, step) = (ViewportSize.Steps[i - 1], ViewportSize.Steps[i]);
+            var (columns, rows) = previous.Columns < ViewportSize.Full.Columns ? (4, 2) : (20, 11);
+
+            Assert.Equal(previous.Columns + columns, step.Columns);
+            Assert.Equal(previous.Rows + rows, step.Rows);
         }
     }
 
@@ -26,16 +32,21 @@ public class ViewportSizeTests
         Assert.Equal(ViewportSize.Original, ViewportSize.Steps[1].NextSmaller());
 
         // Unter das Original geht es nicht (kleineres Bild macht der Bildschirm-Zoom) und über die
-        // volle Cave hinaus auch nicht.
+        // größte Stufe hinaus auch nicht.
         Assert.Equal(ViewportSize.Original, ViewportSize.Original.NextSmaller());
         Assert.Equal(ViewportSize.Steps[^1], ViewportSize.Steps[^1].NextLarger());
+
+        // Über die volle Cave hinaus geht es weiter — dort wechselt nur die Schrittweite.
+        Assert.Equal(new ViewportSize(60, 33), ViewportSize.Full.NextLarger());
+        Assert.Equal(ViewportSize.Full, new ViewportSize(60, 33).NextSmaller());
     }
 
     [Theory]
     [InlineData(20, 12, 20, 12)]
     [InlineData(1, 1, 20, 12)] // viel zu klein -> kleinste Stufe
-    [InlineData(999, 999, 40, 22)] // viel zu groß -> größte Stufe
+    [InlineData(999, 999, 160, 88)] // viel zu groß -> größte Stufe
     [InlineData(26, 15, 24, 14)] // krumme Werte -> nächstgelegene Stufe
+    [InlineData(85, 47, 80, 44)] // auch oberhalb der vollen Cave
     public void Snap_liefert_die_naechstgelegene_Stufe(int columns, int rows, int expectedColumns, int expectedRows)
     {
         Assert.Equal(new ViewportSize(expectedColumns, expectedRows), ViewportSize.Snap(columns, rows));
